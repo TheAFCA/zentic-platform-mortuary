@@ -1,0 +1,452 @@
+// Prisma schema — ZENTIC.pro SaaS multi-tenant platform
+// Estrategia: Row-Level Security con columna tenantId (Opción A del MVP)
+// Naming: tablas en PascalCase (Prisma), columnas en camelCase (Prisma) / snake_case en DB
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("DATABASE_SHADOW_URL")
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum UserRole {
+  SUPER_ADMIN
+  TENANT_ADMIN
+  OPERATOR
+  VIEWER
+}
+
+enum TenantStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum TenantPlan {
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
+enum EventStatus {
+  SCHEDULED
+  LIVE
+  PAUSED
+  FINISHED
+  CANCELLED
+  INTERRUPTED
+}
+
+enum ModerationMode {
+  AUTO
+  MANUAL
+}
+
+enum MessageStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ObituaryStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  INTERESTED
+  CONVERTED
+  DISCARDED
+}
+
+enum LeadSource {
+  DIRECT
+  WAITROOM
+  EMBED
+  INVITATION
+}
+
+// =============================================================================
+// ENTIDADES GLOBALES (sin tenantId)
+// =============================================================================
+
+model Tenant {
+  id        String       @id @default(cuid())
+  slug      String       @unique
+  name      String
+  plan      TenantPlan   @default(BASIC)
+  status    TenantStatus @default(TRIAL)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  deletedAt DateTime?
+
+  brandConfig  TenantBrandConfig?
+  featureFlags TenantFeatureFlag[]
+  users        User[]
+  events       Event[]
+  obituaries   Obituary[]
+  leads        Lead[]
+  clients      Client[]
+  venues       Venue[]
+  auditLogs    AuditLog[]
+}
+
+model TenantBrandConfig {
+  id              String  @id @default(cuid())
+  tenantId        String  @unique
+  tenant          Tenant  @relation(fields: [tenantId], references: [id])
+  logoUrl         String?
+  faviconUrl      String?
+  primaryColor    String  @default("#1a1a2e")
+  secondaryColor  String  @default("#16213e")
+  textColor       String  @default("#333333")
+  backgroundColor String  @default("#f5f5f5")
+  updatedAt       DateTime @updatedAt
+}
+
+model TenantFeatureFlag {
+  id       String  @id @default(cuid())
+  tenantId String
+  tenant   Tenant  @relation(fields: [tenantId], references: [id])
+  feature  String
+  enabled  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, feature])
+  @@index([tenantId])
+}
+
+// =============================================================================
+// AUTENTICACIÓN Y USUARIOS
+// =============================================================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String
+  passwordHash  String
+  tenantId      String?
+  tenant        Tenant?   @relation(fields: [tenantId], references: [id])
+  role          UserRole
+  loginAttempts Int       @default(0)
+  lockedUntil   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  sessions       Session[]
+  passwordResets PasswordReset[]
+  permissions    UserPermission[]
+
+  @@unique([email, tenantId])
+  @@index([tenantId])
+}
+
+model Session {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  refreshTokenHash String
+  device           String?
+  ipAddress        String?
+  isRevoked        Boolean  @default(false)
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+
+  @@index([userId])
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  tokenHash String   @unique
+  used      Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// =============================================================================
+// RBAC — PERMISOS
+// =============================================================================
+
+model UserPermission {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  permission String
+  grantedBy  String
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, permission])
+  @@index([userId])
+}
+
+model PermissionAuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  targetId   String
+  action     String
+  permission String
+  createdAt  DateTime @default(now())
+
+  @@index([targetId])
+  @@index([actorId])
+}
+
+// =============================================================================
+// AUDITORÍA — SUPER ADMIN
+// =============================================================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  role       UserRole
+  action     String
+  entityType String?
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
+  tenantId   String?
+  tenant     Tenant?  @relation(fields: [tenantId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([actorId])
+}
+
+model ImpersonationLog {
+  id           String    @id @default(cuid())
+  superAdminId String
+  tenantId     String
+  reason       String
+  startedAt    DateTime  @default(now())
+  endedAt      DateTime?
+
+  @@index([tenantId])
+}
+
+// =============================================================================
+// DIFUNTO — Entidad compartida entre Streaming, Obituarios y Servicios
+// =============================================================================
+
+model Deceased {
+  id        String    @id @default(cuid())
+  tenantId  String
+  firstName String
+  lastName  String
+  birthDate DateTime?
+  deathDate DateTime?
+  biography String?   @db.Text
+  epitaph   String?   @db.VarChar(150)
+  photoUrl  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  events    Event[]
+  obituary  Obituary?
+
+  @@index([tenantId])
+}
+
+// =============================================================================
+// STREAMING
+// =============================================================================
+
+model Event {
+  id             String         @id @default(cuid())
+  tenantId       String
+  tenant         Tenant         @relation(fields: [tenantId], references: [id])
+  deceasedId     String
+  deceased       Deceased       @relation(fields: [deceasedId], references: [id])
+  roomId         String?
+  room           Room?          @relation(fields: [roomId], references: [id])
+  clientId       String?
+  slug           String         @unique
+  streamKey      String?
+  rtmpUrl        String?
+  status         EventStatus    @default(SCHEDULED)
+  moderationMode ModerationMode @default(AUTO)
+  recordingUrl   String?
+  viewerCount    Int            @default(0)
+  isPublic       Boolean        @default(true)
+  accessCode     String?
+  scheduledAt    DateTime
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  deletedAt      DateTime?
+
+  messages Message[]
+  leads    Lead[]
+
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
+}
+
+model Message {
+  id         String        @id @default(cuid())
+  tenantId   String
+  eventId    String
+  event      Event         @relation(fields: [eventId], references: [id])
+  authorName String
+  content    String        @db.Text
+  iconType   String?
+  status     MessageStatus @default(PENDING)
+  createdAt  DateTime      @default(now())
+  deletedAt  DateTime?
+
+  @@index([tenantId])
+  @@index([eventId])
+  @@index([eventId, status])
+}
+
+// =============================================================================
+// OBITUARIOS
+// =============================================================================
+
+model Obituary {
+  id          String         @id @default(cuid())
+  tenantId    String
+  tenant      Tenant         @relation(fields: [tenantId], references: [id])
+  deceasedId  String         @unique
+  deceased    Deceased       @relation(fields: [deceasedId], references: [id])
+  eventId     String?
+  slug        String         @unique
+  content     String         @db.Text
+  status      ObituaryStatus @default(DRAFT)
+  accessCode  String?
+  publishedAt DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  deletedAt   DateTime?
+
+  messages ObituaryMessage[]
+
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
+}
+
+model ObituaryMessage {
+  id          String        @id @default(cuid())
+  tenantId    String
+  obituaryId  String
+  obituary    Obituary      @relation(fields: [obituaryId], references: [id])
+  authorName  String
+  content     String        @db.Text
+  status      MessageStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  deletedAt   DateTime?
+
+  @@index([obituaryId])
+  @@index([obituaryId, status])
+  @@index([tenantId])
+}
+
+// =============================================================================
+// CRM — CLIENTES Y LEADS
+// =============================================================================
+
+model Client {
+  id            String    @id @default(cuid())
+  tenantId      String
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+  name          String
+  email         String?
+  phone         String?
+  convertedFrom String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  leads Lead[]
+
+  @@index([tenantId])
+}
+
+model Lead {
+  id         String     @id @default(cuid())
+  tenantId   String
+  tenant     Tenant     @relation(fields: [tenantId], references: [id])
+  eventId    String?
+  event      Event?     @relation(fields: [eventId], references: [id])
+  clientId   String?
+  client     Client?    @relation(fields: [clientId], references: [id])
+  assignedTo String?
+  name       String
+  email      String?
+  phone      String?
+  source     LeadSource @default(DIRECT)
+  status     LeadStatus @default(NEW)
+  consent    Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  deletedAt  DateTime?
+
+  notes LeadNote[]
+
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
+  @@index([eventId])
+}
+
+model LeadNote {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id])
+  authorId  String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([leadId])
+}
+
+// =============================================================================
+// SEDES Y SALAS
+// =============================================================================
+
+model Venue {
+  id        String    @id @default(cuid())
+  tenantId  String
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+  name      String
+  address   String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  rooms Room[]
+
+  @@index([tenantId])
+}
+
+model Room {
+  id        String   @id @default(cuid())
+  venueId   String
+  venue     Venue    @relation(fields: [venueId], references: [id])
+  name      String
+  capacity  Int?
+  createdAt DateTime @default(now())
+
+  events Event[]
+
+  @@index([venueId])
+}

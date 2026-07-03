@@ -1,0 +1,49 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: zentic_postgres
+    restart: unless-stopped
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: zentic
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: zentic_dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U zentic -d zentic_dev']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres_shadow:
+    image: postgres:15-alpine
+    container_name: zentic_postgres_shadow
+    restart: unless-stopped
+    ports:
+      - '5433:5432'
+    environment:
+      POSTGRES_USER: zentic
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: zentic_shadow
+
+  redis:
+    image: redis:7-alpine
+    container_name: zentic_redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:

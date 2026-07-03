@@ -1,0 +1,55 @@
+{
+  "name": "zentic-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ZENTIC.pro — SaaS multi-tenant platform for funeral homes",
+  "scripts": {
+    "dev": "pnpm --parallel -r dev",
+    "dev:api": "pnpm --filter @zentic/api dev",
+    "dev:web": "pnpm --filter @zentic/web dev",
+    "build": "pnpm -r build",
+    "build:api": "pnpm --filter @zentic/api build",
+    "build:web": "pnpm --filter @zentic/web build",
+    "test": "pnpm -r test",
+    "test:api": "pnpm --filter @zentic/api test",
+    "test:web": "pnpm --filter @zentic/web test",
+    "lint": "pnpm -r lint",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:prod": "prisma migrate deploy",
+    "prisma:studio": "prisma studio",
+    "prisma:seed": "prisma db seed",
+    "prisma:reset": "prisma migrate reset"
+  },
+  "devDependencies": {
+    "@prisma/client": "^5.22.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "bcrypt": "^5.1.1",
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.5",
+    "prisma": "^5.22.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@prisma/client",
+      "@prisma/engines",
+      "bcrypt",
+      "esbuild",
+      "lmdb",
+      "msgpackr-extract",
+      "prisma",
+      "unrs-resolver"
+    ]
+  }
+}

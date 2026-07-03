@@ -1,0 +1,51 @@
+import { Routes } from '@angular/router';
+import { authGuard } from './core/guards/auth.guard';
+import { permissionGuard } from './core/guards/permission.guard';
+import { UserRole } from '@zentic/shared-types';
+
+export const routes: Routes = [
+  {
+    path: '',
+    redirectTo: '/admin/dashboard',
+    pathMatch: 'full',
+  },
+
+  // Public event page (no auth required)
+  {
+    path: 'e/:slug',
+    loadComponent: () =>
+      import('./public/event-page/event-page.component').then(m => m.EventPageComponent),
+  },
+
+  // Public obituary page (no auth required)
+  {
+    path: 'o/:slug',
+    loadComponent: () =>
+      import('./public/obituary-page/obituary-page.component').then(m => m.ObituaryPageComponent),
+  },
+
+  // Auth module (no layout wrapper needed)
+  {
+    path: 'auth',
+    loadChildren: () => import('./modules/auth/auth.routes').then(m => m.AUTH_ROUTES),
+  },
+
+  // Tenant admin panel
+  {
+    path: 'admin',
+    canActivate: [authGuard],
+    loadChildren: () => import('./modules/admin/admin.routes').then(m => m.ADMIN_ROUTES),
+  },
+
+  // Super admin panel (platform level)
+  {
+    path: 'super-admin',
+    canActivate: [authGuard, permissionGuard],
+    data: { role: UserRole.SUPER_ADMIN },
+    loadChildren: () =>
+      import('./modules/super-admin/super-admin.routes').then(m => m.SUPER_ADMIN_ROUTES),
+  },
+
+  // Wildcard
+  { path: '**', redirectTo: '/admin/dashboard' },
+];
