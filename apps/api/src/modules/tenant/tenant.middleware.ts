@@ -16,7 +16,7 @@ export class TenantMiddleware implements NestMiddleware {
       return next(); // no subdomain (platform admin routes, health checks)
     }
 
-    const tenant = await this.prisma.tenant.findUnique({
+    const tenant = await this.prisma.tenant.findFirst({
       where: { slug, deletedAt: null },
       select: { id: true, status: true },
     });

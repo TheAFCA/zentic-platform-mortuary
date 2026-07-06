@@ -29,10 +29,11 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email and password' })
   login(
+    @Req() req: Request,
     @Body() body: { email: string; password: string },
     @Res({ passthrough: true }) res: Response,
   ) {
-    return this.authService.login(body.email, body.password, res);
+    return this.authService.login(body.email, body.password, req, res);
   }
 
   @Post('logout')
