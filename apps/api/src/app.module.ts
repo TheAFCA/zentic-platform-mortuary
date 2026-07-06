@@ -39,6 +39,7 @@ import { validateEnv } from './config/env.validation';
 })
 export class AppModule implements NestModule {
   configure(_consumer: MiddlewareConsumer) {
+    void _consumer;
     // TenantMiddleware is applied per-module in TenantModule
   }
 }

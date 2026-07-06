@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ObituaryService } from './obituary.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -41,7 +50,11 @@ export class ObituaryController {
 
   @Patch(':id')
   @RequirePermission('obituary:update')
-  update(@TenantId() tenantId: string, @Param('id') id: string, @Body() body: unknown) {
+  update(
+    @TenantId() tenantId: string,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ) {
     return this.obituaryService.update(tenantId, id, body);
   }
 

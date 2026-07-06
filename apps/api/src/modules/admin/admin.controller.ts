@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Patch, Body, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Body,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -34,7 +42,11 @@ export class AdminController {
 
   @Patch('users/:id')
   @RequirePermission('users:manage')
-  updateUser(@TenantId() tenantId: string, @Param('id') id: string, @Body() body: unknown) {
+  updateUser(
+    @TenantId() tenantId: string,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ) {
     return this.adminService.updateUser(tenantId, id, body);
   }
 

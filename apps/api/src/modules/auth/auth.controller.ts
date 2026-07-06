@@ -1,4 +1,15 @@
-import { Controller, Post, Get, Patch, Body, Req, Res, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Body,
+  Req,
+  Res,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
@@ -17,7 +28,10 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email and password' })
-  login(@Body() body: { email: string; password: string }, @Res({ passthrough: true }) res: Response) {
+  login(
+    @Body() body: { email: string; password: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
     return this.authService.login(body.email, body.password, res);
   }
 
@@ -68,6 +82,10 @@ export class AuthController {
     @CurrentUser() user: JwtPayload,
     @Body() body: { currentPassword: string; newPassword: string },
   ) {
-    return this.authService.changePassword(user.sub, body.currentPassword, body.newPassword);
+    return this.authService.changePassword(
+      user.sub,
+      body.currentPassword,
+      body.newPassword,
+    );
   }
 }

@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { LeadsService } from './leads.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -40,13 +49,21 @@ export class LeadsController {
 
   @Patch(':id')
   @RequirePermission('leads:manage')
-  update(@TenantId() tenantId: string, @Param('id') id: string, @Body() body: unknown) {
+  update(
+    @TenantId() tenantId: string,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ) {
     return this.leadsService.update(tenantId, id, body);
   }
 
   @Post(':id/notes')
   @RequirePermission('leads:manage')
-  addNote(@TenantId() tenantId: string, @Param('id') id: string, @Body() body: unknown) {
+  addNote(
+    @TenantId() tenantId: string,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ) {
     return this.leadsService.addNote(tenantId, id, body);
   }
 

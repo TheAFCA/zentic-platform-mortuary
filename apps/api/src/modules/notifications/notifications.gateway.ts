@@ -10,7 +10,11 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
-import { WsNewMessage, WsViewerCount, WsStreamStatus } from '@zentic/shared-types';
+import {
+  WsNewMessage,
+  WsViewerCount,
+  WsStreamStatus,
+} from '@zentic/shared-types';
 
 @WebSocketGateway({
   namespace: '/events',
@@ -37,13 +41,19 @@ export class NotificationsGateway
   }
 
   @SubscribeMessage('join-event')
-  handleJoinEvent(@ConnectedSocket() client: Socket, @MessageBody() data: { eventId: string }) {
+  handleJoinEvent(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { eventId: string },
+  ) {
     client.join(`event:${data.eventId}`);
     this.logger.log(`Client ${client.id} joined event room: ${data.eventId}`);
   }
 
   @SubscribeMessage('leave-event')
-  handleLeaveEvent(@ConnectedSocket() client: Socket, @MessageBody() data: { eventId: string }) {
+  handleLeaveEvent(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { eventId: string },
+  ) {
     client.leave(`event:${data.eventId}`);
   }
 

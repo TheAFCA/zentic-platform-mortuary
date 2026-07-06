@@ -7,7 +7,10 @@ export class FilesService {
 
   // TODO: Implement S3/R2 upload logic
 
-  async upload(_file: { buffer: Buffer; mimetype: string; originalname: string }, _folder: string): Promise<string> {
+  async upload(
+    _file: { buffer: Buffer; mimetype: string; originalname: string },
+    _folder: string,
+  ): Promise<string> {
     throw new Error('File upload not implemented');
   }
 

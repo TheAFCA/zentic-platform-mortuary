@@ -17,7 +17,7 @@ export const permissionGuard: CanActivateFn = (route: ActivatedRouteSnapshot) =>
 
   const requiredPermissions = route.data['permissions'] as Permission[] | undefined;
   if (requiredPermissions?.length) {
-    const hasPermission = requiredPermissions.some(p => user.permissions.includes(p));
+    const hasPermission = requiredPermissions.some((p) => user.permissions.includes(p));
     if (!hasPermission) return router.createUrlTree(['/admin/dashboard']);
   }
 

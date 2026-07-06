@@ -20,21 +20,26 @@ export class PermissionGuard implements CanActivate {
     ]);
     if (isPublic) return true;
 
-    const requiredPermissions = this.reflector.getAllAndOverride<Permission[]>(PERMISSION_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const requiredPermissions = this.reflector.getAllAndOverride<Permission[]>(
+      PERMISSION_KEY,
+      [context.getHandler(), context.getClass()],
+    );
     if (!requiredPermissions?.length) return true;
 
     const user = context.switchToHttp().getRequest().user as JwtPayload;
     if (!user) return false;
 
     // SUPER_ADMIN and TENANT_ADMIN bypass permission checks
-    if (user.role === UserRole.SUPER_ADMIN || user.role === UserRole.TENANT_ADMIN) {
+    if (
+      user.role === UserRole.SUPER_ADMIN ||
+      user.role === UserRole.TENANT_ADMIN
+    ) {
       return true;
     }
 
-    const hasPermission = requiredPermissions.some(p => user.permissions?.includes(p));
+    const hasPermission = requiredPermissions.some((p) =>
+      user.permissions?.includes(p),
+    );
     if (!hasPermission) {
       throw new ForbiddenException(
         `Missing permission: ${requiredPermissions.join(' or ')}`,

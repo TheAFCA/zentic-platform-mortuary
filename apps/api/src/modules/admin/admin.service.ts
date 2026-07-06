@@ -7,11 +7,25 @@ export class AdminService {
 
   // TODO: Implement in Module 05 — Admin General
 
-  getDashboard(_tenantId: string) { throw new Error('Not implemented'); }
-  getUsers(_tenantId: string) { throw new Error('Not implemented'); }
-  createUser(_tenantId: string, _dto: unknown) { throw new Error('Not implemented'); }
-  updateUser(_tenantId: string, _id: string, _dto: unknown) { throw new Error('Not implemented'); }
-  getSettings(_tenantId: string) { throw new Error('Not implemented'); }
-  updateSettings(_tenantId: string, _dto: unknown) { throw new Error('Not implemented'); }
-  updateBrand(_tenantId: string, _dto: unknown) { throw new Error('Not implemented'); }
+  getDashboard(_tenantId: string) {
+    throw new Error('Not implemented');
+  }
+  getUsers(_tenantId: string) {
+    throw new Error('Not implemented');
+  }
+  createUser(_tenantId: string, _dto: unknown) {
+    throw new Error('Not implemented');
+  }
+  updateUser(_tenantId: string, _id: string, _dto: unknown) {
+    throw new Error('Not implemented');
+  }
+  getSettings(_tenantId: string) {
+    throw new Error('Not implemented');
+  }
+  updateSettings(_tenantId: string, _dto: unknown) {
+    throw new Error('Not implemented');
+  }
+  updateBrand(_tenantId: string, _dto: unknown) {
+    throw new Error('Not implemented');
+  }
 }

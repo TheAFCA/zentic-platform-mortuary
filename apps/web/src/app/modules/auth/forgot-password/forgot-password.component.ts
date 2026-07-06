@@ -13,16 +13,17 @@ import { InputComponent } from '../../../shared/atoms/input/input.component';
     <div class="w-full max-w-sm">
       <div class="text-center mb-8">
         <h1 class="text-2xl font-bold text-gray-900">Recuperar contraseña</h1>
-        <p class="mt-2 text-sm text-gray-500">
-          Ingresa tu email y te enviaremos las instrucciones
-        </p>
+        <p class="mt-2 text-sm text-gray-500">Ingresa tu email y te enviaremos las instrucciones</p>
       </div>
       <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-4">
         <app-input formControlName="email" type="email" placeholder="tu@funeraria.com" />
         <app-button type="submit" variant="primary" size="lg" [loading]="loading" class="w-full">
           Enviar instrucciones
         </app-button>
-        <a routerLink="/auth/login" class="block text-center text-sm text-gray-500 hover:text-primary">
+        <a
+          routerLink="/auth/login"
+          class="block text-center text-sm text-gray-500 hover:text-primary"
+        >
           Volver al login
         </a>
       </form>

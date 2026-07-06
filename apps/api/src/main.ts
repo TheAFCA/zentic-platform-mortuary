@@ -11,7 +11,10 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
 
-  const frontendUrl = config.get<string>('FRONTEND_URL', 'http://localhost:4200');
+  const frontendUrl = config.get<string>(
+    'FRONTEND_URL',
+    'http://localhost:4200',
+  );
   const nodeEnv = config.get<string>('NODE_ENV', 'development');
 
   app.use(helmet());
