@@ -4,7 +4,7 @@
   "private": true,
   "description": "ZENTIC.pro — SaaS multi-tenant platform for funeral homes",
   "scripts": {
-    "dev": "pnpm --parallel -r dev",
+    "dev": "pnpm --filter @zentic/shared-types build && pnpm --parallel -r dev",
     "dev:api": "pnpm --filter @zentic/api dev",
     "dev:web": "pnpm --filter @zentic/web dev",
     "build": "pnpm -r build",
