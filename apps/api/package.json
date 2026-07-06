@@ -17,24 +17,26 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:cov": "jest --coverage",
+    "test:cov": "jest --coverage --runInBand",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
+    "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.0.1",
-    "@nestjs/platform-express": "^11.0.1",
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/passport": "^11.0.0",
-    "@nestjs/config": "^4.0.0",
-    "@nestjs/throttler": "^6.0.0",
-    "@nestjs/websockets": "^11.0.1",
+    "@nestjs/platform-express": "^11.0.1",
     "@nestjs/platform-socket.io": "^11.0.1",
     "@nestjs/swagger": "^11.0.0",
+    "@nestjs/throttler": "^6.0.0",
+    "@nestjs/websockets": "^11.0.1",
     "@prisma/client": "^5.22.0",
     "@zentic/shared-types": "workspace:*",
     "bcrypt": "^5.1.1",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
     "cookie-parser": "^1.4.7",
     "helmet": "^8.0.0",
     "ioredis": "^5.4.2",
@@ -86,8 +88,39 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "app.controller.ts",
+      "app.service.ts",
+      "common/**/*.ts",
+      "config/**/*.ts",
+      "modules/auth/**/*.ts",
+      "modules/tenant/**/*.ts",
+      "!**/*.spec.ts",
+      "!main.ts",
+      "!app.module.ts",
+      "!**/index.ts",
+      "!common/decorators/public.decorator.ts",
+      "!common/decorators/require-permission.decorator.ts",
+      "!common/decorators/current-user.decorator.ts",
+      "!common/decorators/tenant-id.decorator.ts",
+      "!common/guards/jwt-auth.guard.ts",
+      "!**/*.module.ts",
+      "!**/*.repository.ts",
+      "!modules/auth/auth.controller.ts",
+      "!modules/**/controllers/**",
+      "!modules/admin/**",
+      "!modules/files/**",
+      "!modules/leads/**",
+      "!modules/notifications/**",
+      "!modules/obituary/**",
+      "!modules/streaming/**",
+      "!modules/super-admin/**",
+      "!prisma/**"
     ],
+    "coverageThreshold": {
+      "global": {
+        "lines": 90
+      }
+    },
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
   }

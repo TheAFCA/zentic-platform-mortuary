@@ -29,6 +29,12 @@ describe('TenantGuard', () => {
     expect(guard.canActivate(createContext({}))).toBe(true);
   });
 
+  it('returns false when user is missing', () => {
+    reflector.getAllAndOverride.mockReturnValue(false);
+
+    expect(guard.canActivate(createContext({}))).toBe(false);
+  });
+
   it('allows super admin regardless of tenant', () => {
     reflector.getAllAndOverride.mockReturnValue(false);
 
