@@ -97,8 +97,10 @@ model Tenant {
   events       Event[]
   obituaries   Obituary[]
   leads        Lead[]
+  leadNotes    LeadNote[]
   clients      Client[]
   venues       Venue[]
+  rooms        Room[]
   auditLogs    AuditLog[]
 }
 
@@ -410,13 +412,17 @@ model Lead {
 
 model LeadNote {
   id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
   leadId    String
   lead      Lead     @relation(fields: [leadId], references: [id])
   authorId  String
   content   String   @db.Text
   createdAt DateTime @default(now())
 
+  @@index([tenantId])
   @@index([leadId])
+  @@index([tenantId, createdAt])
 }
 
 // =============================================================================
@@ -440,6 +446,8 @@ model Venue {
 
 model Room {
   id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
   venueId   String
   venue     Venue    @relation(fields: [venueId], references: [id])
   name      String
@@ -448,5 +456,6 @@ model Room {
 
   events Event[]
 
+  @@index([tenantId])
   @@index([venueId])
 }

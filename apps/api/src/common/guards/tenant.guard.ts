@@ -8,6 +8,12 @@ import { Reflector } from '@nestjs/core';
 import { UserRole, JwtPayload } from '@zentic/shared-types';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
+type TenantRequest = {
+  user?: JwtPayload;
+  resolvedTenantId?: string;
+  tenantId?: string;
+};
+
 @Injectable()
 export class TenantGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
@@ -19,8 +25,9 @@ export class TenantGuard implements CanActivate {
     ]);
     if (isPublic) return true;
 
-    const request = context.switchToHttp().getRequest();
-    const user = request.user as JwtPayload;
+    const request = context.switchToHttp().getRequest<TenantRequest>();
+    const user = request.user;
+    const resolvedTenantId = request.resolvedTenantId;
 
     if (!user) return false;
 
@@ -29,6 +36,10 @@ export class TenantGuard implements CanActivate {
 
     if (!user.tenantId) {
       throw new ForbiddenException('No tenant context found');
+    }
+
+    if (resolvedTenantId && resolvedTenantId !== user.tenantId) {
+      throw new ForbiddenException('Tenant context mismatch');
     }
 
     // Attach tenantId to request for easy access in repositories

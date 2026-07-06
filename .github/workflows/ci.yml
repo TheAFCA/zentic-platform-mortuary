@@ -79,6 +79,10 @@ jobs:
         run: pnpm prisma validate
         working-directory: .
 
+      - name: Build shared types
+        run: pnpm --filter @zentic/shared-types build
+        working-directory: .
+
       - name: Lint
         run: pnpm lint
 
@@ -112,6 +116,10 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Build shared types
+        run: pnpm --filter @zentic/shared-types build
         working-directory: .
 
       - name: Lint

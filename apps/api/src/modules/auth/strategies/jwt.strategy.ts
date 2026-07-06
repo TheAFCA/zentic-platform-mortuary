@@ -2,8 +2,11 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
-import { JwtPayload } from '@zentic/shared-types';
+import { Permission, JwtPayload, UserRole } from '@zentic/shared-types';
 import { PrismaService } from '../../../prisma/prisma.service';
+
+const cookieExtractor = (request: { cookies?: Record<string, string> }) =>
+  request.cookies?.access_token ?? null;
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -12,16 +15,32 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private prisma: PrismaService,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        cookieExtractor,
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ]),
       ignoreExpiration: false,
       secretOrKey: config.getOrThrow<string>('JWT_SECRET'),
+      passReqToCallback: true,
     });
   }
 
-  async validate(payload: JwtPayload): Promise<JwtPayload> {
+  async validate(
+    request: { resolvedTenantId?: string },
+    payload: JwtPayload,
+  ): Promise<JwtPayload> {
     const user = await this.prisma.user.findFirst({
       where: { id: payload.sub, deletedAt: null },
-      select: { id: true, lockedUntil: true },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        tenantId: true,
+        lockedUntil: true,
+        permissions: {
+          select: { permission: true },
+        },
+      },
     });
 
     if (!user) throw new UnauthorizedException('User not found');
@@ -29,6 +48,24 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Account is temporarily locked');
     }
 
-    return payload;
+    if (
+      (user.role as UserRole) !== UserRole.SUPER_ADMIN &&
+      request.resolvedTenantId &&
+      user.tenantId !== request.resolvedTenantId
+    ) {
+      throw new UnauthorizedException('Tenant context mismatch');
+    }
+
+    const permissions = user.permissions.map(
+      (permission) => permission.permission as Permission,
+    );
+
+    return {
+      ...payload,
+      email: user.email,
+      role: user.role as UserRole,
+      tenantId: user.tenantId,
+      permissions,
+    };
   }
 }
