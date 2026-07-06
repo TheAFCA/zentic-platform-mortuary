@@ -14,27 +14,27 @@ export const routes: Routes = [
   {
     path: 'e/:slug',
     loadComponent: () =>
-      import('./public/event-page/event-page.component').then(m => m.EventPageComponent),
+      import('./public/event-page/event-page.component').then((m) => m.EventPageComponent),
   },
 
   // Public obituary page (no auth required)
   {
     path: 'o/:slug',
     loadComponent: () =>
-      import('./public/obituary-page/obituary-page.component').then(m => m.ObituaryPageComponent),
+      import('./public/obituary-page/obituary-page.component').then((m) => m.ObituaryPageComponent),
   },
 
   // Auth module (no layout wrapper needed)
   {
     path: 'auth',
-    loadChildren: () => import('./modules/auth/auth.routes').then(m => m.AUTH_ROUTES),
+    loadChildren: () => import('./modules/auth/auth.routes').then((m) => m.AUTH_ROUTES),
   },
 
   // Tenant admin panel
   {
     path: 'admin',
     canActivate: [authGuard],
-    loadChildren: () => import('./modules/admin/admin.routes').then(m => m.ADMIN_ROUTES),
+    loadChildren: () => import('./modules/admin/admin.routes').then((m) => m.ADMIN_ROUTES),
   },
 
   // Super admin panel (platform level)
@@ -43,7 +43,7 @@ export const routes: Routes = [
     canActivate: [authGuard, permissionGuard],
     data: { role: UserRole.SUPER_ADMIN },
     loadChildren: () =>
-      import('./modules/super-admin/super-admin.routes').then(m => m.SUPER_ADMIN_ROUTES),
+      import('./modules/super-admin/super-admin.routes').then((m) => m.SUPER_ADMIN_ROUTES),
   },
 
   // Wildcard

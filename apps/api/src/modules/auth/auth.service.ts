@@ -30,7 +30,11 @@ export class AuthService {
     throw new Error('Not implemented');
   }
 
-  async changePassword(_userId: string, _currentPassword: string, _newPassword: string) {
+  async changePassword(
+    _userId: string,
+    _currentPassword: string,
+    _newPassword: string,
+  ) {
     throw new Error('Not implemented');
   }
 }

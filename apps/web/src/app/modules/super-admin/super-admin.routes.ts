@@ -5,18 +5,17 @@ export const SUPER_ADMIN_ROUTES: Routes = [
     path: '',
     loadComponent: () =>
       import('../../layouts/dashboard-layout/dashboard-layout.component').then(
-        m => m.DashboardLayoutComponent,
+        (m) => m.DashboardLayoutComponent,
       ),
     children: [
       {
         path: 'tenants',
-        loadComponent: () =>
-          import('./tenants/tenants.component').then(m => m.TenantsComponent),
+        loadComponent: () => import('./tenants/tenants.component').then((m) => m.TenantsComponent),
       },
       {
         path: 'audit-logs',
         loadComponent: () =>
-          import('./audit-logs/audit-logs.component').then(m => m.AuditLogsComponent),
+          import('./audit-logs/audit-logs.component').then((m) => m.AuditLogsComponent),
       },
       { path: '', redirectTo: 'tenants', pathMatch: 'full' },
     ],

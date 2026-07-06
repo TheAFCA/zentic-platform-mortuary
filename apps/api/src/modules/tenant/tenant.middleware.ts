@@ -23,7 +23,8 @@ export class TenantMiddleware implements NestMiddleware {
 
     if (!tenant) throw new NotFoundException(`Tenant '${slug}' not found`);
 
-    (req as Request & { resolvedTenantId: string }).resolvedTenantId = tenant.id;
+    (req as Request & { resolvedTenantId: string }).resolvedTenantId =
+      tenant.id;
     next();
   }
 }

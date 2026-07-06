@@ -31,7 +31,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
     };
 
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
-      this.logger.error(`[${request.method}] ${request.url} — ${status}`, exception.stack);
+      this.logger.error(
+        `[${request.method}] ${request.url} — ${status}`,
+        exception.stack,
+      );
     }
 
     response.status(status).json(body);

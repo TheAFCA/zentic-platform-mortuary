@@ -1,7 +1,9 @@
 import { z } from 'zod';
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  NODE_ENV: z
+    .enum(['development', 'test', 'production'])
+    .default('development'),
   PORT: z.coerce.number().default(3000),
 
   // Database
@@ -51,7 +53,9 @@ export function validateEnv(config: Record<string, unknown>): Env {
   const result = envSchema.safeParse(config);
   if (!result.success) {
     const errors = result.error.flatten().fieldErrors;
-    throw new Error(`Environment validation failed:\n${JSON.stringify(errors, null, 2)}`);
+    throw new Error(
+      `Environment validation failed:\n${JSON.stringify(errors, null, 2)}`,
+    );
   }
   return result.data;
 }
