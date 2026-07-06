@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@prisma/client": "^5.22.0",
+    "@types/bcrypt": "^5.0.2",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
     "bcrypt": "^5.1.1",
@@ -33,7 +34,7 @@
     "typescript": "^5.4.5"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node --project tsconfig.seed.json prisma/seed.ts"
   },
   "engines": {
     "node": ">=20.0.0",
@@ -44,6 +45,7 @@
       "@parcel/watcher",
       "@prisma/client",
       "@prisma/engines",
+      "@scarf/scarf",
       "bcrypt",
       "esbuild",
       "lmdb",

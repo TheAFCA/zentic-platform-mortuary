@@ -6,7 +6,7 @@ services:
     container_name: zentic_postgres
     restart: unless-stopped
     ports:
-      - '5432:5432'
+      - '5545:5432'
     environment:
       POSTGRES_USER: zentic
       POSTGRES_PASSWORD: password
@@ -24,7 +24,7 @@ services:
     container_name: zentic_postgres_shadow
     restart: unless-stopped
     ports:
-      - '5433:5432'
+      - '5546:5432'
     environment:
       POSTGRES_USER: zentic
       POSTGRES_PASSWORD: password

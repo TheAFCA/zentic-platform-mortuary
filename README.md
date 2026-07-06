@@ -38,9 +38,16 @@ cp .env.example .env
 # 4. Levantar PostgreSQL y Redis
 docker compose up -d
 
+# Postgres: localhost:5545
+# Shadow DB: localhost:5546
+# Redis: localhost:6379
+
 # 5. Ejecutar migraciones y seed
 pnpm prisma:migrate
 pnpm prisma:seed
+
+# Si solo necesitas aplicar migraciones ya existentes sin prompts:
+# pnpm prisma:migrate:prod
 
 # 6. Iniciar en modo desarrollo
 pnpm dev:api   # NestJS en :3000
@@ -62,19 +69,7 @@ pnpm dev:web   # Angular en :4200
 
 ## Documentación técnica
 
-Los módulos de diseño y funcionalidades están en `/mds/`:
-
-| Archivo | Contenido |
-|---|---|
-| `01_ARQUITECTURA_GENERAL.md` | Stack técnico, estructura de carpetas |
-| `02_MODULO_LOGIN_REGISTRO.md` | Autenticación y registro |
-| `03_MODULO_ROLES_PERMISOS.md` | RBAC y permisos granulares |
-| `04_MODULO_SUPER_ADMIN.md` | Panel de plataforma |
-| `05_MODULO_ADMIN_GENERAL.md` | Panel del tenant admin |
-| `06_MODULO_STREAMING.md` | Transmisiones en vivo |
-| `07_MODULO_OBITUARIOS.md` | Obituarios digitales |
-| `13_MODULO_LEADS.md` | Mini-CRM de leads |
-| `18_LINEAMIENTOS_DESARROLLO.md` | Estándares de código y calidad |
+La documentación técnica del producto se irá consolidando por HU. Para esta base, el archivo de seguimiento es `HU1_CHECKLIST.md`.
 
 ## Convención de commits
 
@@ -86,6 +81,23 @@ fix(auth): prevent refresh token reuse after logout
 test(leads): add unit tests for LeadsService.convert
 docs(api): update endpoint table in module doc
 ```
+
+## Git Flow
+
+- `main` es la rama productiva.
+- `dev` es la rama de integración obligatoria antes de `main`.
+- Las ramas de trabajo salen desde `dev` usando `feature/<alcance>`.
+- Ejemplo: `feature/hu1-config-base`.
+- No se deben hacer commits directos a `main` ni a `dev`.
+- Los cambios deben entrar por pull request y revisión previa.
+
+## Convenciones de nombres
+
+- Carpetas en `kebab-case` o `lowercase` consistente.
+- Componentes Angular con sufijo `.component.ts`.
+- Rutas y módulos por dominio de negocio.
+- Tipos compartidos en `packages/shared-types` con nombres `PascalCase`.
+- Tablas y columnas de base de datos en `snake_case`.
 
 ## Acceso inicial (desarrollo)
 
