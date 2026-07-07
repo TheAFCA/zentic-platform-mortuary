@@ -342,6 +342,20 @@
   </div>
 </main>
 
+@if (isDev()) {
+  <aside class="sentry-panel">
+    <strong>Sentry local</strong>
+    <p>{{ sentryReady() ? 'Listo para enviar eventos.' : 'Falta configurar `sentryDsn`.' }}</p>
+    <div class="sentry-actions">
+      <button type="button" class="pill" (click)="triggerFrontendTest()">Probar frontend</button>
+      <button type="button" class="pill" (click)="triggerBackendTest()">Probar backend</button>
+    </div>
+    @if (lastResult()) {
+      <p class="sentry-result">{{ lastResult() }}</p>
+    }
+  </aside>
+}
+
 <!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
 <!-- * * * * * * * * * * * The content above * * * * * * * * * * * * -->
 <!-- * * * * * * * * * * is only a placeholder * * * * * * * * * * * -->

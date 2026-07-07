@@ -1,4 +1,5 @@
-import { ArgumentsHost, HttpException, Logger } from '@nestjs/common';
+import { ArgumentsHost, HttpException } from '@nestjs/common';
+import * as Sentry from '@sentry/node';
 import { HttpExceptionFilter } from './http-exception.filter';
 
 const createHost = (url: string, method = 'GET') =>
@@ -21,16 +22,19 @@ const request = {
 
 describe('HttpExceptionFilter', () => {
   let filter: HttpExceptionFilter;
-  let loggerSpy: jest.SpyInstance;
+  let sentrySpy: jest.SpyInstance;
+  let consoleErrorSpy: jest.SpyInstance;
 
   beforeEach(() => {
     filter = new HttpExceptionFilter();
     jest.clearAllMocks();
-    loggerSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    sentrySpy = jest.spyOn(Sentry, 'captureException').mockImplementation();
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
   });
 
   afterEach(() => {
-    loggerSpy.mockRestore();
+    sentrySpy.mockRestore();
+    consoleErrorSpy.mockRestore();
   });
 
   it('formats client errors without logging', () => {
@@ -42,7 +46,7 @@ describe('HttpExceptionFilter', () => {
     expect(response.json).toHaveBeenCalledWith(
       expect.objectContaining({ statusCode: 400, message: 'bad request' }),
     );
-    expect(loggerSpy).not.toHaveBeenCalled();
+    expect(sentrySpy).not.toHaveBeenCalled();
   });
 
   it('logs server errors', () => {
@@ -51,6 +55,6 @@ describe('HttpExceptionFilter', () => {
     filter.catch(new HttpException('boom', 500), host);
 
     expect(response.status).toHaveBeenCalledWith(500);
-    expect(loggerSpy).toHaveBeenCalled();
+    expect(sentrySpy).toHaveBeenCalled();
   });
 });

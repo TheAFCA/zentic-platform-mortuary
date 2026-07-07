@@ -1,0 +1,39 @@
+name: Deploy Staging
+
+on:
+  workflow_run:
+    workflows: ['CI']
+    branches: [dev]
+    types: [completed]
+  workflow_dispatch:
+
+jobs:
+  deploy-api:
+    name: Deploy API to Staging
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Trigger Render deploy hook
+        env:
+          RENDER_API_DEPLOY_HOOK_URL: ${{ secrets.RENDER_API_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_API_DEPLOY_HOOK_URL" ]; then
+            echo "Missing RENDER_API_DEPLOY_HOOK_URL secret" >&2
+            exit 1
+          fi
+          curl -fsSL -X POST "$RENDER_API_DEPLOY_HOOK_URL"
+
+  deploy-web:
+    name: Deploy Web to Staging
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Trigger Render deploy hook
+        env:
+          RENDER_WEB_DEPLOY_HOOK_URL: ${{ secrets.RENDER_WEB_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_WEB_DEPLOY_HOOK_URL" ]; then
+            echo "Missing RENDER_WEB_DEPLOY_HOOK_URL secret" >&2
+            exit 1
+          fi
+          curl -fsSL -X POST "$RENDER_WEB_DEPLOY_HOOK_URL"
