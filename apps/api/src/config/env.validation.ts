@@ -22,6 +22,11 @@ const envSchema = z.object({
   // App
   FRONTEND_URL: z.string().url().default('http://localhost:4200'),
   PLATFORM_DOMAIN: z.string().default('localhost'),
+  SENTRY_DSN: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.string().url().optional(),
+  ),
+  SENTRY_ENVIRONMENT: z.string().optional(),
 
   // Throttler
   THROTTLE_TTL: z.coerce.number().default(60000),

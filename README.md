@@ -67,9 +67,29 @@ pnpm dev:web   # Angular en :4200
 | `pnpm prisma:seed` | Insertar datos iniciales |
 | `pnpm prisma:studio` | Abrir Prisma Studio (BD visual) |
 
+## Staging
+
+- El despliegue a staging se dispara automáticamente cuando `CI` termina bien en `dev`.
+- El workflow `Deploy Staging` llama a los deploy hooks de Render para API y Web.
+- Secrets requeridos en GitHub:
+  - `RENDER_API_DEPLOY_HOOK_URL`
+  - `RENDER_WEB_DEPLOY_HOOK_URL`
+- Observabilidad base:
+  - API: `SENTRY_DSN` y `SENTRY_ENVIRONMENT`.
+  - Web: `apps/web/src/environments/environment*.ts` incluye `sentryDsn` y `sentryEnvironment`.
+  - Logs de API en JSON por consola.
+  - En local hay un panel de prueba en la web con botones para enviar eventos frontend y backend.
+- El workflow también puede ejecutarse manualmente desde GitHub Actions.
+
 ## Documentación técnica
 
 La documentación técnica del producto se irá consolidando por HU. Para esta base, el archivo de seguimiento es `HU1_CHECKLIST.md`.
+
+## Observabilidad
+
+- Los errores 5xx de API se reportan a Sentry cuando hay `SENTRY_DSN` configurado.
+- El frontend Angular inicializa Sentry antes del bootstrap y captura errores globales con `ErrorHandler`.
+- Los errores HTTP del cliente se reenvían a Sentry solo para respuestas `>= 500`.
 
 ## Convención de commits
 

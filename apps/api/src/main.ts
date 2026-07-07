@@ -1,14 +1,26 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as Sentry from '@sentry/node';
 import * as cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ConfigService } from '@nestjs/config';
+import { JsonLoggerService } from './common/logging/json-logger.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const sentryDsn = process.env.SENTRY_DSN;
+  if (sentryDsn) {
+    Sentry.init({
+      dsn: sentryDsn,
+      environment: process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV,
+      integrations: [Sentry.onUncaughtExceptionIntegration()],
+    });
+  }
+
+  const logger = new JsonLoggerService('ZENTIC API');
+  const app = await NestFactory.create(AppModule, { logger });
   const config = app.get(ConfigService);
 
   const frontendUrl = config.get<string>(
@@ -19,6 +31,7 @@ async function bootstrap() {
 
   app.use(helmet());
   app.use(cookieParser());
+  app.useLogger(logger);
 
   app.enableCors({
     origin: nodeEnv === 'production' ? false : frontendUrl,
@@ -53,10 +66,17 @@ async function bootstrap() {
 
   const port = config.get<number>('PORT', 3000);
   await app.listen(port);
-  console.log(`ZENTIC API running on http://localhost:${port}/api`);
+  logger.log({ event: 'startup', url: `http://localhost:${port}/api` });
   if (nodeEnv !== 'production') {
-    console.log(`Swagger docs: http://localhost:${port}/api/docs`);
+    logger.log({
+      event: 'swagger',
+      url: `http://localhost:${port}/api/docs`,
+    });
+    logger.log({
+      event: 'sentry-test',
+      url: `http://localhost:${port}/api/dev/sentry-test`,
+    });
   }
 }
 
-bootstrap();
+void bootstrap();

@@ -3,21 +3,25 @@ import {
   Catch,
   ArgumentsHost,
   HttpException,
-  HttpStatus,
-  Logger,
 } from '@nestjs/common';
+import * as Sentry from '@sentry/node';
 import { Request, Response } from 'express';
+import { JsonLoggerService } from '../logging/json-logger.service';
 
-@Catch(HttpException)
+@Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
-  private readonly logger = new Logger(HttpExceptionFilter.name);
+  private readonly logger = new JsonLoggerService(HttpExceptionFilter.name);
 
-  catch(exception: HttpException, host: ArgumentsHost) {
+  catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
-    const status = exception.getStatus();
-    const exceptionResponse = exception.getResponse();
+    const isHttpException = exception instanceof HttpException;
+    const status = isHttpException ? exception.getStatus() : 500;
+    const exceptionResponse = isHttpException ? exception.getResponse() : null;
+    const errorMessage =
+      exception instanceof Error ? exception.message : 'Internal server error';
+    const trace = exception instanceof Error ? exception.stack : undefined;
 
     const body = {
       statusCode: status,
@@ -27,14 +31,26 @@ export class HttpExceptionFilter implements ExceptionFilter {
         typeof exceptionResponse === 'object' &&
         'message' in (exceptionResponse as Record<string, unknown>)
           ? (exceptionResponse as Record<string, unknown>).message
-          : exception.message,
+          : errorMessage,
     };
 
-    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+    if (status >= 500) {
       this.logger.error(
-        `[${request.method}] ${request.url} — ${status}`,
-        exception.stack,
+        {
+          event: 'http_exception',
+          method: request.method,
+          path: request.url,
+          status,
+        },
+        trace,
       );
+      Sentry.captureException(exception, {
+        tags: {
+          method: request.method,
+          path: request.url,
+          status: String(status),
+        },
+      });
     }
 
     response.status(status).json(body);

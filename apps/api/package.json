@@ -33,6 +33,7 @@
     "@nestjs/throttler": "^6.0.0",
     "@nestjs/websockets": "^11.0.1",
     "@prisma/client": "^5.22.0",
+    "@sentry/node": "^10.64.0",
     "@zentic/shared-types": "workspace:*",
     "bcrypt": "^5.1.1",
     "class-transformer": "^0.5.1",
