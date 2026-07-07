@@ -1,14 +1,14 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
 import { ButtonComponent } from '../../../shared/atoms/button/button.component';
 import { InputComponent } from '../../../shared/atoms/input/input.component';
+import { AuthSessionService } from '../../../core/services/auth-session.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, ButtonComponent, InputComponent],
+  imports: [CommonModule, ReactiveFormsModule, ButtonComponent, InputComponent],
   template: `
     <div class="w-full max-w-sm">
       <div class="text-center mb-8">
@@ -27,10 +27,12 @@ import { InputComponent } from '../../../shared/atoms/input/input.component';
         </div>
 
         <div class="flex items-center justify-end">
-          <a routerLink="/auth/forgot-password" class="text-sm text-primary hover:underline">
-            ¿Olvidaste tu contraseña?
-          </a>
+          <span class="text-sm text-gray-400">Acceso interno protegido</span>
         </div>
+
+        @if (error) {
+          <p class="text-sm text-red-600">{{ error }}</p>
+        }
 
         <app-button
           type="submit"
@@ -48,18 +50,26 @@ import { InputComponent } from '../../../shared/atoms/input/input.component';
 })
 export class LoginComponent {
   private fb = inject(FormBuilder);
-  private router = inject(Router);
+  private session = inject(AuthSessionService);
 
   loading = false;
+  error = '';
 
   form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(8)]],
   });
 
-  onSubmit() {
+  async onSubmit() {
     if (this.form.invalid) return;
     this.loading = true;
-    // TODO: Call AuthService.login() — implement in Module 02
+    this.error = '';
+
+    try {
+      await this.session.login(this.form.controls.email.value, this.form.controls.password.value);
+    } catch {
+      this.error = 'Email o contraseña incorrectos';
+      this.loading = false;
+    }
   }
 }

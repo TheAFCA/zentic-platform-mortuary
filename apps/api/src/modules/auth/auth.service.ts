@@ -13,6 +13,7 @@ import {
   AuthUser,
   JwtPayload,
   Permission,
+  TenantStatus,
   UserRole,
 } from '@zentic/shared-types';
 import { AuthRepository } from './auth.repository';
@@ -40,6 +41,7 @@ type RefreshTokenPayload = JwtPayload & { sid: string; type: 'refresh' };
 const ACCESS_TOKEN_COOKIE = 'access_token';
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
 const LOGIN_LOCK_MINUTES = 15;
+const LOGIN_MAX_ATTEMPTS = 5;
 
 @Injectable()
 export class AuthService {
@@ -63,6 +65,7 @@ export class AuthService {
     }
 
     this.assertUserCanAuthenticate(user, tenantId);
+    this.assertTenantIsActive(user);
 
     if (user.lockedUntil && user.lockedUntil > new Date()) {
       throw new ForbiddenException('Account is temporarily locked');
@@ -107,6 +110,7 @@ export class AuthService {
 
     const user = session.user;
     this.assertUserCanAuthenticate(user, this.resolveTenantId(req));
+    this.assertTenantIsActive(user);
 
     const authUser = this.toAuthUser(user);
     const accessToken = this.signAccessToken(authUser);
@@ -226,10 +230,20 @@ export class AuthService {
     }
   }
 
+  private assertTenantIsActive(user: Pick<AuthUserRecord, 'role' | 'tenant'>) {
+    if (user.role === UserRole.SUPER_ADMIN) {
+      return;
+    }
+
+    if (user.tenant?.status !== TenantStatus.ACTIVE) {
+      throw new UnauthorizedException('Account unavailable');
+    }
+  }
+
   private async handleFailedLogin(userId: string, currentAttempts: number) {
     const nextAttempts = currentAttempts + 1;
     const lockedUntil =
-      nextAttempts >= 10
+      nextAttempts >= LOGIN_MAX_ATTEMPTS
         ? new Date(Date.now() + LOGIN_LOCK_MINUTES * 60 * 1000)
         : null;
 
