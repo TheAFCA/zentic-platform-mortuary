@@ -1,6 +1,6 @@
-# ZENTIC.pro — Plataforma SaaS para Funerarias
+# Homena — by Zentic.pro
 
-Monorepo del sistema multi-tenant ZENTIC.pro. Incluye el backend API (NestJS) y el frontend SPA (Angular).
+Monorepo del sistema multi-tenant Homena. Incluye el backend API (NestJS) y el frontend SPA (Angular).
 
 ## Estructura
 
