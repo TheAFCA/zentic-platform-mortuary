@@ -76,7 +76,15 @@
           "defaultConfiguration": "development"
         },
         "test": {
-          "builder": "@angular/build:unit-test"
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "coverage": true,
+            "coverageExclude": [
+              "src/app/core/services/auth-api.service.ts",
+              "src/app/core/services/auth-state.service.ts",
+              "src/app/core/interceptors/tenant-context.interceptor.ts"
+            ]
+          }
         }
       }
     }
