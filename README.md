@@ -63,6 +63,7 @@ pnpm dev:web   # Angular en :4200
 | `pnpm build` | Build de producción (ambos) |
 | `pnpm test` | Tests unitarios (ambos) |
 | `pnpm lint` | Lint (ambos) |
+| `pnpm lint:fix` | Auto-fix de lint (ambos) |
 | `pnpm prisma:migrate` | Ejecutar migraciones pendientes |
 | `pnpm prisma:seed` | Insertar datos iniciales |
 | `pnpm prisma:studio` | Abrir Prisma Studio (BD visual) |
