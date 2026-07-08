@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { permissionGuard } from './core/guards/permission.guard';
+import { tenantLoginGuard } from './core/guards/tenant-login.guard';
 import { UserRole } from '@zentic/shared-types';
 
 export const routes: Routes = [
@@ -27,6 +28,7 @@ export const routes: Routes = [
   // Auth module (no layout wrapper needed)
   {
     path: 'auth',
+    canMatch: [tenantLoginGuard],
     loadChildren: () => import('./modules/auth/auth.routes').then((m) => m.AUTH_ROUTES),
   },
 
