@@ -23,6 +23,9 @@
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
+            "security": {
+              "allowedHosts": ["localhost", "*.localhost"]
+            },
             "assets": [
               {
                 "glob": "**/*",
@@ -59,6 +62,9 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "proxyConfig": "proxy.conf.json"
+          },
           "configurations": {
             "production": {
               "buildTarget": "web:build:production"
@@ -70,7 +76,15 @@
           "defaultConfiguration": "development"
         },
         "test": {
-          "builder": "@angular/build:unit-test"
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "coverage": true,
+            "coverageExclude": [
+              "src/app/core/services/auth-api.service.ts",
+              "src/app/core/services/auth-state.service.ts",
+              "src/app/core/interceptors/tenant-context.interceptor.ts"
+            ]
+          }
         }
       }
     }

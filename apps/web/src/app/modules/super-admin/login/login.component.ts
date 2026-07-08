@@ -1,33 +1,31 @@
-import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { Component, inject } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { ButtonComponent } from '../../../shared/atoms/button/button.component';
 import { InputComponent } from '../../../shared/atoms/input/input.component';
 import { AuthSessionService } from '../../../core/services/auth-session.service';
 
 @Component({
-  selector: 'app-login',
+  selector: 'app-super-admin-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ButtonComponent, InputComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, ButtonComponent, InputComponent],
   template: `
     <div class="w-full max-w-sm">
       <div class="text-center mb-8">
-        <h1 class="text-2xl font-bold text-gray-900">Iniciar sesión</h1>
-        <p class="mt-2 text-sm text-gray-500">Accede a tu panel de gestión</p>
+        <p class="text-xs uppercase tracking-[0.2em] text-gray-400">Super Admin</p>
+        <h1 class="text-2xl font-bold text-gray-900 mt-2">Acceso a la plataforma</h1>
+        <p class="mt-2 text-sm text-gray-500">Ingreso administrativo para el equipo interno</p>
       </div>
 
       <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <app-input formControlName="email" type="email" placeholder="tu@funeraria.com" />
+          <app-input formControlName="email" type="email" placeholder="superadmin@zentic.pro" />
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
           <app-input formControlName="password" type="password" placeholder="••••••••" />
-        </div>
-
-        <div class="flex items-center justify-end">
-          <span class="text-sm text-gray-400">Acceso interno protegido</span>
         </div>
 
         @if (error) {
@@ -42,20 +40,20 @@ import { AuthSessionService } from '../../../core/services/auth-session.service'
           [disabled]="form.invalid"
           class="w-full"
         >
-          Ingresar
+          Entrar al panel
         </app-button>
 
         <a
-          routerLink="/super-admin/login"
+          routerLink="/auth/login"
           class="block text-center text-sm text-gray-500 hover:text-primary"
         >
-          Acceso Super Admin
+          Volver al login de funeraria
         </a>
       </form>
     </div>
   `,
 })
-export class LoginComponent {
+export class SuperAdminLoginComponent {
   private fb = inject(FormBuilder);
   private session = inject(AuthSessionService);
 

@@ -14,6 +14,7 @@
     "test:api": "pnpm --filter @zentic/api test",
     "test:web": "pnpm --filter @zentic/web test",
     "lint": "pnpm -r lint",
+    "lint:fix": "pnpm -r lint:fix",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:prod": "prisma migrate deploy",

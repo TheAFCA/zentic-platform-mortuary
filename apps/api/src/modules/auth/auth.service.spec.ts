@@ -9,7 +9,7 @@ import {
   hashPassword,
   verifyPassword,
 } from '../../common/security/password.util';
-import { UserRole } from '@zentic/shared-types';
+import { TenantStatus, UserRole } from '@zentic/shared-types';
 
 jest.mock('../../common/security/password.util', () => ({
   hashPassword: jest.fn(),
@@ -51,6 +51,7 @@ describe('AuthService', () => {
     passwordHash: 'stored-hash',
     role: UserRole.TENANT_ADMIN,
     tenantId: 'tenant-1',
+    tenant: { status: TenantStatus.ACTIVE },
     lockedUntil: null,
     loginAttempts: 0,
     permissions: [{ permission: 'users:manage' }],
@@ -62,6 +63,7 @@ describe('AuthService', () => {
     passwordHash: 'admin-hash',
     role: UserRole.SUPER_ADMIN,
     tenantId: null,
+    tenant: null,
     lockedUntil: null,
     loginAttempts: 0,
     permissions: [],
@@ -194,7 +196,7 @@ describe('AuthService', () => {
   it('locks users after repeated failed attempts', async () => {
     authRepository.findUserForLogin.mockResolvedValue({
       ...createTenantUser(),
-      loginAttempts: 9,
+      loginAttempts: 4,
     } as any);
     mockedVerifyPassword.mockResolvedValue(false);
 
@@ -211,6 +213,22 @@ describe('AuthService', () => {
       'user-1',
       expect.any(Date),
     );
+  });
+
+  it('rejects login for inactive tenants', async () => {
+    authRepository.findUserForLogin.mockResolvedValue({
+      ...createTenantUser(),
+      tenant: { status: TenantStatus.SUSPENDED },
+    } as any);
+
+    await expect(
+      service.login(
+        'tenant@example.com',
+        'Secret123!',
+        createRequest(),
+        createResponse(),
+      ),
+    ).rejects.toThrow(UnauthorizedException);
   });
 
   it('throws when account is locked', async () => {

@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { Injectable } from '@nestjs/common';
-import { Permission, UserRole } from '@zentic/shared-types';
+import { Permission, TenantStatus, UserRole } from '@zentic/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
 
 type UserPermissionRecord = { permission: string };
@@ -10,6 +11,7 @@ type AuthUserRecord = {
   passwordHash: string;
   role: UserRole;
   tenantId: string | null;
+  tenant: { status: TenantStatus } | null;
   lockedUntil: Date | null;
   loginAttempts: number;
   permissions: UserPermissionRecord[];
@@ -39,6 +41,9 @@ export class AuthRepository {
         passwordHash: true,
         role: true,
         tenantId: true,
+        tenant: {
+          select: { status: true },
+        },
         lockedUntil: true,
         loginAttempts: true,
         permissions: {
@@ -57,6 +62,9 @@ export class AuthRepository {
         passwordHash: true,
         role: true,
         tenantId: true,
+        tenant: {
+          select: { status: true },
+        },
         lockedUntil: true,
         loginAttempts: true,
         permissions: {
@@ -84,6 +92,9 @@ export class AuthRepository {
             passwordHash: true,
             role: true,
             tenantId: true,
+            tenant: {
+              select: { status: true },
+            },
             lockedUntil: true,
             loginAttempts: true,
             permissions: {
