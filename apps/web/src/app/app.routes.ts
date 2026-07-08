@@ -37,13 +37,25 @@ export const routes: Routes = [
     loadChildren: () => import('./modules/admin/admin.routes').then((m) => m.ADMIN_ROUTES),
   },
 
-  // Super admin panel (platform level)
+  // Super admin section (public login + protected panel)
   {
     path: 'super-admin',
-    canActivate: [authGuard, permissionGuard],
-    data: { role: UserRole.SUPER_ADMIN },
-    loadChildren: () =>
-      import('./modules/super-admin/super-admin.routes').then((m) => m.SUPER_ADMIN_ROUTES),
+    children: [
+      {
+        path: 'login',
+        loadComponent: () =>
+          import('./modules/super-admin/login/login.component').then(
+            (m) => m.SuperAdminLoginComponent,
+          ),
+      },
+      {
+        path: '',
+        canActivate: [authGuard, permissionGuard],
+        data: { role: UserRole.SUPER_ADMIN },
+        loadChildren: () =>
+          import('./modules/super-admin/super-admin.routes').then((m) => m.SUPER_ADMIN_ROUTES),
+      },
+    ],
   },
 
   // Wildcard

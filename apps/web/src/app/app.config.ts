@@ -10,6 +10,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { createErrorHandler } from '@sentry/angular';
 import { routes } from './app.routes';
+import { tenantContextInterceptor } from './core/interceptors/tenant-context.interceptor';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { sessionInterceptor } from './core/interceptors/session.interceptor';
@@ -24,7 +25,14 @@ export const appConfig: ApplicationConfig = {
     },
     provideAppInitializer(() => inject(AuthSessionService).restoreSession()),
     provideRouter(routes, withComponentInputBinding()),
-    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor, sessionInterceptor])),
+    provideHttpClient(
+      withInterceptors([
+        tenantContextInterceptor,
+        authInterceptor,
+        errorInterceptor,
+        sessionInterceptor,
+      ]),
+    ),
     provideAnimationsAsync(),
   ],
 };

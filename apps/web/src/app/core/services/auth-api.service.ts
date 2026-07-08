@@ -1,7 +1,9 @@
 import { HttpClient } from '@angular/common/http';
+import { HttpContext } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { AuthUser } from '@zentic/shared-types';
 import { environment } from '../../../environments/environment';
+import { SKIP_SESSION_REFRESH } from '../interceptors/session.interceptor';
 
 @Injectable({ providedIn: 'root' })
 export class AuthApiService {
@@ -15,7 +17,9 @@ export class AuthApiService {
   }
 
   me() {
-    return this.http.get<AuthUser>(`${environment.apiUrl}/auth/me`);
+    return this.http.get<AuthUser>(`${environment.apiUrl}/auth/me`, {
+      context: new HttpContext().set(SKIP_SESSION_REFRESH, true),
+    });
   }
 
   logout() {
