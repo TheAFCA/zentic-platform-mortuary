@@ -10,30 +10,56 @@ import { InputComponent } from '../../../shared/atoms/input/input.component';
   selector: 'app-settings',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, ButtonComponent, InputComponent],
+  styleUrl: './settings.component.scss',
   template: `
-    <div class="max-w-xl">
-      <h1 class="text-2xl font-bold text-gray-900">Configuración</h1>
-      <p class="mt-2 text-sm text-gray-500">Actualiza tu contraseña desde tu perfil.</p>
+    <section class="settings-shell">
+      <div class="settings-shell__copy">
+        <p class="settings-shell__eyebrow">Seguridad de cuenta</p>
+        <h1>Cambia tu contraseña desde tu perfil.</h1>
+        <p>
+          Mantén tu cuenta protegida con una contraseña fuerte. Al actualizarla, se cerrarán las
+          sesiones activas en otros dispositivos.
+        </p>
+      </div>
 
-      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="mt-6 space-y-4">
-        <app-input
-          formControlName="currentPassword"
-          type="password"
-          placeholder="Contraseña actual"
-        />
-        <app-input formControlName="newPassword" type="password" placeholder="Nueva contraseña" />
-        <app-input
-          formControlName="confirmPassword"
-          type="password"
-          placeholder="Confirmar contraseña"
-        />
+      <div class="settings-card">
+        <div class="settings-card__header">
+          <span class="settings-card__icon material-icons">manage_accounts</span>
+          <div>
+            <h2>Cambiar contraseña</h2>
+            <p>Ingresa tu contraseña actual y define una nueva.</p>
+          </div>
+        </div>
 
-        <p *ngIf="error" class="text-sm text-red-600">{{ error }}</p>
-        <app-button type="submit" variant="primary" size="lg" [loading]="loading" class="w-full">
-          Cambiar contraseña
-        </app-button>
-      </form>
-    </div>
+        <p *ngIf="success" class="settings-success" role="status">{{ success }}</p>
+        <p *ngIf="error" class="settings-error" role="alert">{{ error }}</p>
+
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="settings-form" novalidate>
+          <app-input
+            formControlName="currentPassword"
+            type="password"
+            placeholder="Contraseña actual"
+          />
+          <app-input formControlName="newPassword" type="password" placeholder="Nueva contraseña" />
+          <app-input
+            formControlName="confirmPassword"
+            type="password"
+            placeholder="Confirmar contraseña"
+          />
+
+          <ul class="password-rules">
+            <li>8 caracteres mínimo</li>
+            <li>Una mayúscula</li>
+            <li>Un número</li>
+            <li>Un símbolo</li>
+          </ul>
+
+          <app-button type="submit" variant="primary" size="lg" [loading]="loading" class="w-full">
+            Guardar y cerrar sesiones
+          </app-button>
+        </form>
+      </div>
+    </section>
   `,
 })
 export class SettingsComponent {
@@ -43,6 +69,7 @@ export class SettingsComponent {
 
   loading = false;
   error = '';
+  success = '';
 
   form = this.fb.nonNullable.group({
     currentPassword: ['', [Validators.required]],
@@ -63,12 +90,14 @@ export class SettingsComponent {
 
     this.loading = true;
     this.error = '';
+    this.success = '';
 
     try {
       await this.authApi.changePassword(
         this.form.controls.currentPassword.value,
         this.form.controls.newPassword.value,
       );
+      this.success = 'Contraseña actualizada. Debes iniciar sesión nuevamente.';
       await this.authSession.logout();
     } catch {
       this.error = 'No se pudo actualizar la contraseña';

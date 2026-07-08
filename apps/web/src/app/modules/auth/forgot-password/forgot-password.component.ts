@@ -10,30 +10,46 @@ import { AuthApiService } from '../../../core/services/auth-api.service';
   selector: 'app-forgot-password',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterModule, ButtonComponent, InputComponent],
+  styleUrl: './forgot-password.component.scss',
   template: `
-    <div class="w-full max-w-sm">
-      <div class="text-center mb-8">
-        <h1 class="text-2xl font-bold text-gray-900">Recuperar contraseña</h1>
-        <p class="mt-2 text-sm text-gray-500">Ingresa tu email y te enviaremos las instrucciones</p>
+    <section class="recovery-shell">
+      <div class="recovery-shell__hero">
+        <p class="recovery-shell__eyebrow">Recuperación segura</p>
+        <h1>Recupera tu acceso sin fricción.</h1>
+        <p>
+          Te enviaremos un enlace de un solo uso para restablecer tu contraseña. Si no existe la
+          cuenta, no lo revelaremos.
+        </p>
       </div>
 
-      <p *ngIf="sent" class="mb-4 rounded-md bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-        Si el email existe, recibirás las instrucciones de recuperación.
-      </p>
+      <div class="recovery-card">
+        <div class="recovery-card__header">
+          <span class="recovery-card__icon material-icons">lock_reset</span>
+          <div>
+            <h2>Solicitar recuperación</h2>
+            <p>Introduce el email asociado a tu cuenta.</p>
+          </div>
+        </div>
 
-      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-4">
-        <app-input formControlName="email" type="email" placeholder="tu@funeraria.com" />
-        <app-button type="submit" variant="primary" size="lg" [loading]="loading" class="w-full">
-          Enviar instrucciones
-        </app-button>
-        <a
-          routerLink="/auth/login"
-          class="block text-center text-sm text-gray-500 hover:text-primary"
-        >
-          Volver al login
-        </a>
-      </form>
-    </div>
+        <p *ngIf="sent" class="recovery-success" role="status">
+          Si el email existe, recibirás las instrucciones de recuperación.
+        </p>
+
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="recovery-form" novalidate>
+          <app-input formControlName="email" type="email" placeholder="tu@funeraria.com" />
+
+          <p class="recovery-form__hint">
+            Revisa tu bandeja de entrada y la carpeta de spam. El enlace vence en 1 hora.
+          </p>
+
+          <app-button type="submit" variant="primary" size="lg" [loading]="loading" class="w-full">
+            Enviar enlace
+          </app-button>
+
+          <a routerLink="/auth/login" class="recovery-card__back">Volver al login</a>
+        </form>
+      </div>
+    </section>
   `,
 })
 export class ForgotPasswordComponent {
