@@ -59,7 +59,10 @@ type EmailServiceMock = jest.Mocked<
 type JwtServiceMock = jest.Mocked<
   Pick<JwtService, 'sign' | 'signAsync' | 'verifyAsync'>
 >;
-type ConfigServiceMock = jest.Mocked<Pick<ConfigService, 'get' | 'getOrThrow'>>;
+type ConfigServiceMock = {
+  get: jest.Mock;
+  getOrThrow: jest.Mock;
+};
 
 jest.mock('../../common/security/password.util', () => ({
   hashPassword: jest.fn(),
