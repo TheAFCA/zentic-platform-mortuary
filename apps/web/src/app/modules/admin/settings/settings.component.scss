@@ -5,7 +5,11 @@
 .settings-shell {
   display: grid;
   gap: 1.25rem;
-  max-width: 42rem;
+  max-width: 34rem;
+  margin: 0 auto;
+  min-height: 100%;
+  align-content: center;
+  padding-block: clamp(0.75rem, 5vh, 2.5rem);
 }
 
 .settings-shell__copy {
@@ -45,7 +49,7 @@
 .settings-card {
   display: grid;
   gap: 1rem;
-  padding: 1.35rem;
+  padding: 1.15rem;
   border: 1px solid #e5e7eb;
   border-radius: 1.5rem;
   background: rgba(255, 255, 255, 0.86);
@@ -105,7 +109,7 @@
 
 @media (max-width: 860px) {
   .settings-card {
-    padding: 1.1rem;
+    padding: 1rem;
     border-radius: 1.25rem;
   }
 }

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -28,11 +28,11 @@ import { AuthApiService } from '../../../core/services/auth-api.service';
           </div>
         </div>
 
-        <p *ngIf="success" class="recovery-success" role="status">
+        <p *ngIf="success()" class="recovery-success" role="status">
           Contraseña actualizada. Te redirigimos al login.
         </p>
 
-        <p *ngIf="error" class="recovery-error" role="alert">{{ error }}</p>
+        <p *ngIf="error()" class="recovery-error" role="alert">{{ error() }}</p>
 
         <form [formGroup]="form" (ngSubmit)="onSubmit()" class="recovery-form" novalidate>
           <app-input formControlName="password" type="password" placeholder="Nueva contraseña" />
@@ -45,7 +45,13 @@ import { AuthApiService } from '../../../core/services/auth-api.service';
             <li>Un símbolo</li>
           </ul>
 
-          <app-button type="submit" variant="primary" size="lg" [loading]="loading" class="w-full">
+          <app-button
+            type="submit"
+            variant="primary"
+            size="lg"
+            [loading]="loading()"
+            class="w-full"
+          >
             Cambiar contraseña
           </app-button>
         </form>
@@ -60,9 +66,9 @@ export class ResetPasswordComponent {
   private readonly router = inject(Router);
   private readonly authApi = inject(AuthApiService);
 
-  loading = false;
-  success = false;
-  error = '';
+  loading = signal(false);
+  success = signal(false);
+  error = signal('');
   token = this.route.snapshot.paramMap.get('token') ?? '';
   form = this.fb.nonNullable.group({
     password: ['', [Validators.required, Validators.minLength(8)]],
@@ -71,7 +77,7 @@ export class ResetPasswordComponent {
 
   async onSubmit() {
     if (!this.token) {
-      this.error = 'El enlace no es válido';
+      this.error.set('El enlace no es válido');
       return;
     }
 
@@ -81,26 +87,26 @@ export class ResetPasswordComponent {
     }
 
     if (this.form.controls.password.value !== this.form.controls.confirm.value) {
-      this.error = 'Las contraseñas no coinciden';
+      this.error.set('Las contraseñas no coinciden');
       this.form.controls.confirm.setErrors({ mismatch: true });
       return;
     }
 
     if (!ResetPasswordComponent.passwordRules.test(this.form.controls.password.value)) {
-      this.error = 'La contraseña no cumple los requisitos mínimos';
+      this.error.set('La contraseña no cumple los requisitos mínimos');
       return;
     }
 
-    this.loading = true;
-    this.error = '';
+    this.loading.set(true);
+    this.error.set('');
     try {
       await this.authApi.resetPassword(this.token, this.form.controls.password.value);
-      this.success = true;
+      this.success.set(true);
       await this.router.navigate(['/auth/login']);
     } catch {
-      this.error = 'No pudimos actualizar la contraseña. Intenta con un nuevo enlace.';
+      this.error.set('No pudimos actualizar la contraseña. Intenta con un nuevo enlace.');
     } finally {
-      this.loading = false;
+      this.loading.set(false);
     }
   }
 }

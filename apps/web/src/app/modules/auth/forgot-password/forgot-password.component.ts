@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -31,7 +31,7 @@ import { AuthApiService } from '../../../core/services/auth-api.service';
           </div>
         </div>
 
-        <p *ngIf="sent" class="recovery-success" role="status">
+        <p *ngIf="sent()" class="recovery-success" role="status">
           Si el email existe, recibirás las instrucciones de recuperación.
         </p>
 
@@ -42,7 +42,13 @@ import { AuthApiService } from '../../../core/services/auth-api.service';
             Revisa tu bandeja de entrada y la carpeta de spam. El enlace vence en 1 hora.
           </p>
 
-          <app-button type="submit" variant="primary" size="lg" [loading]="loading" class="w-full">
+          <app-button
+            type="submit"
+            variant="primary"
+            size="lg"
+            [loading]="loading()"
+            class="w-full"
+          >
             Enviar enlace
           </app-button>
 
@@ -56,8 +62,8 @@ export class ForgotPasswordComponent {
   private fb = inject(FormBuilder);
   private readonly authApi = inject(AuthApiService);
 
-  loading = false;
-  sent = false;
+  loading = signal(false);
+  sent = signal(false);
   form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
   });
@@ -68,12 +74,12 @@ export class ForgotPasswordComponent {
       return;
     }
 
-    this.loading = true;
+    this.loading.set(true);
     try {
       await this.authApi.forgotPassword(this.form.controls.email.value);
-      this.sent = true;
+      this.sent.set(true);
     } finally {
-      this.loading = false;
+      this.loading.set(false);
     }
   }
 }
