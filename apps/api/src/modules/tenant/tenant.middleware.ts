@@ -2,7 +2,12 @@ import { Injectable, NestMiddleware, NotFoundException } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { PrismaService } from '../../prisma/prisma.service';
 
-const RESERVED_HOST_SLUGS = new Set(['localhost', 'admin', 'super-admin', 'www']);
+const RESERVED_HOST_SLUGS = new Set([
+  'localhost',
+  'admin',
+  'super-admin',
+  'www',
+]);
 
 @Injectable()
 export class TenantMiddleware implements NestMiddleware {
@@ -25,7 +30,8 @@ export class TenantMiddleware implements NestMiddleware {
         throw new NotFoundException(`Tenant '${headerTenantSlug}' not found`);
       }
 
-      (req as Request & { resolvedTenantId: string }).resolvedTenantId = tenant.id;
+      (req as Request & { resolvedTenantId: string }).resolvedTenantId =
+        tenant.id;
       return next();
     }
 
