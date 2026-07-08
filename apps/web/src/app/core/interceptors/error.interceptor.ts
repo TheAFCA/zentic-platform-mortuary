@@ -9,7 +9,10 @@ const isAuthEndpoint = (url: string) =>
   url.includes('/auth/login') ||
   url.includes('/auth/refresh') ||
   url.includes('/auth/logout') ||
-  url.includes('/auth/me');
+  url.includes('/auth/me') ||
+  url.includes('/auth/forgot-password') ||
+  url.includes('/auth/reset-password') ||
+  url.includes('/auth/change-password');
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);

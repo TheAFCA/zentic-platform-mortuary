@@ -10,14 +10,97 @@ export type ButtonSize = 'sm' | 'md' | 'lg';
   selector: 'app-button',
   standalone: true,
   imports: [CommonModule, MatButtonModule, MatProgressSpinnerModule],
+  styles: [
+    `
+      :host {
+        display: block;
+      }
+
+      button {
+        width: 100%;
+        min-height: 3.35rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.625rem;
+        border: 0;
+        border-radius: 1rem;
+        padding: 0.9rem 1.1rem;
+        font-weight: 700;
+        color: #fff;
+        background: linear-gradient(
+          135deg,
+          var(--brand-primary, #0f5e59),
+          var(--brand-primary-hover, #0b4c48)
+        );
+        box-shadow: 0 18px 34px rgba(15, 94, 89, 0.22);
+        transition:
+          transform 160ms ease,
+          box-shadow 160ms ease,
+          opacity 160ms ease;
+      }
+
+      button:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 22px 42px rgba(15, 94, 89, 0.26);
+      }
+
+      button:focus-visible {
+        outline: none;
+        box-shadow:
+          0 0 0 4px rgba(15, 94, 89, 0.16),
+          0 18px 34px rgba(15, 94, 89, 0.22);
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.72;
+      }
+
+      button[data-size='sm'] {
+        min-height: 2.6rem;
+        padding: 0.55rem 0.9rem;
+        border-radius: 0.8rem;
+        font-size: 0.875rem;
+      }
+
+      button[data-size='md'] {
+        min-height: 3rem;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+      }
+
+      button[data-size='lg'] {
+        min-height: 3.35rem;
+        padding: 0.95rem 1.1rem;
+        font-size: 1rem;
+      }
+
+      button[data-variant='secondary'] {
+        background: linear-gradient(135deg, #334155, #1f2937);
+      }
+
+      button[data-variant='danger'] {
+        background: linear-gradient(135deg, #dc2626, #b91c1c);
+      }
+
+      button[data-variant='ghost'] {
+        color: #374151;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid #dbe0e8;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      }
+    `,
+  ],
   template: `
     <button
       [type]="type"
       [disabled]="disabled || loading"
-      [class]="buttonClasses"
+      [attr.data-variant]="variant"
+      [attr.data-size]="size"
       (click)="onClick.emit($event)"
     >
-      <mat-spinner *ngIf="loading" diameter="16" class="inline-block mr-2" />
+      <mat-spinner *ngIf="loading" diameter="16" />
       <ng-content />
     </button>
   `,
@@ -29,21 +112,4 @@ export class ButtonComponent {
   @Input() disabled = false;
   @Input() loading = false;
   @Output() onClick = new EventEmitter<MouseEvent>();
-
-  get buttonClasses(): string {
-    const base =
-      'inline-flex items-center justify-center rounded font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
-    const sizes: Record<ButtonSize, string> = {
-      sm: 'px-3 py-1.5 text-sm',
-      md: 'px-4 py-2 text-sm',
-      lg: 'px-6 py-3 text-base',
-    };
-    const variants: Record<ButtonVariant, string> = {
-      primary: 'bg-primary text-white hover:bg-primary/90 focus:ring-primary',
-      secondary: 'bg-secondary text-white hover:bg-secondary/90 focus:ring-secondary',
-      danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
-      ghost: 'bg-transparent border border-gray-300 text-gray-700 hover:bg-gray-50',
-    };
-    return `${base} ${sizes[this.size]} ${variants[this.variant]}`;
-  }
 }

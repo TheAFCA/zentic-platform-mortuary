@@ -15,7 +15,12 @@ import { environment } from '../../../environments/environment';
 export const SKIP_SESSION_REFRESH = new HttpContextToken<boolean>(() => false);
 
 const isAuthEndpoint = (url: string) =>
-  url.includes('/auth/login') || url.includes('/auth/refresh') || url.includes('/auth/logout');
+  url.includes('/auth/login') ||
+  url.includes('/auth/refresh') ||
+  url.includes('/auth/logout') ||
+  url.includes('/auth/forgot-password') ||
+  url.includes('/auth/reset-password') ||
+  url.includes('/auth/change-password');
 
 export const sessionInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);

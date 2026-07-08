@@ -28,6 +28,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
       path: request.url,
       message:
+        exceptionResponse &&
         typeof exceptionResponse === 'object' &&
         'message' in (exceptionResponse as Record<string, unknown>)
           ? (exceptionResponse as Record<string, unknown>).message

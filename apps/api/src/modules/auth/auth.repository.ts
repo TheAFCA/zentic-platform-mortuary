@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { Injectable } from '@nestjs/common';
 import { Permission, TenantStatus, UserRole } from '@zentic/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -24,6 +23,15 @@ type SessionRecord = {
   device: string | null;
   ipAddress: string | null;
   isRevoked: boolean;
+  expiresAt: Date;
+  user: AuthUserRecord;
+};
+
+type PasswordResetRecord = {
+  id: string;
+  userId: string;
+  tokenHash: string;
+  usedAt: Date | null;
   expiresAt: Date;
   user: AuthUserRecord;
 };
@@ -106,6 +114,36 @@ export class AuthRepository {
     }) as Promise<SessionRecord | null>;
   }
 
+  findPasswordResetByTokenHash(tokenHash: string) {
+    return this.prisma.passwordReset.findUnique({
+      where: { tokenHash },
+      select: {
+        id: true,
+        userId: true,
+        tokenHash: true,
+        usedAt: true,
+        expiresAt: true,
+        user: {
+          select: {
+            id: true,
+            email: true,
+            passwordHash: true,
+            role: true,
+            tenantId: true,
+            tenant: {
+              select: { status: true },
+            },
+            lockedUntil: true,
+            loginAttempts: true,
+            permissions: {
+              select: { permission: true },
+            },
+          },
+        },
+      },
+    }) as Promise<PasswordResetRecord | null>;
+  }
+
   async createSession(data: {
     id: string;
     userId: string;
@@ -151,6 +189,36 @@ export class AuthRepository {
     return this.prisma.session.updateMany({
       where: { userId },
       data: { isRevoked: true },
+    });
+  }
+
+  async deleteUnusedPasswordResets(userId: string) {
+    return this.prisma.passwordReset.deleteMany({
+      where: {
+        userId,
+        usedAt: null,
+      },
+    });
+  }
+
+  async createPasswordReset(data: {
+    userId: string;
+    tokenHash: string;
+    expiresAt: Date;
+  }) {
+    return this.prisma.passwordReset.create({
+      data: {
+        userId: data.userId,
+        tokenHash: data.tokenHash,
+        expiresAt: data.expiresAt,
+      },
+    });
+  }
+
+  async markPasswordResetUsed(id: string) {
+    return this.prisma.passwordReset.update({
+      where: { id },
+      data: { usedAt: new Date() },
     });
   }
 

@@ -4,6 +4,7 @@ import { Injectable } from '@angular/core';
 import { AuthUser } from '@zentic/shared-types';
 import { environment } from '../../../environments/environment';
 import { SKIP_SESSION_REFRESH } from '../interceptors/session.interceptor';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class AuthApiService {
@@ -28,5 +29,29 @@ export class AuthApiService {
 
   refresh() {
     return this.http.post<AuthUser>(`${environment.apiUrl}/auth/refresh`, {});
+  }
+
+  forgotPassword(email: string) {
+    return firstValueFrom(
+      this.http.post<void>(`${environment.apiUrl}/auth/forgot-password`, { email }),
+    );
+  }
+
+  resetPassword(token: string, newPassword: string) {
+    return firstValueFrom(
+      this.http.post<void>(`${environment.apiUrl}/auth/reset-password`, {
+        token,
+        newPassword,
+      }),
+    );
+  }
+
+  changePassword(currentPassword: string, newPassword: string) {
+    return firstValueFrom(
+      this.http.patch<void>(`${environment.apiUrl}/auth/change-password`, {
+        currentPassword,
+        newPassword,
+      }),
+    );
   }
 }

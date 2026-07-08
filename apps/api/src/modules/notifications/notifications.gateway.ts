@@ -41,20 +41,20 @@ export class NotificationsGateway
   }
 
   @SubscribeMessage('join-event')
-  handleJoinEvent(
+  async handleJoinEvent(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { eventId: string },
   ) {
-    client.join(`event:${data.eventId}`);
+    await client.join(`event:${data.eventId}`);
     this.logger.log(`Client ${client.id} joined event room: ${data.eventId}`);
   }
 
   @SubscribeMessage('leave-event')
-  handleLeaveEvent(
+  async handleLeaveEvent(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { eventId: string },
   ) {
-    client.leave(`event:${data.eventId}`);
+    await client.leave(`event:${data.eventId}`);
   }
 
   broadcastNewMessage(eventId: string, payload: WsNewMessage) {
