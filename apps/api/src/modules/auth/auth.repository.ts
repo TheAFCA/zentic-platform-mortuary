@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { Injectable } from '@nestjs/common';
 import { Permission, TenantStatus, UserRole } from '@zentic/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
