@@ -26,7 +26,8 @@ export class PermissionGuard implements CanActivate {
     );
     if (!requiredPermissions?.length) return true;
 
-    const user = context.switchToHttp().getRequest().user as JwtPayload;
+    const request = context.switchToHttp().getRequest<{ user?: JwtPayload }>();
+    const user = request.user;
     if (!user) return false;
 
     // SUPER_ADMIN and TENANT_ADMIN bypass permission checks

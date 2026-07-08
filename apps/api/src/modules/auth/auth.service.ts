@@ -21,7 +21,10 @@ import {
   verifyPassword,
 } from '../../common/security/password.util';
 import { assertStrongPassword } from '../../common/security/password-policy';
-import { generateSecureToken, hashToken } from '../../common/security/token.util';
+import {
+  generateSecureToken,
+  hashToken,
+} from '../../common/security/token.util';
 import { EmailService } from '../email/email.service';
 
 type AuthUserRecord = NonNullable<
@@ -249,12 +252,21 @@ export class AuthService {
     return records.map((record) => record.permission as Permission);
   }
 
-  private async getValidPasswordReset(token: string): Promise<PasswordResetRecord> {
+  private async getValidPasswordReset(
+    token: string,
+  ): Promise<PasswordResetRecord> {
     const tokenHash = hashToken(token);
-    const passwordReset = await this.authRepository.findPasswordResetByTokenHash(tokenHash);
+    const passwordReset =
+      await this.authRepository.findPasswordResetByTokenHash(tokenHash);
 
-    if (!passwordReset || passwordReset.usedAt || passwordReset.expiresAt <= new Date()) {
-      throw new UnauthorizedException('This reset link is invalid or has expired');
+    if (
+      !passwordReset ||
+      passwordReset.usedAt ||
+      passwordReset.expiresAt <= new Date()
+    ) {
+      throw new UnauthorizedException(
+        'This reset link is invalid or has expired',
+      );
     }
 
     return passwordReset;

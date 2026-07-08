@@ -14,7 +14,10 @@ export class EmailService {
   constructor(private readonly config: ConfigService) {}
 
   async sendPasswordResetEmail(input: PasswordResetEmailInput): Promise<void> {
-    const provider = this.config.get<'resend' | 'sendgrid'>('EMAIL_PROVIDER', 'resend');
+    const provider = this.config.get<'resend' | 'sendgrid'>(
+      'EMAIL_PROVIDER',
+      'resend',
+    );
     const message = buildPasswordResetEmail({ resetUrl: input.resetUrl });
 
     if (provider === 'sendgrid') {
@@ -25,8 +28,12 @@ export class EmailService {
     const from = this.config.get<string>('EMAIL_FROM', 'noreply@zentic.pro');
 
     if (!apiKey) {
-      this.logger.warn(`Password reset email skipped for ${input.to}: RESEND_API_KEY is missing`);
-      this.logger.debug(`Password reset link for ${input.to}: ${input.resetUrl}`);
+      this.logger.warn(
+        `Password reset email skipped for ${input.to}: RESEND_API_KEY is missing`,
+      );
+      this.logger.debug(
+        `Password reset link for ${input.to}: ${input.resetUrl}`,
+      );
       return;
     }
 
@@ -47,7 +54,9 @@ export class EmailService {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new BadGatewayException(`Failed to send password reset email: ${errorText}`);
+      throw new BadGatewayException(
+        `Failed to send password reset email: ${errorText}`,
+      );
     }
   }
 }

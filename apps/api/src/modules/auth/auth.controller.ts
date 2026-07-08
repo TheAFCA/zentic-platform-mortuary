@@ -82,7 +82,10 @@ export class AuthController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Change password for authenticated user' })
-  changePassword(@CurrentUser() user: JwtPayload, @Body() body: ChangePasswordDto) {
+  changePassword(
+    @CurrentUser() user: JwtPayload,
+    @Body() body: ChangePasswordDto,
+  ) {
     return this.authService.changePassword(
       user.sub,
       body.currentPassword,

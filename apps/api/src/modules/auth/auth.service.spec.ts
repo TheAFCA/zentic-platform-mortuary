@@ -3,12 +3,63 @@ import {
   ForbiddenException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import { JwtPayload, TenantStatus, UserRole } from '@zentic/shared-types';
+import { AuthRepository } from './auth.repository';
+import { EmailService } from '../email/email.service';
 import { AuthService } from './auth.service';
 import {
   hashPassword,
   verifyPassword,
 } from '../../common/security/password.util';
-import { TenantStatus, UserRole } from '@zentic/shared-types';
+
+type AuthUserRecord = NonNullable<
+  Awaited<ReturnType<AuthRepository['findUserForLogin']>>
+>;
+
+type AuthSessionRecord = NonNullable<
+  Awaited<ReturnType<AuthRepository['findSessionById']>>
+>;
+
+type PasswordResetRecord = NonNullable<
+  Awaited<ReturnType<AuthRepository['findPasswordResetByTokenHash']>>
+>;
+
+type AuthRequest = Parameters<AuthService['login']>[2];
+type AuthResponse = Parameters<AuthService['login']>[3];
+type TestResponse = {
+  cookie: jest.Mock;
+  clearCookie: jest.Mock;
+};
+
+type AuthRepositoryMock = jest.Mocked<
+  Pick<
+    AuthRepository,
+    | 'findUserForLogin'
+    | 'findUserById'
+    | 'findSessionById'
+    | 'findPasswordResetByTokenHash'
+    | 'createSession'
+    | 'updateSessionRefreshToken'
+    | 'revokeSession'
+    | 'revokeUserSessions'
+    | 'updateLoginState'
+    | 'updatePasswordHash'
+    | 'incrementLoginAttempts'
+    | 'deleteUnusedPasswordResets'
+    | 'createPasswordReset'
+    | 'markPasswordResetUsed'
+  >
+>;
+
+type EmailServiceMock = jest.Mocked<
+  Pick<EmailService, 'sendPasswordResetEmail'>
+>;
+type JwtServiceMock = jest.Mocked<
+  Pick<JwtService, 'sign' | 'signAsync' | 'verifyAsync'>
+>;
+type ConfigServiceMock = jest.Mocked<Pick<ConfigService, 'get' | 'getOrThrow'>>;
 
 jest.mock('../../common/security/password.util', () => ({
   hashPassword: jest.fn(),
@@ -24,12 +75,12 @@ const mockedVerifyPassword = verifyPassword as jest.MockedFunction<
 
 describe('AuthService', () => {
   let service: AuthService;
-  let authRepository: any;
-  let jwtService: any;
-  let config: any;
-  let emailService: any;
+  let authRepository: AuthRepositoryMock;
+  let jwtService: JwtServiceMock;
+  let config: ConfigServiceMock;
+  let emailService: EmailServiceMock;
 
-  const createRequest = (overrides: Record<string, unknown> = {}) =>
+  const createRequest = (overrides: Partial<AuthRequest> = {}) =>
     ({
       hostname: 'demo-funeraria.localhost',
       resolvedTenantId: 'tenant-1',
@@ -38,37 +89,38 @@ describe('AuthService', () => {
       get: jest.fn().mockReturnValue('test-agent'),
       ip: '127.0.0.1',
       ...overrides,
-    }) as any;
+    }) as AuthRequest;
 
-  const createResponse = () =>
+  const createResponse = (): TestResponse => ({
+    cookie: jest.fn(),
+    clearCookie: jest.fn(),
+  });
+
+  const createTenantUser = (): AuthUserRecord =>
     ({
-      cookie: jest.fn(),
-      clearCookie: jest.fn(),
-    }) as any;
+      id: 'user-1',
+      email: 'tenant@example.com',
+      passwordHash: 'stored-hash',
+      role: UserRole.TENANT_ADMIN,
+      tenantId: 'tenant-1',
+      tenant: { status: TenantStatus.ACTIVE },
+      lockedUntil: null,
+      loginAttempts: 0,
+      permissions: [{ permission: 'users:manage' }],
+    }) as AuthUserRecord;
 
-  const createTenantUser = () => ({
-    id: 'user-1',
-    email: 'tenant@example.com',
-    passwordHash: 'stored-hash',
-    role: UserRole.TENANT_ADMIN,
-    tenantId: 'tenant-1',
-    tenant: { status: TenantStatus.ACTIVE },
-    lockedUntil: null,
-    loginAttempts: 0,
-    permissions: [{ permission: 'users:manage' }],
-  });
-
-  const createSuperAdmin = () => ({
-    id: 'admin-1',
-    email: 'superadmin@zentic.pro',
-    passwordHash: 'admin-hash',
-    role: UserRole.SUPER_ADMIN,
-    tenantId: null,
-    tenant: null,
-    lockedUntil: null,
-    loginAttempts: 0,
-    permissions: [],
-  });
+  const createSuperAdmin = (): AuthUserRecord =>
+    ({
+      id: 'admin-1',
+      email: 'superadmin@zentic.pro',
+      passwordHash: 'admin-hash',
+      role: UserRole.SUPER_ADMIN,
+      tenantId: null,
+      tenant: null,
+      lockedUntil: null,
+      loginAttempts: 0,
+      permissions: [],
+    }) as AuthUserRecord;
 
   beforeEach(() => {
     authRepository = {
@@ -116,7 +168,12 @@ describe('AuthService', () => {
       }),
     };
 
-    service = new AuthService(authRepository, jwtService, config, emailService);
+    service = new AuthService(
+      authRepository as unknown as AuthRepository,
+      jwtService as unknown as JwtService,
+      config as unknown as ConfigService,
+      emailService as unknown as EmailService,
+    );
 
     mockedHashPassword.mockReset();
     mockedVerifyPassword.mockReset();
@@ -130,16 +187,14 @@ describe('AuthService', () => {
       permissions: ['users:manage'],
       sid: 'session-1',
       type: 'refresh',
-    } as any);
+    } as JwtPayload);
     mockedHashPassword.mockResolvedValue('hashed-token');
     mockedVerifyPassword.mockResolvedValue(true);
     authRepository.findPasswordResetByTokenHash.mockResolvedValue(null);
   });
 
   it('logs in tenant users and issues cookies', async () => {
-    authRepository.findUserForLogin.mockResolvedValue(
-      createTenantUser() as any,
-    );
+    authRepository.findUserForLogin.mockResolvedValue(createTenantUser());
 
     const req = createRequest();
     const res = createResponse();
@@ -148,7 +203,7 @@ describe('AuthService', () => {
       'tenant@example.com',
       'Secret123!',
       req,
-      res,
+      res as unknown as AuthResponse,
     );
 
     expect(result).toEqual({
@@ -174,9 +229,7 @@ describe('AuthService', () => {
   });
 
   it('allows super admins without tenant context', async () => {
-    authRepository.findUserForLogin.mockResolvedValue(
-      createSuperAdmin() as any,
-    );
+    authRepository.findUserForLogin.mockResolvedValue(createSuperAdmin());
     const req = createRequest({
       resolvedTenantId: undefined,
       tenantId: undefined,
@@ -184,7 +237,12 @@ describe('AuthService', () => {
     const res = createResponse();
 
     await expect(
-      service.login('superadmin@zentic.pro', 'Secret123!', req, res),
+      service.login(
+        'superadmin@zentic.pro',
+        'Secret123!',
+        req,
+        res as unknown as AuthResponse,
+      ),
     ).resolves.toEqual(
       expect.objectContaining({ role: UserRole.SUPER_ADMIN, tenantId: null }),
     );
@@ -198,7 +256,7 @@ describe('AuthService', () => {
         'missing@example.com',
         'Secret123!',
         createRequest(),
-        createResponse(),
+        createResponse() as unknown as AuthResponse,
       ),
     ).rejects.toThrow(UnauthorizedException);
   });
@@ -207,7 +265,7 @@ describe('AuthService', () => {
     authRepository.findUserForLogin.mockResolvedValue({
       ...createTenantUser(),
       loginAttempts: 4,
-    } as any);
+    });
     mockedVerifyPassword.mockResolvedValue(false);
 
     await expect(
@@ -215,7 +273,7 @@ describe('AuthService', () => {
         'tenant@example.com',
         'Wrong123!',
         createRequest(),
-        createResponse(),
+        createResponse() as unknown as AuthResponse,
       ),
     ).rejects.toThrow(UnauthorizedException);
 
@@ -229,14 +287,14 @@ describe('AuthService', () => {
     authRepository.findUserForLogin.mockResolvedValue({
       ...createTenantUser(),
       tenant: { status: TenantStatus.SUSPENDED },
-    } as any);
+    });
 
     await expect(
       service.login(
         'tenant@example.com',
         'Secret123!',
         createRequest(),
-        createResponse(),
+        createResponse() as unknown as AuthResponse,
       ),
     ).rejects.toThrow(UnauthorizedException);
   });
@@ -245,14 +303,14 @@ describe('AuthService', () => {
     authRepository.findUserForLogin.mockResolvedValue({
       ...createTenantUser(),
       lockedUntil: new Date(Date.now() + 60_000),
-    } as any);
+    });
 
     await expect(
       service.login(
         'tenant@example.com',
         'Secret123!',
         createRequest(),
-        createResponse(),
+        createResponse() as unknown as AuthResponse,
       ),
     ).rejects.toThrow(ForbiddenException);
   });
@@ -263,7 +321,7 @@ describe('AuthService', () => {
     });
     const res = createResponse();
 
-    await service.logout(req, res);
+    await service.logout(req, res as unknown as AuthResponse);
 
     expect(authRepository.revokeSession).toHaveBeenCalledWith('session-1');
     expect(res.clearCookie).toHaveBeenCalledTimes(2);
@@ -278,8 +336,8 @@ describe('AuthService', () => {
       ipAddress: '127.0.0.1',
       isRevoked: false,
       expiresAt: new Date(Date.now() + 60_000),
-      user: createTenantUser() as any,
-    } as any);
+      user: createTenantUser(),
+    } as AuthSessionRecord);
     mockedVerifyPassword.mockResolvedValue(true);
     jwtService.sign.mockReturnValue('new-access-token');
     jwtService.signAsync.mockResolvedValue('new-refresh-token');
@@ -287,7 +345,7 @@ describe('AuthService', () => {
 
     const result = await service.refresh(
       createRequest({ cookies: { refresh_token: 'refresh-token' } }),
-      createResponse(),
+      createResponse() as unknown as AuthResponse,
     );
 
     expect(result).toEqual(
@@ -309,8 +367,8 @@ describe('AuthService', () => {
       ipAddress: '127.0.0.1',
       isRevoked: false,
       expiresAt: new Date(Date.now() + 60_000),
-      user: createTenantUser() as any,
-    } as any);
+      user: createTenantUser(),
+    } as AuthSessionRecord);
     mockedVerifyPassword.mockResolvedValue(true);
 
     await expect(
@@ -319,19 +377,22 @@ describe('AuthService', () => {
           resolvedTenantId: 'tenant-2',
           cookies: { refresh_token: 'refresh-token' },
         }),
-        createResponse(),
+        createResponse() as unknown as AuthResponse,
       ),
     ).rejects.toThrow(UnauthorizedException);
   });
 
   it('throws when refresh token is missing', async () => {
     await expect(
-      service.refresh(createRequest({ cookies: {} }), createResponse()),
+      service.refresh(
+        createRequest({ cookies: {} }),
+        createResponse() as unknown as AuthResponse,
+      ),
     ).rejects.toThrow(UnauthorizedException);
   });
 
   it('returns the current user', async () => {
-    authRepository.findUserById.mockResolvedValue(createTenantUser() as any);
+    authRepository.findUserById.mockResolvedValue(createTenantUser());
 
     await expect(
       service.me({
@@ -347,7 +408,7 @@ describe('AuthService', () => {
   });
 
   it('changes passwords and revokes active sessions', async () => {
-    authRepository.findUserById.mockResolvedValue(createTenantUser() as any);
+    authRepository.findUserById.mockResolvedValue(createTenantUser());
     mockedVerifyPassword.mockResolvedValue(true);
     mockedHashPassword.mockResolvedValue('new-password-hash');
 
@@ -367,7 +428,7 @@ describe('AuthService', () => {
   });
 
   it('rejects invalid current passwords', async () => {
-    authRepository.findUserById.mockResolvedValue(createTenantUser() as any);
+    authRepository.findUserById.mockResolvedValue(createTenantUser());
     mockedVerifyPassword.mockResolvedValue(false);
 
     await expect(
@@ -376,10 +437,12 @@ describe('AuthService', () => {
   });
 
   it('throws for forgot and reset password stubs', async () => {
-    authRepository.findUserForLogin.mockResolvedValue(createTenantUser() as any);
+    authRepository.findUserForLogin.mockResolvedValue(createTenantUser());
 
     await service.forgotPassword('tenant@example.com', createRequest());
-    expect(authRepository.deleteUnusedPasswordResets).toHaveBeenCalledWith('user-1');
+    expect(authRepository.deleteUnusedPasswordResets).toHaveBeenCalledWith(
+      'user-1',
+    );
     expect(authRepository.createPasswordReset).toHaveBeenCalled();
     expect(emailService.sendPasswordResetEmail).toHaveBeenCalled();
 
@@ -390,7 +453,7 @@ describe('AuthService', () => {
       usedAt: null,
       expiresAt: new Date(Date.now() + 60_000),
       user: createTenantUser(),
-    });
+    } as PasswordResetRecord);
     mockedHashPassword.mockResolvedValue('new-password-hash');
 
     await service.resetPassword('token', 'NewSecret123!');
@@ -398,7 +461,9 @@ describe('AuthService', () => {
       'user-1',
       'new-password-hash',
     );
-    expect(authRepository.markPasswordResetUsed).toHaveBeenCalledWith('reset-1');
+    expect(authRepository.markPasswordResetUsed).toHaveBeenCalledWith(
+      'reset-1',
+    );
     expect(authRepository.revokeUserSessions).toHaveBeenCalledWith('user-1');
   });
 });

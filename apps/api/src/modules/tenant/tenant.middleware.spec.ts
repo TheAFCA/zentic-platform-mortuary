@@ -1,6 +1,9 @@
 import { NotFoundException } from '@nestjs/common';
+import { Request, Response } from 'express';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TenantMiddleware } from './tenant.middleware';
+
+type TenantRequest = Request & { resolvedTenantId?: string };
 
 describe('TenantMiddleware', () => {
   let middleware: TenantMiddleware;
@@ -23,8 +26,10 @@ describe('TenantMiddleware', () => {
 
   it('skips platform routes without subdomain', async () => {
     const next = jest.fn();
+    const request = { hostname: 'localhost', headers: {} } as TenantRequest;
+    const response = {} as Response;
 
-    await middleware.use({ hostname: 'localhost' } as any, {} as any, next);
+    await middleware.use(request, response, next);
 
     expect(prisma.tenant.findFirst).not.toHaveBeenCalled();
     expect(next).toHaveBeenCalled();
@@ -36,9 +41,13 @@ describe('TenantMiddleware', () => {
       status: 'ACTIVE',
     });
     const next = jest.fn();
-    const request: any = { hostname: 'demo.localhost' };
+    const request = {
+      hostname: 'demo.localhost',
+      headers: {},
+    } as TenantRequest;
+    const response = {} as Response;
 
-    await middleware.use(request, {} as any, next);
+    await middleware.use(request, response, next);
 
     expect(prisma.tenant.findFirst).toHaveBeenCalledWith({
       where: { slug: 'demo', deletedAt: null },
@@ -50,13 +59,14 @@ describe('TenantMiddleware', () => {
 
   it('throws when tenant does not exist', async () => {
     prisma.tenant.findFirst.mockResolvedValue(null);
+    const request = {
+      hostname: 'missing.localhost',
+      headers: {},
+    } as TenantRequest;
+    const response = {} as Response;
 
-    await expect(
-      middleware.use(
-        { hostname: 'missing.localhost' } as any,
-        {} as any,
-        jest.fn(),
-      ),
-    ).rejects.toThrow(NotFoundException);
+    await expect(middleware.use(request, response, jest.fn())).rejects.toThrow(
+      NotFoundException,
+    );
   });
 });
