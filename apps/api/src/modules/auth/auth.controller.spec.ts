@@ -10,6 +10,8 @@ describe('AuthController', () => {
     refresh: jest.Mock;
     me: jest.Mock;
     changePassword: jest.Mock;
+    forgotPassword: jest.Mock;
+    resetPassword: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -19,6 +21,8 @@ describe('AuthController', () => {
       refresh: jest.fn(),
       me: jest.fn(),
       changePassword: jest.fn(),
+      forgotPassword: jest.fn(),
+      resetPassword: jest.fn(),
     };
 
     const app: TestingModule = await Test.createTestingModule({
@@ -87,6 +91,26 @@ describe('AuthController', () => {
     expect(authService.changePassword).toHaveBeenCalledWith(
       'user-1',
       body.currentPassword,
+      body.newPassword,
+    );
+  });
+
+  it('delegates forgotPassword to AuthService', async () => {
+    const req = { hostname: 'demo-funeraria.localhost' } as never;
+    const body = { email: 'test@example.com' };
+
+    await controller.forgotPassword(req, body);
+
+    expect(authService.forgotPassword).toHaveBeenCalledWith(body.email, req);
+  });
+
+  it('delegates resetPassword to AuthService', async () => {
+    const body = { token: 'token-1', newPassword: 'NewSecret123!' };
+
+    await controller.resetPassword(body);
+
+    expect(authService.resetPassword).toHaveBeenCalledWith(
+      body.token,
       body.newPassword,
     );
   });

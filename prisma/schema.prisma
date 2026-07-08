@@ -174,7 +174,7 @@ model PasswordReset {
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   tokenHash String   @unique
-  used      Boolean  @default(false)
+  usedAt    DateTime?
   expiresAt DateTime
   createdAt DateTime @default(now())
 

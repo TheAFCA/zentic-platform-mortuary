@@ -2,7 +2,6 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
-  NotImplementedException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -21,6 +20,9 @@ import {
   hashPassword,
   verifyPassword,
 } from '../../common/security/password.util';
+import { assertStrongPassword } from '../../common/security/password-policy';
+import { generateSecureToken, hashToken } from '../../common/security/token.util';
+import { EmailService } from '../email/email.service';
 
 type AuthUserRecord = NonNullable<
   Awaited<ReturnType<AuthRepository['findUserForLogin']>>
@@ -28,6 +30,10 @@ type AuthUserRecord = NonNullable<
 
 type AuthSessionRecord = NonNullable<
   Awaited<ReturnType<AuthRepository['findSessionById']>>
+>;
+
+type PasswordResetRecord = NonNullable<
+  Awaited<ReturnType<AuthRepository['findPasswordResetByTokenHash']>>
 >;
 
 type AuthRequest = Omit<Request, 'cookies'> & {
@@ -42,6 +48,7 @@ const ACCESS_TOKEN_COOKIE = 'access_token';
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
 const LOGIN_LOCK_MINUTES = 15;
 const LOGIN_MAX_ATTEMPTS = 5;
+const PASSWORD_RESET_MINUTES = 60;
 
 @Injectable()
 export class AuthService {
@@ -49,6 +56,7 @@ export class AuthService {
     private readonly authRepository: AuthRepository,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly emailService: EmailService,
   ) {}
 
   async login(
@@ -130,12 +138,42 @@ export class AuthService {
     return authUser;
   }
 
-  async forgotPassword(_email: string) {
-    throw new NotImplementedException('Forgot password is not part of HU2');
+  async forgotPassword(email: string, req: AuthRequest) {
+    const tenantId = this.resolveTenantId(req);
+    const user = await this.authRepository.findUserForLogin(email, tenantId);
+
+    if (!user) {
+      return;
+    }
+
+    const token = generateSecureToken();
+    const tokenHash = hashToken(token);
+
+    await this.authRepository.deleteUnusedPasswordResets(user.id);
+    await this.authRepository.createPasswordReset({
+      userId: user.id,
+      tokenHash,
+      expiresAt: new Date(Date.now() + PASSWORD_RESET_MINUTES * 60 * 1000),
+    });
+
+    await this.emailService.sendPasswordResetEmail({
+      to: user.email,
+      resetUrl: this.buildFrontendUrl(req, `/auth/reset-password/${token}`),
+    });
   }
 
-  async resetPassword(_token: string, _newPassword: string) {
-    throw new NotImplementedException('Reset password is not part of HU2');
+  async resetPassword(token: string, newPassword: string) {
+    assertStrongPassword(newPassword);
+
+    const passwordReset = await this.getValidPasswordReset(token);
+
+    const passwordHash = await hashPassword(newPassword);
+    await this.authRepository.updatePasswordHash(
+      passwordReset.user.id,
+      passwordHash,
+    );
+    await this.authRepository.markPasswordResetUsed(passwordReset.id);
+    await this.authRepository.revokeUserSessions(passwordReset.user.id);
   }
 
   async me(user: JwtPayload) {
@@ -152,9 +190,7 @@ export class AuthService {
     currentPassword: string,
     newPassword: string,
   ) {
-    if (newPassword.length < 8) {
-      throw new BadRequestException('Password must be at least 8 characters');
-    }
+    assertStrongPassword(newPassword);
 
     const user = await this.authRepository.findUserById(userId);
     if (!user) {
@@ -211,6 +247,28 @@ export class AuthService {
 
   private toPermissions(records: { permission: string }[]): Permission[] {
     return records.map((record) => record.permission as Permission);
+  }
+
+  private async getValidPasswordReset(token: string): Promise<PasswordResetRecord> {
+    const tokenHash = hashToken(token);
+    const passwordReset = await this.authRepository.findPasswordResetByTokenHash(tokenHash);
+
+    if (!passwordReset || passwordReset.usedAt || passwordReset.expiresAt <= new Date()) {
+      throw new UnauthorizedException('This reset link is invalid or has expired');
+    }
+
+    return passwordReset;
+  }
+
+  private buildFrontendUrl(req: AuthRequest, path: string) {
+    const frontendUrl = new URL(
+      this.config.get<string>('FRONTEND_URL', 'http://localhost:4200'),
+    );
+    frontendUrl.hostname = req.hostname;
+    frontendUrl.pathname = path;
+    frontendUrl.search = '';
+    frontendUrl.hash = '';
+    return frontendUrl.toString();
   }
 
   private resolveTenantId(req: AuthRequest): string | null {

@@ -1,8 +1,10 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonComponent } from '../../../shared/atoms/button/button.component';
 import { InputComponent } from '../../../shared/atoms/input/input.component';
+import { AuthApiService } from '../../../core/services/auth-api.service';
 
 @Component({
   selector: 'app-reset-password',
@@ -23,14 +25,40 @@ import { InputComponent } from '../../../shared/atoms/input/input.component';
 })
 export class ResetPasswordComponent {
   private fb = inject(FormBuilder);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly authApi = inject(AuthApiService);
 
   loading = false;
+  success = false;
+  token = this.route.snapshot.paramMap.get('token') ?? '';
   form = this.fb.nonNullable.group({
     password: ['', [Validators.required, Validators.minLength(8)]],
     confirm: ['', Validators.required],
   });
 
-  onSubmit() {
-    // TODO: Implement in Module 02
+  async onSubmit() {
+    if (!this.token) {
+      return;
+    }
+
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    if (this.form.controls.password.value !== this.form.controls.confirm.value) {
+      this.form.controls.confirm.setErrors({ mismatch: true });
+      return;
+    }
+
+    this.loading = true;
+    try {
+      await this.authApi.resetPassword(this.token, this.form.controls.password.value);
+      this.success = true;
+      await this.router.navigate(['/auth/login']);
+    } finally {
+      this.loading = false;
+    }
   }
 }

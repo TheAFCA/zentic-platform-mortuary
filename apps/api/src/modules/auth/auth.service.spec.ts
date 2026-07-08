@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ForbiddenException,
-  NotImplementedException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
@@ -28,9 +27,11 @@ describe('AuthService', () => {
   let authRepository: any;
   let jwtService: any;
   let config: any;
+  let emailService: any;
 
   const createRequest = (overrides: Record<string, unknown> = {}) =>
     ({
+      hostname: 'demo-funeraria.localhost',
       resolvedTenantId: 'tenant-1',
       tenantId: 'tenant-1',
       cookies: {},
@@ -74,6 +75,7 @@ describe('AuthService', () => {
       findUserForLogin: jest.fn(),
       findUserById: jest.fn(),
       findSessionById: jest.fn(),
+      findPasswordResetByTokenHash: jest.fn(),
       createSession: jest.fn(),
       updateSessionRefreshToken: jest.fn(),
       revokeSession: jest.fn(),
@@ -81,6 +83,13 @@ describe('AuthService', () => {
       updateLoginState: jest.fn(),
       updatePasswordHash: jest.fn(),
       incrementLoginAttempts: jest.fn(),
+      deleteUnusedPasswordResets: jest.fn(),
+      createPasswordReset: jest.fn(),
+      markPasswordResetUsed: jest.fn(),
+    };
+
+    emailService = {
+      sendPasswordResetEmail: jest.fn(),
     };
 
     jwtService = {
@@ -107,7 +116,7 @@ describe('AuthService', () => {
       }),
     };
 
-    service = new AuthService(authRepository, jwtService, config);
+    service = new AuthService(authRepository, jwtService, config, emailService);
 
     mockedHashPassword.mockReset();
     mockedVerifyPassword.mockReset();
@@ -124,6 +133,7 @@ describe('AuthService', () => {
     } as any);
     mockedHashPassword.mockResolvedValue('hashed-token');
     mockedVerifyPassword.mockResolvedValue(true);
+    authRepository.findPasswordResetByTokenHash.mockResolvedValue(null);
   });
 
   it('logs in tenant users and issues cookies', async () => {
@@ -366,11 +376,29 @@ describe('AuthService', () => {
   });
 
   it('throws for forgot and reset password stubs', async () => {
-    await expect(service.forgotPassword('tenant@example.com')).rejects.toThrow(
-      NotImplementedException,
+    authRepository.findUserForLogin.mockResolvedValue(createTenantUser() as any);
+
+    await service.forgotPassword('tenant@example.com', createRequest());
+    expect(authRepository.deleteUnusedPasswordResets).toHaveBeenCalledWith('user-1');
+    expect(authRepository.createPasswordReset).toHaveBeenCalled();
+    expect(emailService.sendPasswordResetEmail).toHaveBeenCalled();
+
+    authRepository.findPasswordResetByTokenHash.mockResolvedValue({
+      id: 'reset-1',
+      userId: 'user-1',
+      tokenHash: 'hash',
+      usedAt: null,
+      expiresAt: new Date(Date.now() + 60_000),
+      user: createTenantUser(),
+    });
+    mockedHashPassword.mockResolvedValue('new-password-hash');
+
+    await service.resetPassword('token', 'NewSecret123!');
+    expect(authRepository.updatePasswordHash).toHaveBeenCalledWith(
+      'user-1',
+      'new-password-hash',
     );
-    await expect(
-      service.resetPassword('token', 'NewSecret123!'),
-    ).rejects.toThrow(NotImplementedException);
+    expect(authRepository.markPasswordResetUsed).toHaveBeenCalledWith('reset-1');
+    expect(authRepository.revokeUserSessions).toHaveBeenCalledWith('user-1');
   });
 });
