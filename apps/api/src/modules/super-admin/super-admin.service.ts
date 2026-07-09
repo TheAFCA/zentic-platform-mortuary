@@ -35,7 +35,7 @@ export class SuperAdminService {
     throw new Error('Not implemented');
   }
   getAuditLogs() {
-    throw new Error('Not implemented');
+    return this.superAdminRepo.findAuditLogs();
   }
   getUsers() {
     throw new Error('Not implemented');

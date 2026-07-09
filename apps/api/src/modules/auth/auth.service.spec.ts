@@ -8,6 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { JwtPayload, TenantStatus, UserRole } from '@zentic/shared-types';
 import { AuthRepository } from './auth.repository';
 import { EmailService } from '../email/email.service';
+import { SecurityEventsService } from '../security-events/security-events.service';
 import { AuthService } from './auth.service';
 import {
   hashPassword,
@@ -64,6 +65,17 @@ type ConfigServiceMock = {
   getOrThrow: jest.Mock;
 };
 
+type SecurityEventsServiceMock = jest.Mocked<
+  Pick<
+    SecurityEventsService,
+    | 'recordFailedLogin'
+    | 'recordAccountLocked'
+    | 'recordTenantContextMismatch'
+    | 'recordInvalidRefreshToken'
+    | 'record'
+  >
+>;
+
 jest.mock('../../common/security/password.util', () => ({
   hashPassword: jest.fn(),
   verifyPassword: jest.fn(),
@@ -82,6 +94,7 @@ describe('AuthService', () => {
   let jwtService: JwtServiceMock;
   let config: ConfigServiceMock;
   let emailService: EmailServiceMock;
+  let securityEvents: SecurityEventsServiceMock;
 
   const createRequest = (overrides: Partial<AuthRequest> = {}) =>
     ({
@@ -147,6 +160,14 @@ describe('AuthService', () => {
       sendPasswordResetEmail: jest.fn(),
     };
 
+    securityEvents = {
+      recordFailedLogin: jest.fn(),
+      recordAccountLocked: jest.fn(),
+      recordTenantContextMismatch: jest.fn(),
+      recordInvalidRefreshToken: jest.fn(),
+      record: jest.fn(),
+    };
+
     jwtService = {
       sign: jest.fn(),
       signAsync: jest.fn(),
@@ -176,6 +197,7 @@ describe('AuthService', () => {
       jwtService as unknown as JwtService,
       config as unknown as ConfigService,
       emailService as unknown as EmailService,
+      securityEvents as unknown as SecurityEventsService,
     );
 
     mockedHashPassword.mockReset();

@@ -177,6 +177,26 @@ export interface ApiError {
   error?: string;
 }
 
+// ---------- Security events -------------------------------------------------
+
+export enum SecurityEventType {
+  FAILED_LOGIN = 'FAILED_LOGIN',
+  ACCOUNT_LOCKED = 'ACCOUNT_LOCKED',
+  TENANT_CONTEXT_MISMATCH = 'TENANT_CONTEXT_MISMATCH',
+  INVALID_REFRESH_TOKEN = 'INVALID_REFRESH_TOKEN',
+}
+
+export interface SecurityEventAlert {
+  id: string;
+  type: SecurityEventType;
+  actorId: string;
+  role: UserRole;
+  tenantId: string | null;
+  message: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
+
 // ---------- WebSocket events ------------------------------------------------
 
 export interface WsEventPayload {

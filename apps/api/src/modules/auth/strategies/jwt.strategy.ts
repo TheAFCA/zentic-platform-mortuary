@@ -4,6 +4,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { Permission, JwtPayload, UserRole } from '@zentic/shared-types';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { SecurityEventsService } from '../../security-events/security-events.service';
 
 const cookieExtractor = (request: { cookies?: Record<string, string> }) =>
   request.cookies?.access_token ?? null;
@@ -13,6 +14,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     config: ConfigService,
     private prisma: PrismaService,
+    private readonly securityEvents: SecurityEventsService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
@@ -53,6 +55,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       request.resolvedTenantId &&
       user.tenantId !== request.resolvedTenantId
     ) {
+      void this.securityEvents.recordTenantContextMismatch({
+        actorId: user.id,
+        role: user.role as UserRole,
+        tenantId: user.tenantId,
+        metadata: {
+          resolvedTenantId: request.resolvedTenantId,
+          tokenTenantId: user.tenantId,
+          source: 'jwt-strategy',
+        },
+      });
       throw new UnauthorizedException('Tenant context mismatch');
     }
 

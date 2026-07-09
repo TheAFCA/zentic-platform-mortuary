@@ -26,6 +26,7 @@ import {
   hashToken,
 } from '../../common/security/token.util';
 import { EmailService } from '../email/email.service';
+import { SecurityEventsService } from '../security-events/security-events.service';
 
 type AuthUserRecord = NonNullable<
   Awaited<ReturnType<AuthRepository['findUserForLogin']>>
@@ -49,8 +50,6 @@ type RefreshTokenPayload = JwtPayload & { sid: string; type: 'refresh' };
 
 const ACCESS_TOKEN_COOKIE = 'access_token';
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
-const LOGIN_LOCK_MINUTES = 15;
-const LOGIN_MAX_ATTEMPTS = 5;
 const PASSWORD_RESET_MINUTES = 60;
 
 @Injectable()
@@ -60,6 +59,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly emailService: EmailService,
+    private readonly securityEvents: SecurityEventsService,
   ) {}
 
   async login(
@@ -72,6 +72,17 @@ export class AuthService {
     const user = await this.authRepository.findUserForLogin(email, tenantId);
 
     if (!user) {
+      await this.securityEvents.recordFailedLogin({
+        actorId: email,
+        role: UserRole.VIEWER,
+        tenantId,
+        ipAddress: req.ip ?? null,
+        metadata: {
+          email,
+          userFound: false,
+          tenantId,
+        },
+      });
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -84,7 +95,7 @@ export class AuthService {
 
     const isPasswordValid = await verifyPassword(password, user.passwordHash);
     if (!isPasswordValid) {
-      await this.handleFailedLogin(user.id, user.loginAttempts);
+      await this.handleFailedLogin(user, req);
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -310,14 +321,46 @@ export class AuthService {
     }
   }
 
-  private async handleFailedLogin(userId: string, currentAttempts: number) {
-    const nextAttempts = currentAttempts + 1;
+  private async handleFailedLogin(
+    user: Pick<
+      AuthUserRecord,
+      'id' | 'email' | 'role' | 'tenantId' | 'loginAttempts'
+    >,
+    req: AuthRequest,
+  ) {
+    const nextAttempts = user.loginAttempts + 1;
     const lockedUntil =
-      nextAttempts >= LOGIN_MAX_ATTEMPTS
-        ? new Date(Date.now() + LOGIN_LOCK_MINUTES * 60 * 1000)
+      nextAttempts >= this.getLoginMaxAttempts()
+        ? new Date(Date.now() + this.getLoginLockMinutes() * 60 * 1000)
         : null;
 
-    await this.authRepository.incrementLoginAttempts(userId, lockedUntil);
+    await this.authRepository.incrementLoginAttempts(user.id, lockedUntil);
+
+    await this.securityEvents.recordFailedLogin({
+      actorId: user.id,
+      role: user.role,
+      tenantId: user.tenantId,
+      ipAddress: req.ip ?? null,
+      metadata: {
+        email: user.email,
+        attempts: nextAttempts,
+        lockedUntil: lockedUntil?.toISOString() ?? null,
+      },
+    });
+
+    if (lockedUntil) {
+      await this.securityEvents.recordAccountLocked({
+        actorId: user.id,
+        role: user.role,
+        tenantId: user.tenantId,
+        ipAddress: req.ip ?? null,
+        metadata: {
+          email: user.email,
+          attempts: nextAttempts,
+          lockedUntil: lockedUntil.toISOString(),
+        },
+      });
+    }
   }
 
   private signAccessToken(user: AuthUser) {
@@ -391,6 +434,16 @@ export class AuthService {
       resolvedTenantId &&
       session.user.tenantId !== resolvedTenantId
     ) {
+      await this.securityEvents.recordTenantContextMismatch({
+        actorId: session.user.id,
+        role: session.user.role,
+        tenantId: session.user.tenantId,
+        metadata: {
+          resolvedTenantId,
+          tokenTenantId: session.user.tenantId,
+          source: 'refresh',
+        },
+      });
       throw new UnauthorizedException('Tenant context mismatch');
     }
 
@@ -475,5 +528,13 @@ export class AuthService {
 
   private isProduction() {
     return this.config.get<string>('NODE_ENV', 'development') === 'production';
+  }
+
+  private getLoginMaxAttempts() {
+    return this.config.get<number>('LOGIN_MAX_ATTEMPTS', 5);
+  }
+
+  private getLoginLockMinutes() {
+    return this.config.get<number>('LOGIN_LOCK_MINUTES', 15);
   }
 }
