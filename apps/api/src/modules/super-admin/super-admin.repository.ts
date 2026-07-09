@@ -5,5 +5,22 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class SuperAdminRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  // TODO: Implement in Module 04 — Super Admin
+  findAuditLogs() {
+    return this.prisma.auditLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+      select: {
+        id: true,
+        actorId: true,
+        role: true,
+        action: true,
+        entityType: true,
+        entityId: true,
+        metadata: true,
+        ipAddress: true,
+        tenantId: true,
+        createdAt: true,
+      },
+    });
+  }
 }

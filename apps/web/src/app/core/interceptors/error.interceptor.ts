@@ -27,7 +27,9 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         }
       }
       if (error.status === 403) {
-        void router.navigate(['/admin/dashboard']);
+        if (!isAuthEndpoint(req.url)) {
+          void router.navigate(['/admin/dashboard']);
+        }
       }
       if (error.status >= 500) {
         Sentry.captureException(error);

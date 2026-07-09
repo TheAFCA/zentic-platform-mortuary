@@ -3,12 +3,23 @@ import { UnauthorizedException } from '@nestjs/common';
 import { JwtStrategy } from './jwt.strategy';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { JwtPayload, UserRole } from '@zentic/shared-types';
+import { SecurityEventsService } from '../../security-events/security-events.service';
 
 describe('JwtStrategy', () => {
   let strategy: JwtStrategy;
   let prisma: {
     user: { findFirst: jest.Mock };
   };
+  let securityEvents: jest.Mocked<
+    Pick<
+      SecurityEventsService,
+      | 'recordTenantContextMismatch'
+      | 'recordFailedLogin'
+      | 'recordAccountLocked'
+      | 'recordInvalidRefreshToken'
+      | 'record'
+    >
+  >;
 
   beforeEach(() => {
     prisma = {
@@ -17,11 +28,23 @@ describe('JwtStrategy', () => {
       },
     };
 
+    securityEvents = {
+      recordTenantContextMismatch: jest.fn(),
+      recordFailedLogin: jest.fn(),
+      recordAccountLocked: jest.fn(),
+      recordInvalidRefreshToken: jest.fn(),
+      record: jest.fn(),
+    };
+
     const config = {
       getOrThrow: jest.fn().mockReturnValue('jwt-secret'),
     } as unknown as ConfigService;
 
-    strategy = new JwtStrategy(config, prisma as unknown as PrismaService);
+    strategy = new JwtStrategy(
+      config,
+      prisma as unknown as PrismaService,
+      securityEvents as unknown as SecurityEventsService,
+    );
   });
 
   it('returns a hydrated payload for an active user', async () => {

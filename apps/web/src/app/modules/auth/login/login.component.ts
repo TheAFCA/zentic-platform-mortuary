@@ -9,6 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { HttpErrorResponse } from '@angular/common/http';
 import { AuthSessionService } from '../../../core/services/auth-session.service';
 
 type LoginBenefit = {
@@ -109,10 +110,29 @@ export class LoginComponent {
 
     try {
       await this.session.login(this.form.controls.email.value, this.form.controls.password.value);
-    } catch {
-      this.error.set('Email o contraseña incorrectos');
+    } catch (error) {
+      this.error.set(this.getLoginErrorMessage(error));
     } finally {
       this.loading.set(false);
     }
+  }
+
+  private getLoginErrorMessage(error: unknown): string {
+    if (error instanceof HttpErrorResponse && error.status === 403) {
+      const responseBody = error.error as { message?: unknown } | string | null;
+      let message = '';
+
+      if (typeof responseBody === 'string') {
+        message = responseBody;
+      } else {
+        const bodyMessage = responseBody?.message;
+        message = typeof bodyMessage === 'string' ? bodyMessage : '';
+      }
+      if (typeof message === 'string' && message.includes('locked')) {
+        return 'Tu cuenta está bloqueada temporalmente. Intenta de nuevo en unos minutos.';
+      }
+    }
+
+    return 'Email o contraseña incorrectos';
   }
 }

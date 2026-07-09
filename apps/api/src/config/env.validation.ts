@@ -16,6 +16,10 @@ const envSchema = z.object({
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
 
+  // Security
+  LOGIN_MAX_ATTEMPTS: z.coerce.number().default(5),
+  LOGIN_LOCK_MINUTES: z.coerce.number().default(15),
+
   // Redis
   REDIS_URL: z.string().url().default('redis://localhost:6379'),
 

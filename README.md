@@ -91,6 +91,7 @@ La documentación técnica del producto se irá consolidando por HU. Para esta b
 - Los errores 5xx de API se reportan a Sentry cuando hay `SENTRY_DSN` configurado.
 - El frontend Angular inicializa Sentry antes del bootstrap y captura errores globales con `ErrorHandler`.
 - Los errores HTTP del cliente se reenvían a Sentry solo para respuestas `>= 500`.
+- Los eventos de seguridad se persisten en `AuditLog` y se emiten en tiempo real a super admin por websocket.
 
 ## Convención de commits
 
