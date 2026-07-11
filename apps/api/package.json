@@ -95,6 +95,7 @@
       "config/**/*.ts",
       "modules/auth/**/*.ts",
       "modules/tenant/**/*.ts",
+      "modules/super-admin/**/*.ts",
       "!**/*.spec.ts",
       "!main.ts",
       "!app.module.ts",
@@ -114,7 +115,8 @@
       "!modules/notifications/**",
       "!modules/obituary/**",
       "!modules/streaming/**",
-      "!modules/super-admin/**",
+      "!modules/super-admin/dto/**",
+      "!modules/super-admin/super-admin.controller.ts",
       "!prisma/**"
     ],
     "coverageThreshold": {
