@@ -8,9 +8,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
-import { StreamingApiService, StreamingEvent } from '../../../core/services/streaming-api.service';
-import { EventStatus } from '@zentic/shared-types';
+import {
+  StreamingApiService,
+  StreamingEvent,
+} from '../../../core/services/streaming-api.service';
 
+/** Mapa de etiquetas legibles para cada estado del evento */
 const STATUS_LABELS: Record<string, string> = {
   SCHEDULED: 'Programado',
   LIVE: 'En vivo',
@@ -20,6 +23,7 @@ const STATUS_LABELS: Record<string, string> = {
   INTERRUPTED: 'Interrumpido',
 };
 
+/** Mapa de clases CSS para el badge de estado */
 const STATUS_CLASSES: Record<string, string> = {
   SCHEDULED: 'bg-blue-100 text-blue-800',
   LIVE: 'bg-green-100 text-green-800',
@@ -29,6 +33,14 @@ const STATUS_CLASSES: Record<string, string> = {
   INTERRUPTED: 'bg-orange-100 text-orange-800',
 };
 
+/**
+ * Componente de listado de eventos de streaming.
+ *
+ * Muestra todos los eventos del tenant organizados en tabs por estado
+ * (Todos, Próximos, En vivo, Finalizados, Cancelados). Cada evento se
+ * renderiza como una card con información del difunto, sala, fecha y
+ * conteo de mensajes. Incluye un botón para crear nuevos eventos.
+ */
 @Component({
   selector: 'app-events-list',
   standalone: true,
@@ -62,7 +74,11 @@ const STATUS_CLASSES: Record<string, string> = {
       } @else {
         <nav mat-tab-nav-bar>
           @for (tab of tabs; track tab.key) {
-            <a mat-tab-link [active]="activeTab() === tab.key" (click)="activeTab.set(tab.key)">
+            <a
+              mat-tab-link
+              [active]="activeTab() === tab.key"
+              (click)="activeTab.set(tab.key)"
+            >
               {{ tab.label }} ({{ tab.count }})
             </a>
           }
@@ -77,9 +93,7 @@ const STATUS_CLASSES: Record<string, string> = {
               <div class="flex items-start justify-between mb-2">
                 <h3 class="font-semibold text-gray-900">{{ event.title }}</h3>
                 <span
-                  class="px-2 py-0.5 text-xs font-medium rounded-full {{
-                    statusClass(event.status)
-                  }}"
+                  class="px-2 py-0.5 text-xs font-medium rounded-full {{ statusClass(event.status) }}"
                 >
                   {{ statusLabel(event.status) }}
                 </span>
@@ -90,7 +104,7 @@ const STATUS_CLASSES: Record<string, string> = {
                 </p>
               }
               <p class="text-xs text-gray-500 mt-1">
-                {{ event.scheduledAt | date: 'dd/MM/yyyy HH:mm' }}
+                {{ event.scheduledAt | date : 'dd/MM/yyyy HH:mm' }}
               </p>
               @if (event.room) {
                 <p class="text-xs text-gray-500">
@@ -116,11 +130,16 @@ const STATUS_CLASSES: Record<string, string> = {
 export class EventsListComponent {
   private readonly api = inject(StreamingApiService);
 
+  /** Indica si los eventos están cargando */
   readonly loading = signal(true);
+  /** Mensaje de error si la carga falla */
   readonly error = signal('');
+  /** Lista completa de eventos del tenant */
   readonly events = signal<StreamingEvent[]>([]);
+  /** Tab activa actual (all, SCHEDULED, LIVE, FINISHED, CANCELLED) */
   readonly activeTab = signal('all');
 
+  /** Configuración de las tabs del filtro */
   readonly tabs = [
     { key: 'all', label: 'Todos', count: 0 },
     { key: 'SCHEDULED', label: 'Próximos', count: 0 },
@@ -133,18 +152,25 @@ export class EventsListComponent {
     this.loadEvents();
   }
 
+  /** Retorna la etiqueta legible para un estado */
   statusLabel(status: string): string {
     return STATUS_LABELS[status] ?? status;
   }
 
+  /** Retorna la clase CSS para el badge de estado */
   statusClass(status: string): string {
     return STATUS_CLASSES[status] ?? 'bg-gray-100 text-gray-800';
   }
 
+  /** Retorna la etiqueta de la tab activa */
   activeTabLabel(): string {
     return this.tabs.find((t) => t.key === this.activeTab())?.label ?? '';
   }
 
+  /**
+   * Retorna los eventos filtrados según la tab activa.
+   * Es una función (no un getter) para compatibilidad con Angular signals.
+   */
   get filteredEvents() {
     const tab = this.activeTab();
     return () => {
@@ -154,6 +180,7 @@ export class EventsListComponent {
     };
   }
 
+  /** Carga los eventos desde la API y actualiza los contadores de tabs */
   private loadEvents() {
     this.loading.set(true);
     this.error.set('');
@@ -170,6 +197,7 @@ export class EventsListComponent {
     });
   }
 
+  /** Actualiza los contadores de cada tab según los eventos cargados */
   private updateCounts(events: StreamingEvent[]) {
     for (const tab of this.tabs) {
       if (tab.key === 'all') {

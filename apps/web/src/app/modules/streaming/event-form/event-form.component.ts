@@ -5,6 +5,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -12,13 +13,26 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatDividerModule } from '@angular/material/divider';
 import {
   StreamingApiService,
   CreateEventInput,
-  StreamingEvent,
 } from '../../../core/services/streaming-api.service';
 
+/**
+ * Componente de formulario para crear y editar eventos de streaming.
+ *
+ * Proporciona un formulario completo con todos los campos del spec:
+ * - Información general (nombre, tipo, duración, descripción)
+ * - Fecha y hora programada
+ * - Datos del difunto
+ * - Configuración de visibilidad y código de acceso
+ * - Modo de moderación de mensajes
+ *
+ * @remarks
+ * Si se accede con un ID en la ruta, opera en modo edición cargando
+ * los datos existentes del evento. En caso contrario, opera en modo
+ * creación. Redirige al listado de eventos tras guardar exitosamente.
+ */
 @Component({
   selector: 'app-event-form',
   standalone: true,
@@ -106,13 +120,22 @@ import {
 
                 <mat-form-field>
                   <mat-label>Hora</mat-label>
-                  <input matInput type="time" formControlName="scheduledTime" required />
+                  <input
+                    matInput
+                    type="time"
+                    formControlName="scheduledTime"
+                    required
+                  />
                 </mat-form-field>
               </div>
 
               <mat-form-field class="w-full">
                 <mat-label>Descripción del servicio</mat-label>
-                <textarea matInput formControlName="description" rows="3"></textarea>
+                <textarea
+                  matInput
+                  formControlName="description"
+                  rows="3"
+                ></textarea>
               </mat-form-field>
 
               <mat-divider />
@@ -121,23 +144,39 @@ import {
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <mat-form-field>
                   <mat-label>Nombre</mat-label>
-                  <input matInput formControlName="deceasedFirstName" placeholder="Nombre" />
+                  <input
+                    matInput
+                    formControlName="deceasedFirstName"
+                    placeholder="Nombre"
+                  />
                 </mat-form-field>
                 <mat-form-field>
                   <mat-label>Apellido</mat-label>
-                  <input matInput formControlName="deceasedLastName" placeholder="Apellido" />
+                  <input
+                    matInput
+                    formControlName="deceasedLastName"
+                    placeholder="Apellido"
+                  />
                 </mat-form-field>
               </div>
 
               <mat-divider />
-              <h3 class="font-semibold text-gray-700">Configuración del evento</h3>
+              <h3 class="font-semibold text-gray-700">
+                Configuración del evento
+              </h3>
 
               <div class="flex items-center gap-4">
-                <mat-slide-toggle formControlName="isPublic"> Evento público </mat-slide-toggle>
+                <mat-slide-toggle formControlName="isPublic">
+                  Evento público
+                </mat-slide-toggle>
                 @if (!form.get('isPublic')?.value) {
                   <mat-form-field class="flex-1">
                     <mat-label>Código de acceso</mat-label>
-                    <input matInput formControlName="accessCode" placeholder="Ej: FAMILIA2026" />
+                    <input
+                      matInput
+                      formControlName="accessCode"
+                      placeholder="Ej: FAMILIA2026"
+                    />
                   </mat-form-field>
                 }
               </div>
@@ -145,13 +184,19 @@ import {
               <mat-form-field class="w-full">
                 <mat-label>Moderación de mensajes</mat-label>
                 <mat-select formControlName="moderationMode">
-                  <mat-option value="AUTO">Automática (todos se publican)</mat-option>
-                  <mat-option value="MANUAL">Manual (requiere aprobación)</mat-option>
+                  <mat-option value="AUTO"
+                    >Automática (todos se publican)</mat-option
+                  >
+                  <mat-option value="MANUAL"
+                    >Manual (requiere aprobación)</mat-option
+                  >
                 </mat-select>
               </mat-form-field>
 
               <div class="flex justify-end gap-3 pt-4">
-                <a mat-stroked-button routerLink="/admin/streaming">Cancelar</a>
+                <a mat-stroked-button routerLink="/admin/streaming"
+                  >Cancelar</a
+                >
                 <button
                   mat-raised-button
                   color="primary"
@@ -180,11 +225,15 @@ export class EventFormComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly snackBar = inject(MatSnackBar);
 
+  /** Indica si los datos del evento están cargando (modo edición) */
   readonly loading = signal(false);
+  /** Indica si el formulario se está enviando */
   readonly submitting = signal(false);
 
+  /** Retorna true si el componente está en modo edición */
   readonly isEdit = () => !!this.route.snapshot.paramMap.get('id');
 
+  /** Formulario reactivo con todos los campos del evento */
   form = this.fb.nonNullable.group({
     title: ['', Validators.required],
     ceremonyType: ['VELATORIO', Validators.required],
@@ -204,6 +253,12 @@ export class EventFormComponent {
     if (editId) this.loadEvent(editId);
   }
 
+  /**
+   * Carga los datos de un evento existente para edición.
+   * Parsea la fecha y hora programada a los campos del formulario.
+   *
+   * @param id - ID del evento a editar
+   */
   private loadEvent(id: string): void {
     this.loading.set(true);
     this.api.findOne(id).subscribe({
@@ -224,12 +279,19 @@ export class EventFormComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.snackBar.open('Error al cargar evento', 'Cerrar', { duration: 3000 });
+        this.snackBar.open('Error al cargar evento', 'Cerrar', {
+          duration: 3000,
+        });
         this.loading.set(false);
       },
     });
   }
 
+  /**
+   ＊ Procesa el envío del formulario.
+   * Construye el DTO combinando fecha y hora, y determina si es
+   * creación o actualización según la presencia del ID en la ruta.
+   */
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -264,20 +326,25 @@ export class EventFormComponent {
     }
 
     const editId = this.route.snapshot.paramMap.get('id');
-
-    const request = editId ? this.api.update(editId, dto) : this.api.create(dto);
+    const request = editId
+      ? this.api.update(editId, dto)
+      : this.api.create(dto);
 
     request.subscribe({
       next: () => {
         this.submitting.set(false);
-        this.snackBar.open(editId ? 'Evento actualizado' : 'Evento creado exitosamente', 'Cerrar', {
-          duration: 3000,
-        });
+        this.snackBar.open(
+          editId ? 'Evento actualizado' : 'Evento creado exitosamente',
+          'Cerrar',
+          { duration: 3000 },
+        );
         this.router.navigate(['/admin/streaming']);
       },
       error: (err) => {
         this.submitting.set(false);
-        this.snackBar.open(err.message ?? 'Error al guardar', 'Cerrar', { duration: 3000 });
+        this.snackBar.open(err.message ?? 'Error al guardar', 'Cerrar', {
+          duration: 3000,
+        });
       },
     });
   }

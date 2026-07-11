@@ -1,22 +1,12 @@
 import { CommonModule } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  effect,
-  inject,
-  signal,
-} from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatDialogModule } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -29,21 +19,33 @@ import {
 import { StreamingSocketService } from '../../../core/services/streaming-socket.service';
 import { EventStatus } from '@zentic/shared-types';
 
+/**
+ * Componente de detalle y control de un evento de streaming.
+ *
+ * Proporciona una vista completa del evento con:
+ * - Información general y estado
+ * - Panel de control del stream (iniciar/detener)
+ * - Credenciales de transmisión OBS (stream key, RTMP URL)
+ * - Moderación de mensajes en tiempo real (aprobar/rechazar)
+ * - Visualización de grabación si el evento finalizó
+ *
+ * @remarks
+ * Se conecta al Socket.IO al cargar un evento en LIVE/PAUSED
+ * para recibir actualizaciones en tiempo real. Los mensajes
+ * nuevos aparecen automáticamente sin recargar la página.
+ */
 @Component({
   selector: 'app-event-detail',
   standalone: true,
   imports: [
     CommonModule,
-    ReactiveFormsModule,
     RouterModule,
     MatButtonModule,
     MatCardModule,
     MatChipsModule,
     MatDialogModule,
     MatDividerModule,
-    MatFormFieldModule,
     MatIconModule,
-    MatInputModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatTabsModule,
@@ -69,13 +71,15 @@ import { EventStatus } from '@zentic/shared-types';
                 </p>
               }
               <p class="text-sm text-gray-500 mt-1">
-                {{ ev.scheduledAt | date: 'dd/MM/yyyy HH:mm' }}
+                {{ ev.scheduledAt | date : 'dd/MM/yyyy HH:mm' }}
                 @if (ev.room) {
                   · {{ ev.room.name }} - {{ ev.room.venue.name }}
                 }
               </p>
             </div>
-            <span class="px-3 py-1 text-sm font-medium rounded-full {{ statusClass(ev.status) }}">
+            <span
+              class="px-3 py-1 text-sm font-medium rounded-full {{ statusClass(ev.status) }}"
+            >
               {{ statusLabel(ev.status) }}
             </span>
           </div>
@@ -107,7 +111,9 @@ import { EventStatus } from '@zentic/shared-types';
                   }
                   @if (ev.status === 'LIVE') {
                     <span class="flex items-center gap-1 text-green-700">
-                      <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                      <span
+                        class="w-2 h-2 bg-green-500 rounded-full animate-pulse"
+                      ></span>
                       Transmitiendo en vivo · {{ viewerCount() }} espectadores
                     </span>
                   }
@@ -116,7 +122,7 @@ import { EventStatus } from '@zentic/shared-types';
             </mat-card>
           }
 
-          <!-- Stream credentials (if SCHEDULED) -->
+          <!-- Stream credentials -->
           @if (ev.status === 'SCHEDULED' && canManage()) {
             <mat-card class="mb-6">
               <mat-card-header>
@@ -124,9 +130,13 @@ import { EventStatus } from '@zentic/shared-types';
               </mat-card-header>
               <mat-card-content class="p-4 space-y-3">
                 <div>
-                  <label class="text-sm font-medium text-gray-600">Stream Key</label>
+                  <label class="text-sm font-medium text-gray-600"
+                    >Stream Key</label
+                  >
                   <div class="flex items-center gap-2 mt-1">
-                    <code class="flex-1 p-2 bg-gray-100 rounded text-sm font-mono break-all">
+                    <code
+                      class="flex-1 p-2 bg-gray-100 rounded text-sm font-mono break-all"
+                    >
                       {{ ev.streamKey }}
                     </code>
                     <button
@@ -139,9 +149,13 @@ import { EventStatus } from '@zentic/shared-types';
                   </div>
                 </div>
                 <div>
-                  <label class="text-sm font-medium text-gray-600">RTMP URL</label>
+                  <label class="text-sm font-medium text-gray-600"
+                    >RTMP URL</label
+                  >
                   <div class="flex items-center gap-2 mt-1">
-                    <code class="flex-1 p-2 bg-gray-100 rounded text-sm font-mono break-all">
+                    <code
+                      class="flex-1 p-2 bg-gray-100 rounded text-sm font-mono break-all"
+                    >
                       {{ ev.rtmpUrl }}
                     </code>
                     <button
@@ -154,9 +168,13 @@ import { EventStatus } from '@zentic/shared-types';
                   </div>
                 </div>
                 <div>
-                  <label class="text-sm font-medium text-gray-600">URL Pública del Evento</label>
+                  <label class="text-sm font-medium text-gray-600"
+                    >URL Pública del Evento</label
+                  >
                   <div class="flex items-center gap-2 mt-1">
-                    <code class="flex-1 p-2 bg-gray-100 rounded text-sm font-mono break-all">
+                    <code
+                      class="flex-1 p-2 bg-gray-100 rounded text-sm font-mono break-all"
+                    >
                       {{ getPublicUrl() }}
                     </code>
                     <button
@@ -172,10 +190,14 @@ import { EventStatus } from '@zentic/shared-types';
             </mat-card>
           }
 
-          <!-- Tabs: Messages / Info -->
+          <!-- Tabs -->
           <nav mat-tab-nav-bar>
             @for (tab of tabs; track tab.key) {
-              <a mat-tab-link [active]="activeTab() === tab.key" (click)="activeTab.set(tab.key)">
+              <a
+                mat-tab-link
+                [active]="activeTab() === tab.key"
+                (click)="activeTab.set(tab.key)"
+              >
                 {{ tab.label }}
               </a>
             }
@@ -208,18 +230,26 @@ import { EventStatus } from '@zentic/shared-types';
                   <mat-spinner diameter="30" />
                 </div>
               } @else if (messages().length === 0) {
-                <div class="text-center py-8 text-gray-500">No hay mensajes aún</div>
+                <div class="text-center py-8 text-gray-500">
+                  No hay mensajes aún
+                </div>
               } @else {
                 @for (msg of messages(); track msg.id) {
                   <div
                     class="flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-200"
                   >
-                    <span class="text-xl">{{ iconMap[msg.iconType ?? ''] ?? '💬' }}</span>
+                    <span class="text-xl">{{
+                      iconMap[msg.iconType ?? ''] ?? '💬'
+                    }}</span>
                     <div class="flex-1 min-w-0">
-                      <p class="font-medium text-sm text-gray-900">{{ msg.authorName }}</p>
-                      <p class="text-gray-700 text-sm mt-0.5">{{ msg.content }}</p>
+                      <p class="font-medium text-sm text-gray-900">
+                        {{ msg.authorName }}
+                      </p>
+                      <p class="text-gray-700 text-sm mt-0.5">
+                        {{ msg.content }}
+                      </p>
                       <p class="text-xs text-gray-400 mt-1">
-                        {{ msg.createdAt | date: 'dd/MM HH:mm' }}
+                        {{ msg.createdAt | date : 'dd/MM HH:mm' }}
                       </p>
                     </div>
                     @if (msg.status === 'PENDING' && canModerate()) {
@@ -259,7 +289,8 @@ import { EventStatus } from '@zentic/shared-types';
                   <video controls class="w-full h-full" [src]="ev.recordingUrl"></video>
                 </div>
                 <p class="text-sm text-gray-500 mt-2">
-                  Grabación disponible — descárgala desde el panel de administración
+                  Grabación disponible — descárgala desde el panel de
+                  administración
                 </p>
               } @else {
                 <div class="text-center py-8 text-gray-500">
@@ -286,21 +317,32 @@ export class EventDetailComponent {
   private readonly socket = inject(StreamingSocketService);
   private readonly snackBar = inject(MatSnackBar);
 
+  /** Indica si el detalle del evento está cargando */
   readonly loading = signal(true);
+  /** Mensaje de error si la carga falla */
   readonly error = signal('');
+  /** Datos del evento actual */
   readonly event = signal<StreamingEvent | null>(null);
+  /** Lista de mensajes del evento */
   readonly messages = signal<Message[]>([]);
+  /** Cantidad de mensajes pendientes de moderación */
   readonly pendingCount = signal(0);
+  /** Indica si los mensajes están cargando */
   readonly messagesLoading = signal(false);
+  /** Indica si una operación de stream está en curso */
   readonly streamLoading = signal(false);
+  /** Contador de espectadores en vivo */
   readonly viewerCount = signal(0);
+  /** Tab activa en la vista de detalle */
   readonly activeTab = signal('messages');
 
+  /** Configuración de las tabs de detalle */
   readonly tabs = [
     { key: 'messages', label: 'Mensajes y Homenajes' },
     { key: 'recording', label: 'Grabación' },
   ];
 
+  /** Mapa de iconos por tipo */
   readonly iconMap: Record<string, string> = {
     HEART: '❤️',
     CANDLE: '🕯️',
@@ -312,6 +354,7 @@ export class EventDetailComponent {
     dove: '🕊️',
   };
 
+  /** Mapa de etiquetas de estado */
   readonly statusLabels: Record<string, string> = {
     SCHEDULED: 'Programado',
     LIVE: 'En vivo',
@@ -339,23 +382,29 @@ export class EventDetailComponent {
       });
 
       this.socket.streamStatus$.subscribe((status) => {
-        this.event.update((e) => (e ? { ...e, status: status as EventStatus } : e));
+        this.event.update((e) =>
+          e ? { ...e, status: status as EventStatus } : e,
+        );
       });
     }
   }
 
+  /** Verifica si el usuario puede gestionar el stream */
   get canManage(): () => boolean {
     return () => true;
   }
 
+  /** Verifica si el usuario puede moderar mensajes */
   get canModerate(): () => boolean {
     return () => true;
   }
 
+  /** Retorna la etiqueta legible para un estado */
   statusLabel(status: string): string {
     return this.statusLabels[status] ?? status;
   }
 
+  /** Retorna la clase CSS para el badge de estado */
   statusClass(status: string): string {
     const map: Record<string, string> = {
       SCHEDULED: 'bg-blue-100 text-blue-800',
@@ -368,17 +417,22 @@ export class EventDetailComponent {
     return map[status] ?? 'bg-gray-100 text-gray-800';
   }
 
+  /** Genera la URL pública del evento */
   getPublicUrl(): string {
     const ev = this.event();
     return ev ? `${window.location.origin}/e/${ev.slug}` : '';
   }
 
+  /** Copia un valor al portapapeles */
   copyToClipboard(value: string): void {
     navigator.clipboard.writeText(value).then(() => {
-      this.snackBar.open('Copiado al portapapeles', 'Cerrar', { duration: 2000 });
+      this.snackBar.open('Copiado al portapapeles', 'Cerrar', {
+        duration: 2000,
+      });
     });
   }
 
+  /** Inicia la transmisión en vivo del evento */
   startStream(): void {
     this.streamLoading.set(true);
     this.api.startStream(this.eventId).subscribe({
@@ -386,15 +440,20 @@ export class EventDetailComponent {
         this.event.set(ev);
         this.streamLoading.set(false);
         this.socket.connect(this.eventId, true);
-        this.snackBar.open('Transmisión iniciada', 'Cerrar', { duration: 3000 });
+        this.snackBar.open('Transmisión iniciada', 'Cerrar', {
+          duration: 3000,
+        });
       },
       error: (err) => {
         this.streamLoading.set(false);
-        this.snackBar.open(err.message ?? 'Error al iniciar', 'Cerrar', { duration: 3000 });
+        this.snackBar.open(err.message ?? 'Error al iniciar', 'Cerrar', {
+          duration: 3000,
+        });
       },
     });
   }
 
+  /** Finaliza la transmisión en vivo */
   stopStream(): void {
     this.streamLoading.set(true);
     this.api.stopStream(this.eventId).subscribe({
@@ -402,15 +461,20 @@ export class EventDetailComponent {
         this.event.set(ev);
         this.streamLoading.set(false);
         this.socket.disconnect();
-        this.snackBar.open('Transmisión finalizada', 'Cerrar', { duration: 3000 });
+        this.snackBar.open('Transmisión finalizada', 'Cerrar', {
+          duration: 3000,
+        });
       },
       error: (err) => {
         this.streamLoading.set(false);
-        this.snackBar.open(err.message ?? 'Error al finalizar', 'Cerrar', { duration: 3000 });
+        this.snackBar.open(err.message ?? 'Error al finalizar', 'Cerrar', {
+          duration: 3000,
+        });
       },
     });
   }
 
+  /** Carga los mensajes aprobados del evento */
   loadMessages(): void {
     this.messagesLoading.set(true);
     this.api.getMessages(this.eventId).subscribe({
@@ -422,6 +486,7 @@ export class EventDetailComponent {
     });
   }
 
+  /** Carga los mensajes pendientes de moderación */
   loadPendingMessages(): void {
     this.messagesLoading.set(true);
     this.api.getPendingMessages(this.eventId).subscribe({
@@ -434,6 +499,7 @@ export class EventDetailComponent {
     });
   }
 
+  /** Aprueba un mensaje pendiente y lo transmite a los viewers */
   approveMessage(messageId: string): void {
     this.api.approveMessage(this.eventId, messageId).subscribe({
       next: () => {
@@ -441,10 +507,14 @@ export class EventDetailComponent {
         this.pendingCount.update((c) => Math.max(0, c - 1));
         this.snackBar.open('Mensaje aprobado', 'Cerrar', { duration: 2000 });
       },
-      error: () => this.snackBar.open('Error al aprobar mensaje', 'Cerrar', { duration: 2000 }),
+      error: () =>
+        this.snackBar.open('Error al aprobar mensaje', 'Cerrar', {
+          duration: 2000,
+        }),
     });
   }
 
+  /** Rechaza un mensaje pendiente */
   rejectMessage(messageId: string): void {
     this.api.rejectMessage(this.eventId, messageId).subscribe({
       next: () => {
@@ -452,10 +522,14 @@ export class EventDetailComponent {
         this.pendingCount.update((c) => Math.max(0, c - 1));
         this.snackBar.open('Mensaje rechazado', 'Cerrar', { duration: 2000 });
       },
-      error: () => this.snackBar.open('Error al rechazar mensaje', 'Cerrar', { duration: 2000 }),
+      error: () =>
+        this.snackBar.open('Error al rechazar mensaje', 'Cerrar', {
+          duration: 2000,
+        }),
     });
   }
 
+  /** Carga el evento completo y configura Socket.IO si está en vivo */
   private loadEvent(): void {
     this.loading.set(true);
     this.api.findOne(this.eventId).subscribe({

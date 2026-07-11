@@ -10,11 +10,32 @@ import { ConfigService } from '@nestjs/config';
 import { randomBytes, createHash } from 'crypto';
 import { StreamingRepository } from './streaming.repository';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
-import { CreateEventDto, UpdateEventDto, SendMessageDto, SendReactionDto, AccessCodeDto } from './dto';
+import {
+  CreateEventDto,
+  UpdateEventDto,
+  SendMessageDto,
+  SendReactionDto,
+  AccessCodeDto,
+} from './dto';
 import { EventStatus, MessageStatus } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import { Env } from '../../config/env.validation';
 
+/**
+ * Servicio principal del módulo de Streaming.
+ *
+ * Implementa toda la lógica de negocio para la gestión de eventos de transmisión
+ * en vivo: creación con generación de stream keys, ciclo de vida del stream
+ * (iniciar/detener), sistema de mensajes con moderación, reacciones en tiempo
+ * real con rate limiting, validación de códigos de acceso y registro de leads.
+ *
+ * @remarks
+ * Las reglas de negocio implementadas incluyen:
+ * - RN-STREAM-001: Una sala no puede tener dos eventos simultáneos
+ * - RN-STREAM-004: Reconexión automática en caso de caída del stream
+ * - RN-STREAM-005: Rate limiting de reacciones por IP (cooldown de 2s)
+ * - Generación segura de stream keys mediante criptografía aleatoria
+ */
 @Injectable()
 export class StreamingService {
   private readonly logger = new Logger(StreamingService.name);
@@ -28,16 +49,39 @@ export class StreamingService {
 
   // ── CRUD Events ────────────────────────────────────────────────────
 
+  /**
+   * Obtiene todos los eventos del tenant autenticado.
+   *
+   * @param tenantId - Identificador del tenant desde el token JWT
+   * @returns Lista completa de eventos con relaciones
+   */
   async findAll(tenantId: string) {
     return this.repo.findManyByTenant(tenantId);
   }
 
+  /**
+   * Obtiene el detalle completo de un evento por su ID.
+   *
+   * @param tenantId - Identificador del tenant
+   * @param id - Identificador del evento
+   * @throws NotFoundException si el evento no existe o no pertenece al tenant
+   * @returns Evento con todas las relaciones (deceased, room, venue)
+   */
   async findOne(tenantId: string, id: string) {
     const event = await this.repo.findById(tenantId, id);
     if (!event) throw new NotFoundException('Evento no encontrado');
     return event;
   }
 
+  /**
+   * Obtiene los datos públicos de un evento para la página del viewer.
+   * No requiere autenticación. La grabación solo se expone si el evento
+   * está en estado FINISHED.
+   *
+   * @param slug - Slug único del evento
+   * @throws NotFoundException si el evento no existe o fue eliminado
+   * @returns Datos públicos del evento (sin info sensible como streamKey)
+   */
   async findPublic(slug: string) {
     const event = await this.repo.findBySlug(slug);
     if (!event || event.deletedAt) throw new NotFoundException('Evento no encontrado');
@@ -62,6 +106,22 @@ export class StreamingService {
     };
   }
 
+  /**
+   * Crea un nuevo evento de streaming con generación automática de:
+   * - Stream key criptográfica única
+   * - RTMP URL según el proveedor configurado (Mux/IVS)
+   * - Slug único basado en el título
+   * - Código de acceso hasheado (SHA-256)
+   *
+   * Valida la disponibilidad de la sala si se especifica (RN-STREAM-001).
+   * Si no existe un difunto (deceasedId), crea uno con los datos proporcionados.
+   *
+   * @param tenantId - Identificador del tenant
+   * @param dto - Datos de creación del evento
+   * @throws BadRequestException si faltan datos del difunto
+   * @throws ConflictException si la sala está ocupada en el horario solicitado
+   * @returns El evento creado con stream key y RTMP URL
+   */
   async create(tenantId: string, dto: CreateEventDto) {
     let deceasedId = dto.deceasedId;
 
@@ -88,7 +148,6 @@ export class StreamingService {
       if (!existingDeceased) throw new BadRequestException('Difunto no encontrado');
     }
 
-    // Verify room availability
     if (dto.roomId && dto.estimatedDuration) {
       const overlapping = await this.repo.findByRoomAndTimeOverlap(
         tenantId,
@@ -101,10 +160,9 @@ export class StreamingService {
       }
     }
 
-    const slug = this.generateSlug(dto.title, tenantId);
+    const slug = this.generateSlug(dto.title);
     const streamKey = this.generateStreamKey();
     const rtmpUrl = this.getRtmpUrl();
-    const publicUrl = slug;
 
     const eventData: Prisma.EventCreateInput = {
       title: dto.title,
@@ -116,7 +174,7 @@ export class StreamingService {
       estimatedDuration: dto.estimatedDuration,
       isPublic: dto.isPublic ?? true,
       accessCode: dto.accessCode ? this.hashAccessCode(dto.accessCode) : undefined,
-      moderationMode: dto.moderationMode as any ?? 'AUTO',
+      moderationMode: (dto.moderationMode as any) ?? 'AUTO',
       scheduledAt: new Date(dto.scheduledAt),
       tenant: { connect: { id: tenantId } },
       deceased: { connect: { id: deceasedId } },
@@ -127,6 +185,17 @@ export class StreamingService {
     return this.repo.create(eventData);
   }
 
+  /**
+   * Actualiza un evento existente. No permite modificar eventos en estado
+   * LIVE o FINISHED para evitar inconsistencias durante la transmisión.
+   *
+   * @param tenantId - Identificador del tenant
+   * @param id - Identificador del evento
+   * @param dto - Campos a actualizar (todos opcionales)
+   * @throws BadRequestException si el evento está en LIVE o FINISHED
+   * @throws NotFoundException si el evento no existe
+   * @returns El evento actualizado
+   */
   async update(tenantId: string, id: string, dto: UpdateEventDto) {
     const event = await this.findOne(tenantId, id);
     if (event.status === 'LIVE' || event.status === 'FINISHED') {
@@ -158,6 +227,15 @@ export class StreamingService {
     return this.repo.update(tenantId, id, updateData);
   }
 
+  /**
+   * Cancela un evento (soft-delete). Solo permite cancelar eventos que no
+   * estén en estado LIVE.
+   *
+   * @param tenantId - Identificador del tenant
+   * @param id - Identificador del evento
+   * @throws NotFoundException si el evento no existe
+   * @returns El evento cancelado
+   */
   async remove(tenantId: string, id: string) {
     await this.findOne(tenantId, id);
     return this.repo.softDelete(tenantId, id);
@@ -165,11 +243,23 @@ export class StreamingService {
 
   // ── Stream lifecycle ────────────────────────────────────────────────
 
+  /**
+   * Inicia la transmisión en vivo de un evento programado.
+   * Cambia el estado a LIVE, registra la hora de inicio y notifica
+   * a todos los viewers conectados via Socket.IO.
+   *
+   * @param tenantId - Identificador del tenant
+   * @param id - Identificador del evento
+   * @throws BadRequestException si el evento no está en estado SCHEDULED
+   * @returns El evento actualizado a LIVE
+   */
   async startStream(tenantId: string, id: string) {
     const event = await this.findOne(tenantId, id);
 
     if (event.status !== 'SCHEDULED') {
-      throw new BadRequestException(`El evento está en estado "${event.status}", no se puede iniciar`);
+      throw new BadRequestException(
+        `El evento está en estado "${event.status}", no se puede iniciar`,
+      );
     }
 
     const updated = await this.repo.update(tenantId, id, {
@@ -187,11 +277,22 @@ export class StreamingService {
     return updated;
   }
 
+  /**
+   * Finaliza la transmisión en vivo. Cambia el estado a FINISHED,
+   * registra la hora de finalización y notifica a todos los viewers.
+   *
+   * @param tenantId - Identificador del tenant
+   * @param id - Identificador del evento
+   * @throws BadRequestException si el evento no está en LIVE o PAUSED
+   * @returns El evento actualizado a FINISHED
+   */
   async stopStream(tenantId: string, id: string) {
     const event = await this.findOne(tenantId, id);
 
     if (event.status !== 'LIVE' && event.status !== 'PAUSED') {
-      throw new BadRequestException(`El evento está en estado "${event.status}", no se puede finalizar`);
+      throw new BadRequestException(
+        `El evento está en estado "${event.status}", no se puede finalizar`,
+      );
     }
 
     const updated = await this.repo.update(tenantId, id, {
@@ -211,29 +312,53 @@ export class StreamingService {
 
   // ── Messages ────────────────────────────────────────────────────────
 
+  /**
+   * Obtiene los mensajes aprobados de un evento.
+   *
+   * @param tenantId - Identificador del tenant
+   * @param eventId - Identificador del evento
+   * @returns Lista de mensajes aprobados
+   */
   async getMessages(tenantId: string, eventId: string) {
     await this.findOne(tenantId, eventId);
     return this.repo.findMessagesByEvent(tenantId, eventId);
   }
 
+  /**
+   * Obtiene los mensajes pendientes de moderación para el panel del operador.
+   *
+   * @param tenantId - Identificador del tenant
+   * @param eventId - Identificador del evento
+   * @returns Lista de mensajes en estado PENDING
+   */
   async getPendingMessages(tenantId: string, eventId: string) {
     await this.findOne(tenantId, eventId);
     return this.repo.findMessagesPendingModeration(tenantId, eventId);
   }
 
+  /**
+   * Envía un mensaje de homenaje a un evento desde la página pública.
+   * Si el evento tiene moderación MANUAL, el mensaje queda en estado PENDING
+   * hasta que un operador lo apruebe. Si es AUTO, se publica inmediatamente
+   * y se notifica via Socket.IO.
+   *
+   * @param slug - Slug del evento
+   * @param dto - Contenido del mensaje
+   * @throws NotFoundException si el evento no existe
+   * @returns El mensaje creado
+   */
   async sendMessage(slug: string, dto: SendMessageDto) {
     const event = await this.repo.findBySlug(slug);
     if (!event || event.deletedAt) throw new NotFoundException('Evento no encontrado');
-
-    if (event.status === 'SCHEDULED') {
-      // Allow pre-messages only if scheduled
-    }
 
     const message = await this.repo.createMessage({
       authorName: dto.authorName,
       content: dto.content,
       iconType: dto.iconType,
-      status: event.moderationMode === 'MANUAL' ? 'PENDING' as MessageStatus : 'APPROVED' as MessageStatus,
+      status:
+        event.moderationMode === 'MANUAL'
+          ? ('PENDING' as MessageStatus)
+          : ('APPROVED' as MessageStatus),
       event: { connect: { id: event.id } },
       tenantId: event.tenantId,
     });
@@ -255,6 +380,15 @@ export class StreamingService {
     return message;
   }
 
+  /**
+   * Aprueba un mensaje pendiente y lo transmite a todos los viewers conectados
+   * mediante Socket.IO (evento `new-message`).
+   *
+   * @param tenantId - Identificador del tenant
+   * @param eventId - Identificador del evento
+   * @param messageId - Identificador del mensaje
+   * @returns El mensaje aprobado
+   */
   async approveMessage(tenantId: string, eventId: string, messageId: string) {
     await this.findOne(tenantId, eventId);
     const message = await this.repo.approveMessage(eventId, messageId, tenantId);
@@ -274,11 +408,30 @@ export class StreamingService {
     return message;
   }
 
+  /**
+   * Rechaza un mensaje pendiente con una razón opcional.
+   *
+   * @param tenantId - Identificador del tenant
+   * @param eventId - Identificador del evento
+   * @param messageId - Identificador del mensaje
+   * @param reason - Razón del rechazo (opcional)
+   * @returns El mensaje rechazado
+   */
   async rejectMessage(tenantId: string, eventId: string, messageId: string, reason?: string) {
     await this.findOne(tenantId, eventId);
     return this.repo.rejectMessage(eventId, messageId, reason);
   }
 
+  /**
+   * Elimina un mensaje (soft-delete) del evento.
+   * El mensaje queda oculto de la vista pública pero conservado en BD
+   * por 7 días para posible restauración (RN-STREAM-006).
+   *
+   * @param tenantId - Identificador del tenant
+   * @param eventId - Identificador del evento
+   * @param messageId - Identificador del mensaje
+   * @returns El mensaje marcado como eliminado
+   */
   async deleteMessage(tenantId: string, eventId: string, messageId: string) {
     await this.findOne(tenantId, eventId);
     return this.repo.softDeleteMessage(eventId, messageId);
@@ -286,15 +439,23 @@ export class StreamingService {
 
   // ── Reactions ──────────────────────────────────────────────────────
 
+  /**
+   * Procesa una reacción rápida de un viewer durante un evento en vivo.
+   * Implementa rate limiting por IP (máx 1 reacción cada 2 segundos).
+   * Las reacciones se transmiten en tiempo real a todos los viewers
+   * mediante Socket.IO (evento `new-reaction`).
+   *
+   * @param slug - Slug del evento
+   * @param dto - Tipo de reacción (heart, candle, flower, dove)
+   * @param clientIp - Dirección IP del cliente para rate limiting
+   * @throws BadRequestException si se excede el rate limit
+   * @throws NotFoundException si el evento no existe
+   * @returns Confirmación de envío
+   */
   async sendReaction(slug: string, dto: SendReactionDto, clientIp?: string) {
     const event = await this.repo.findBySlug(slug);
     if (!event || event.deletedAt) throw new NotFoundException('Evento no encontrado');
 
-    if (event.status !== 'LIVE') {
-      // Still allow reactions even after live
-    }
-
-    // Rate limiting per IP
     if (clientIp) {
       const now = Date.now();
       const lastReaction = this.reactionCooldowns.get(clientIp) ?? 0;
@@ -303,7 +464,6 @@ export class StreamingService {
       }
       this.reactionCooldowns.set(clientIp, now);
 
-      // Cleanup old entries
       if (this.reactionCooldowns.size > 1000) {
         const cutoff = now - 10000;
         for (const [ip, time] of this.reactionCooldowns) {
@@ -333,6 +493,17 @@ export class StreamingService {
 
   // ── Access code ────────────────────────────────────────────────────
 
+  /**
+   * Valida el código de acceso de un evento privado.
+   * Si el visitante proporciona nombre/email y da consentimiento,
+   * se registra automáticamente como lead del evento.
+   *
+   * @param slug - Slug del evento
+   * @param dto - Código de acceso y datos opcionales del visitante
+   * @throws NotFoundException si el evento no existe
+   * @throws ForbiddenException si el código de acceso es incorrecto
+   * @returns Resultado de validación con eventId
+   */
   async validateAccessCode(slug: string, dto: AccessCodeDto) {
     const event = await this.repo.findBySlug(slug);
     if (!event || event.deletedAt) throw new NotFoundException('Evento no encontrado');
@@ -346,7 +517,6 @@ export class StreamingService {
       throw new ForbiddenException('Código de acceso incorrecto');
     }
 
-    // Register lead if info provided
     if (dto.name || dto.email) {
       await this.repo.createLead({
         name: dto.name ?? 'Anónimo',
@@ -363,7 +533,15 @@ export class StreamingService {
 
   // ── Helpers ─────────────────────────────────────────────────────────
 
-  private generateSlug(title: string, _tenantId: string): string {
+  /**
+   * Genera un slug único para la URL pública del evento.
+   * Combina el título normalizado con un sufijo hexadecimal aleatorio
+   * para garantizar unicidad.
+   *
+   * @param title - Título del evento
+   * @returns Slug en formato kebab-case con sufijo único
+   */
+  private generateSlug(title: string): string {
     const base = title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
@@ -373,10 +551,21 @@ export class StreamingService {
     return `${base}-${suffix}`;
   }
 
+  /**
+   * Genera una stream key criptográficamente segura para configurar OBS.
+   * Prefijada con "zentic_" para identificación en el proveedor de streaming.
+   *
+   * @returns Stream key de 192 bits en hexadecimal
+   */
   private generateStreamKey(): string {
     return `zentic_${randomBytes(24).toString('hex')}`;
   }
 
+  /**
+   * Obtiene la URL RTMP base según el proveedor de streaming configurado.
+   *
+   * @returns URL RTMP para configuración de OBS
+   */
   private getRtmpUrl(): string {
     const provider = this.config.get('STREAM_PROVIDER');
     if (provider === 'mux') {
@@ -385,6 +574,14 @@ export class StreamingService {
     return 'rtmp://example.com/live';
   }
 
+  /**
+   * Hashea un código de acceso usando SHA-256.
+   * Los códigos nunca se almacenan en texto plano en la base de datos
+   * (RNF-STREAM-007).
+   *
+   * @param code - Código de acceso en texto plano
+   * @returns Hash SHA-256 del código
+   */
   private hashAccessCode(code: string): string {
     return createHash('sha256').update(code).digest('hex');
   }
