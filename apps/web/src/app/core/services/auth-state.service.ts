@@ -1,5 +1,5 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { AuthUser } from '@zentic/shared-types';
+import { AuthUser, Permission, UserRole } from '@zentic/shared-types';
 
 @Injectable({ providedIn: 'root' })
 export class AuthStateService {
@@ -12,9 +12,15 @@ export class AuthStateService {
     this._user.set(user);
   }
 
-  hasPermission(permission: string): boolean {
+  /**
+   * SUPER_ADMIN/TENANT_ADMIN tienen todos los permisos de su ámbito por defecto (§4) — igual que
+   * el PermissionGuard del backend, deben pasar sin depender del array `permissions`.
+   */
+  hasPermission(permission: Permission): boolean {
     const user = this._user();
-    return user?.permissions.includes(permission as never) ?? false;
+    if (!user) return false;
+    if (user.role === UserRole.SUPER_ADMIN || user.role === UserRole.TENANT_ADMIN) return true;
+    return user.permissions.includes(permission);
   }
 
   clear() {

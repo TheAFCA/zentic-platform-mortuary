@@ -28,7 +28,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       }
       if (error.status === 403) {
         if (!isAuthEndpoint(req.url)) {
-          void router.navigate(['/admin/dashboard']);
+          void router.navigate(['/no-autorizado']);
         }
       }
       if (error.status >= 500) {

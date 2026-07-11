@@ -60,6 +60,13 @@ export const routes: Routes = [
     ],
   },
 
+  // Destino de permissionGuard / errorInterceptor cuando falta un permiso (HU-RBAC-002)
+  {
+    path: 'no-autorizado',
+    loadComponent: () =>
+      import('./public/no-autorizado/no-autorizado.component').then((m) => m.NoAutorizadoComponent),
+  },
+
   // Wildcard
   { path: '**', redirectTo: '/admin/dashboard' },
 ];

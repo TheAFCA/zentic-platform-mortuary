@@ -91,29 +91,30 @@ model Tenant {
   updatedAt DateTime     @updatedAt
   deletedAt DateTime?
 
-  brandConfig  TenantBrandConfig?
-  featureFlags TenantFeatureFlag[]
-  users        User[]
-  events       Event[]
-  obituaries   Obituary[]
-  leads        Lead[]
-  leadNotes    LeadNote[]
-  clients      Client[]
-  venues       Venue[]
-  rooms        Room[]
-  auditLogs    AuditLog[]
+  brandConfig         TenantBrandConfig?
+  featureFlags        TenantFeatureFlag[]
+  users               User[]
+  events              Event[]
+  obituaries          Obituary[]
+  leads               Lead[]
+  leadNotes           LeadNote[]
+  clients             Client[]
+  venues              Venue[]
+  rooms               Room[]
+  auditLogs           AuditLog[]
+  permissionAuditLogs PermissionAuditLog[]
 }
 
 model TenantBrandConfig {
-  id              String  @id @default(cuid())
-  tenantId        String  @unique
-  tenant          Tenant  @relation(fields: [tenantId], references: [id])
+  id              String   @id @default(cuid())
+  tenantId        String   @unique
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
   logoUrl         String?
   faviconUrl      String?
-  primaryColor    String  @default("#1a1a2e")
-  secondaryColor  String  @default("#16213e")
-  textColor       String  @default("#333333")
-  backgroundColor String  @default("#f5f5f5")
+  primaryColor    String   @default("#1a1a2e")
+  secondaryColor  String   @default("#16213e")
+  textColor       String   @default("#333333")
+  backgroundColor String   @default("#f5f5f5")
   updatedAt       DateTime @updatedAt
 }
 
@@ -170,13 +171,13 @@ model Session {
 }
 
 model PasswordReset {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  tokenHash String   @unique
+  user      User      @relation(fields: [userId], references: [id])
+  tokenHash String    @unique
   usedAt    DateTime?
   expiresAt DateTime
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@index([userId])
 }
@@ -203,10 +204,13 @@ model PermissionAuditLog {
   targetId   String
   action     String
   permission String
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
   createdAt  DateTime @default(now())
 
   @@index([targetId])
   @@index([actorId])
+  @@index([tenantId])
 }
 
 // =============================================================================
@@ -259,8 +263,8 @@ model Deceased {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  events    Event[]
-  obituary  Obituary?
+  events   Event[]
+  obituary Obituary?
 
   @@index([tenantId])
 }
@@ -347,15 +351,15 @@ model Obituary {
 }
 
 model ObituaryMessage {
-  id          String        @id @default(cuid())
-  tenantId    String
-  obituaryId  String
-  obituary    Obituary      @relation(fields: [obituaryId], references: [id])
-  authorName  String
-  content     String        @db.Text
-  status      MessageStatus @default(PENDING)
-  createdAt   DateTime      @default(now())
-  deletedAt   DateTime?
+  id         String        @id @default(cuid())
+  tenantId   String
+  obituaryId String
+  obituary   Obituary      @relation(fields: [obituaryId], references: [id])
+  authorName String
+  content    String        @db.Text
+  status     MessageStatus @default(PENDING)
+  createdAt  DateTime      @default(now())
+  deletedAt  DateTime?
 
   @@index([obituaryId])
   @@index([obituaryId, status])

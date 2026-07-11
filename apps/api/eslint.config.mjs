@@ -29,6 +29,9 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/no-unnecessary-type-assertion': 'off',
+      // expect(mock.method).toHaveBeenCalledWith(...) es un patrón seguro e idiomático de Jest;
+      // unbound-method no entiende mocks y da falsos positivos en los specs.
+      '@typescript-eslint/unbound-method': 'off',
     },
   },
   {
