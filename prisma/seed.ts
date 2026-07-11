@@ -75,6 +75,35 @@ async function main() {
     console.log('Demo tenant admin created:', adminEmail);
   }
 
+  // Demo operator with a couple of granted permissions (Módulo 03: Roles y Permisos) — para
+  // poder probar de verdad el flujo de permisos, no solo el bypass de rol de los admins.
+  const operatorEmail = 'operador@demo-funeraria.zentic.pro';
+  const existingOperator = await prisma.user.findFirst({
+    where: { email: operatorEmail, tenantId: demoTenant.id },
+  });
+
+  if (!existingOperator) {
+    const passwordHash = await bcrypt.hash('Operador2026!', 12);
+    const operator = await prisma.user.create({
+      data: {
+        email: operatorEmail,
+        passwordHash,
+        role: UserRole.OPERATOR,
+        tenantId: demoTenant.id,
+      },
+    });
+
+    const superAdmin = await prisma.user.findFirst({ where: { email: superAdminEmail, tenantId: null } });
+    await prisma.userPermission.createMany({
+      data: ['leads:read', 'leads:export', 'obituary:read'].map(permission => ({
+        userId: operator.id,
+        permission,
+        grantedBy: superAdmin?.id ?? operator.id,
+      })),
+    });
+    console.log('Demo operator created:', operatorEmail);
+  }
+
   console.log('Seed completed.');
 }
 

@@ -56,3 +56,7 @@ Competencia Adiau/
 
 # Internal docs (not for the repo)
 mds/
+
+# Agents
+.agents
+skills-lock.json

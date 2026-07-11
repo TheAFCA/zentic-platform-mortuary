@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { permissionGuard } from '../../core/guards/permission.guard';
 
 export const ADMIN_ROUTES: Routes = [
   {
@@ -27,6 +28,8 @@ export const ADMIN_ROUTES: Routes = [
       },
       {
         path: 'users',
+        canActivate: [permissionGuard],
+        data: { permissions: ['users:read'] },
         loadComponent: () => import('./users/users.component').then((m) => m.UsersComponent),
       },
       {

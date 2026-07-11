@@ -1,0 +1,155 @@
+@use '../../../shared/styles/panel' as panel;
+
+.users-page {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 56rem;
+}
+
+.users-page__header {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.users-page__eyebrow {
+  @include panel.eyebrow;
+}
+
+.users-page__title {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: panel.$ink;
+}
+
+.users-page__subtitle {
+  margin: 0;
+  color: panel.$muted;
+}
+
+.panel-card {
+  @include panel.panel-card;
+}
+
+.panel-card__header {
+  padding: 1.35rem 1.5rem 0.75rem;
+}
+
+.panel-card__header--split {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.panel-card__header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: panel.$ink;
+}
+
+.panel-card__count {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  color: panel.$muted;
+}
+
+.panel-card__body {
+  padding: 0.75rem 1.5rem 1.5rem;
+}
+
+.panel-card__body--flush {
+  padding: 0.5rem 0 0.25rem;
+}
+
+.btn-primary {
+  @include panel.primary-button;
+}
+
+.btn-ghost {
+  @include panel.ghost-button;
+}
+
+.btn-ghost--sm {
+  min-height: 2.25rem;
+  padding: 0 0.9rem;
+  font-size: 0.85rem;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.users-table thead th {
+  text-align: left;
+  padding: 0.5rem 1.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: panel.$muted;
+  border-bottom: 1px solid #eef0f3;
+}
+
+.users-table tbody tr {
+  transition: background-color 150ms ease;
+}
+
+.users-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.users-table tbody td {
+  padding: 0.85rem 1.5rem;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 0.92rem;
+}
+
+.users-table__actions {
+  text-align: right;
+}
+
+.user-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-identity__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 auto;
+  border-radius: 0.7rem;
+  background: linear-gradient(135deg, panel.$brand-primary, panel.$brand-primary-hover);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.user-identity__email {
+  color: panel.$ink;
+  font-weight: 500;
+}
+
+.role-chip {
+  @include panel.role-chip(#eef2f7, #475569);
+}
+
+.role-chip--tenant_admin {
+  @include panel.role-chip(rgba(15, 94, 89, 0.12), panel.$brand-primary);
+}
+
+.role-chip--operator {
+  @include panel.role-chip(#e0edff, #1d4ed8);
+}
+
+.role-chip--viewer {
+  @include panel.role-chip(#f1f5f9, #475569);
+}
