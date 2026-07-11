@@ -6,7 +6,11 @@ import {
   Body,
   Param,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtPayload } from '@zentic/shared-types';
 import { AdminService } from './admin.service';
@@ -18,6 +22,8 @@ import { TenantId } from '../../common/decorators/tenant-id.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateBrandDto } from './dto/update-brand.dto';
+import { UpdateSettingsDto } from './dto/update-settings.dto';
 
 @ApiTags('admin')
 @ApiBearerAuth()
@@ -67,13 +73,35 @@ export class AdminController {
 
   @Patch('settings')
   @RequirePermission('settings:manage')
-  updateSettings(@TenantId() tenantId: string, @Body() body: unknown) {
-    return this.adminService.updateSettings(tenantId, body);
+  updateSettings(@TenantId() tenantId: string, @Body() dto: UpdateSettingsDto) {
+    return this.adminService.updateSettings(tenantId, dto);
   }
 
   @Patch('settings/brand')
   @RequirePermission('settings:manage')
-  updateBrand(@TenantId() tenantId: string, @Body() body: unknown) {
-    return this.adminService.updateBrand(tenantId, body);
+  updateBrand(@TenantId() tenantId: string, @Body() dto: UpdateBrandDto) {
+    return this.adminService.updateBrand(tenantId, dto);
+  }
+
+  @Post('settings/brand/logo')
+  @RequirePermission('settings:manage')
+  @UseInterceptors(FileInterceptor('file'))
+  uploadBrandLogo(
+    @TenantId() tenantId: string,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('Falta el archivo');
+    return this.adminService.uploadBrandLogo(tenantId, file);
+  }
+
+  @Post('settings/brand/favicon')
+  @RequirePermission('settings:manage')
+  @UseInterceptors(FileInterceptor('file'))
+  uploadBrandFavicon(
+    @TenantId() tenantId: string,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('Falta el archivo');
+    return this.adminService.uploadBrandFavicon(tenantId, file);
   }
 }

@@ -44,6 +44,10 @@ coverage/
 # Docker
 docker-compose.override.yml
 
+# Local file uploads (temporary bridge until R2/S3 — ver apps/api/src/modules/files)
+apps/api/uploads/*
+!apps/api/uploads/.gitkeep
+
 # Large media files
 *.mp4
 *.mov

@@ -10,12 +10,14 @@ import { AdminService } from './admin.service';
 import { AdminRepository, AdminUserRecord } from './admin.repository';
 import { PermissionsService } from '../permissions/permissions.service';
 import { EmailService } from '../email/email.service';
+import { FilesService } from '../files/files.service';
 
 describe('AdminService', () => {
   let service: AdminService;
   let adminRepo: jest.Mocked<AdminRepository>;
   let permissionsService: jest.Mocked<PermissionsService>;
   let emailService: jest.Mocked<EmailService>;
+  let filesService: jest.Mocked<FilesService>;
 
   const actor: JwtPayload = {
     sub: 'admin-1',
@@ -37,6 +39,16 @@ describe('AdminService', () => {
             findUserByEmail: jest.fn(),
             createUser: jest.fn(),
             updateUserRole: jest.fn(),
+            findAccountSettings: jest.fn(),
+            countActiveEventsToday: jest.fn(),
+            countObituariesPublished: jest.fn(),
+            countPendingMessages: jest.fn(),
+            countLeadsInRange: jest.fn(),
+            sumLiveViewers: jest.fn(),
+            countActiveClients: jest.fn(),
+            upsertAccountSettings: jest.fn(),
+            findBrandConfig: jest.fn(),
+            upsertBrandConfig: jest.fn(),
           },
         },
         {
@@ -53,6 +65,13 @@ describe('AdminService', () => {
           },
         },
         {
+          provide: FilesService,
+          useValue: {
+            upload: jest.fn(),
+            delete: jest.fn(),
+          },
+        },
+        {
           provide: ConfigService,
           useValue: { get: jest.fn().mockReturnValue('http://localhost:4200') },
         },
@@ -63,10 +82,237 @@ describe('AdminService', () => {
     adminRepo = module.get(AdminRepository);
     permissionsService = module.get(PermissionsService);
     emailService = module.get(EmailService);
+    filesService = module.get(FilesService);
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('getDashboard', () => {
+    it('throws ForbiddenException when there is no tenant context', async () => {
+      // ACT & ASSERT
+      await expect(service.getDashboard('')).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(adminRepo.findAccountSettings).not.toHaveBeenCalled();
+    });
+
+    it('aggregates metrics and computes the leads delta percentage', async () => {
+      // ARRANGE
+      adminRepo.findAccountSettings.mockResolvedValue(null);
+      adminRepo.countActiveEventsToday.mockResolvedValue(2);
+      adminRepo.countObituariesPublished.mockResolvedValue(5);
+      adminRepo.countPendingMessages.mockResolvedValue(3);
+      adminRepo.countLeadsInRange
+        .mockResolvedValueOnce(10) // este mes
+        .mockResolvedValueOnce(5); // mes anterior
+      adminRepo.sumLiveViewers.mockResolvedValue(42);
+      adminRepo.countActiveClients.mockResolvedValue(7);
+
+      // ACT
+      const result = await service.getDashboard('tenant-1');
+
+      // ASSERT
+      expect(result).toEqual({
+        activeEventsToday: 2,
+        obituariesPublishedThisMonth: 5,
+        pendingMessages: 3,
+        leadsThisMonth: 10,
+        leadsLastMonth: 5,
+        leadsDeltaPercent: 100,
+        liveViewers: 42,
+        totalClients: 7,
+      });
+    });
+
+    it('returns a null leads delta when there were no leads last month (avoids divide-by-zero)', async () => {
+      // ARRANGE
+      adminRepo.findAccountSettings.mockResolvedValue(null);
+      adminRepo.countActiveEventsToday.mockResolvedValue(0);
+      adminRepo.countObituariesPublished.mockResolvedValue(0);
+      adminRepo.countPendingMessages.mockResolvedValue(0);
+      adminRepo.countLeadsInRange
+        .mockResolvedValueOnce(3)
+        .mockResolvedValueOnce(0);
+      adminRepo.sumLiveViewers.mockResolvedValue(0);
+      adminRepo.countActiveClients.mockResolvedValue(0);
+
+      // ACT
+      const result = await service.getDashboard('tenant-1');
+
+      // ASSERT
+      expect(result.leadsDeltaPercent).toBeNull();
+    });
+  });
+
+  describe('getSettings', () => {
+    it('throws ForbiddenException when there is no tenant context', async () => {
+      await expect(service.getSettings('')).rejects.toThrow(ForbiddenException);
+    });
+
+    it('returns sane defaults when the tenant has no settings row yet', async () => {
+      // ARRANGE
+      adminRepo.findAccountSettings.mockResolvedValue(null);
+
+      // ACT
+      const result = await service.getSettings('tenant-1');
+
+      // ASSERT
+      expect(result).toEqual({
+        timezone: 'America/Bogota',
+        locale: 'es',
+        notifyNewLead: true,
+        notifyPendingMessages: true,
+        notifyWeeklySummary: false,
+        requireAccessCodeDefault: false,
+      });
+    });
+
+    it('returns the persisted settings when they exist', async () => {
+      // ARRANGE
+      adminRepo.findAccountSettings.mockResolvedValue({
+        id: 'settings-1',
+        tenantId: 'tenant-1',
+        timezone: 'America/Mexico_City',
+        locale: 'en',
+        notifyNewLead: false,
+        notifyPendingMessages: false,
+        notifyWeeklySummary: true,
+        requireAccessCodeDefault: true,
+        updatedAt: new Date(),
+      });
+
+      // ACT
+      const result = await service.getSettings('tenant-1');
+
+      // ASSERT
+      expect(result.timezone).toBe('America/Mexico_City');
+      expect(result.locale).toBe('en');
+    });
+  });
+
+  describe('updateSettings', () => {
+    it('throws ForbiddenException when there is no tenant context', async () => {
+      await expect(
+        service.updateSettings('', { timezone: 'America/Bogota' }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(adminRepo.upsertAccountSettings).not.toHaveBeenCalled();
+    });
+
+    it('upserts the account settings for the tenant', async () => {
+      // ARRANGE
+      adminRepo.upsertAccountSettings.mockResolvedValue({} as never);
+
+      // ACT
+      await service.updateSettings('tenant-1', { locale: 'en' });
+
+      // ASSERT
+      expect(adminRepo.upsertAccountSettings).toHaveBeenCalledWith('tenant-1', {
+        locale: 'en',
+      });
+    });
+  });
+
+  describe('updateBrand', () => {
+    it('throws ForbiddenException when there is no tenant context', async () => {
+      await expect(
+        service.updateBrand('', { primaryColor: '#111111' }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(adminRepo.upsertBrandConfig).not.toHaveBeenCalled();
+    });
+
+    it('upserts the brand config for the tenant', async () => {
+      // ARRANGE
+      adminRepo.upsertBrandConfig.mockResolvedValue({} as never);
+
+      // ACT
+      await service.updateBrand('tenant-1', { primaryColor: '#111111' });
+
+      // ASSERT
+      expect(adminRepo.upsertBrandConfig).toHaveBeenCalledWith('tenant-1', {
+        primaryColor: '#111111',
+      });
+    });
+  });
+
+  describe('uploadBrandLogo', () => {
+    const file = {
+      buffer: Buffer.from('x'),
+      mimetype: 'image/png',
+      originalname: 'logo.png',
+    };
+
+    it('throws ForbiddenException when there is no tenant context', async () => {
+      await expect(service.uploadBrandLogo('', file)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(filesService.upload).not.toHaveBeenCalled();
+    });
+
+    it('uploads the file, persists the URL and deletes the previous logo', async () => {
+      // ARRANGE
+      adminRepo.findBrandConfig.mockResolvedValue({
+        logoUrl: 'http://localhost:3000/uploads/brand/tenant-1/old.png',
+      } as never);
+      filesService.upload.mockResolvedValue(
+        'http://localhost:3000/uploads/brand/tenant-1/new.png',
+      );
+      adminRepo.upsertBrandConfig.mockResolvedValue({} as never);
+
+      // ACT
+      await service.uploadBrandLogo('tenant-1', file);
+
+      // ASSERT
+      expect(filesService.upload).toHaveBeenCalledWith(file, 'brand/tenant-1', {
+        maxSizeBytes: 2 * 1024 * 1024,
+      });
+      expect(adminRepo.upsertBrandConfig).toHaveBeenCalledWith('tenant-1', {
+        logoUrl: 'http://localhost:3000/uploads/brand/tenant-1/new.png',
+      });
+      expect(filesService.delete).toHaveBeenCalledWith(
+        'http://localhost:3000/uploads/brand/tenant-1/old.png',
+      );
+    });
+
+    it('does not attempt to delete anything when there was no previous logo', async () => {
+      // ARRANGE
+      adminRepo.findBrandConfig.mockResolvedValue(null);
+      filesService.upload.mockResolvedValue(
+        'http://localhost:3000/uploads/brand/tenant-1/new.png',
+      );
+      adminRepo.upsertBrandConfig.mockResolvedValue({} as never);
+
+      // ACT
+      await service.uploadBrandLogo('tenant-1', file);
+
+      // ASSERT
+      expect(filesService.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('uploadBrandFavicon', () => {
+    it('uploads with the favicon size limit', async () => {
+      // ARRANGE
+      const file = {
+        buffer: Buffer.from('x'),
+        mimetype: 'image/png',
+        originalname: 'favicon.png',
+      };
+      adminRepo.findBrandConfig.mockResolvedValue(null);
+      filesService.upload.mockResolvedValue(
+        'http://localhost:3000/uploads/brand/tenant-1/favicon.png',
+      );
+      adminRepo.upsertBrandConfig.mockResolvedValue({} as never);
+
+      // ACT
+      await service.uploadBrandFavicon('tenant-1', file);
+
+      // ASSERT
+      expect(filesService.upload).toHaveBeenCalledWith(file, 'brand/tenant-1', {
+        maxSizeBytes: 512 * 1024,
+      });
+    });
   });
 
   describe('getUsers', () => {
