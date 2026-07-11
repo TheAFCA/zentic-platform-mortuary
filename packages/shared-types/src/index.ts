@@ -221,3 +221,87 @@ export interface WsViewerCount extends WsEventPayload {
 export interface WsStreamStatus extends WsEventPayload {
   status: EventStatus;
 }
+
+export interface WsMessagePending extends WsEventPayload {
+  message: {
+    id: string;
+    authorName: string;
+    content: string;
+    iconType: string | null;
+    createdAt: string;
+  };
+}
+
+export interface WsReaction extends WsEventPayload {
+  reaction: {
+    type: string;
+    count: number;
+  };
+}
+
+export interface WsEventPublic {
+  id: string;
+  title: string;
+  slug: string;
+  status: EventStatus;
+  ceremonyType: string;
+  scheduledAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  recordingUrl: string | null;
+  isPublic: boolean;
+  viewerCount: number;
+  deceased: {
+    firstName: string;
+    lastName: string;
+    birthDate: string | null;
+    deathDate: string | null;
+    photoUrl: string | null;
+    biography: string | null;
+    epitaph: string | null;
+  } | null;
+  tenant: {
+    name: string;
+    brandConfig: TenantBrandConfig | null;
+  };
+}
+
+export interface CreateEventInput {
+  title: string;
+  deceasedId?: string;
+  deceased?: {
+    firstName: string;
+    lastName: string;
+    birthDate?: string;
+    deathDate?: string;
+    photoUrl?: string;
+    biography?: string;
+    epitaph?: string;
+  };
+  roomId?: string;
+  clientId?: string;
+  description?: string;
+  ceremonyType: string;
+  scheduledAt: string;
+  estimatedDuration?: number;
+  isPublic?: boolean;
+  accessCode?: string;
+  moderationMode?: ModerationMode;
+}
+
+export interface SendMessageInput {
+  authorName: string;
+  content: string;
+  iconType?: string;
+}
+
+export interface SendReactionInput {
+  type: string;
+}
+
+export interface AccessCodeInput {
+  code: string;
+  name?: string;
+  email?: string;
+  consent?: boolean;
+}

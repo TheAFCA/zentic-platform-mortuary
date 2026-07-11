@@ -68,4 +68,28 @@ export class NotificationsGateway
   broadcastStreamStatus(eventId: string, payload: WsStreamStatus) {
     this.server.to(`event:${eventId}`).emit('stream-status', payload);
   }
+
+  broadcastMessagePending(eventId: string, payload: WsNewMessage) {
+    this.server.to(`event:${eventId}:admin`).emit('message-pending', payload);
+  }
+
+  async handleJoinAdmin(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { eventId: string },
+  ) {
+    await client.join(`event:${data.eventId}:admin`);
+    this.logger.log(`Admin ${client.id} joined admin room: ${data.eventId}`);
+  }
+
+  @SubscribeMessage('leave-admin')
+  async handleLeaveAdmin(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { eventId: string },
+  ) {
+    await client.leave(`event:${data.eventId}:admin`);
+  }
+
+  broadcastReaction(eventId: string, payload: WsNewMessage) {
+    this.server.to(`event:${eventId}`).emit('new-reaction', payload);
+  }
 }
