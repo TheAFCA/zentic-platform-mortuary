@@ -1,0 +1,42 @@
+<app-impersonation-banner
+  *ngIf="impersonationSession.isActive()"
+  [tenantName]="impersonationSession.session()!.tenantName"
+  [expiresAt]="impersonationSession.session()!.expiresAt"
+  (exit)="exitImpersonation()"
+  (expired)="exitImpersonation()"
+/>
+
+<mat-sidenav-container class="dashboard-layout">
+  <mat-sidenav mode="side" opened class="dashboard-layout__sidenav">
+    <div class="dashboard-layout__brand">
+      <span class="dashboard-layout__brand-mark">Z</span>
+      <div>
+        <p class="dashboard-layout__brand-name">ZENTIC</p>
+        <p class="dashboard-layout__brand-tag">Panel operativo</p>
+      </div>
+    </div>
+
+    <!-- Navegación temporal del panel Super Admin (Módulo 04) — el sidebar real es de Módulo 05 -->
+    <nav class="dashboard-layout__nav" *ngIf="router.url.startsWith('/super-admin')">
+      <p class="dashboard-layout__nav-eyebrow">Plataforma</p>
+      <a
+        *ngFor="let item of superAdminNavItems"
+        class="dashboard-layout__nav-link"
+        routerLinkActive="dashboard-layout__nav-link--active"
+        [routerLink]="item.path"
+      >
+        <mat-icon>{{ item.icon }}</mat-icon>
+        <span>{{ item.label }}</span>
+      </a>
+    </nav>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <mat-toolbar class="dashboard-layout__toolbar">
+      <!-- TODO: HeaderComponent — implement in Module 05 -->
+    </mat-toolbar>
+    <main class="dashboard-layout__main">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>
