@@ -12,13 +12,14 @@ export const permissionGuard: CanActivateFn = (route: ActivatedRouteSnapshot) =>
 
   const requiredRole = route.data['role'] as UserRole | undefined;
   if (requiredRole && user.role !== requiredRole) {
-    return router.createUrlTree(['/admin/dashboard']);
+    return router.createUrlTree(['/no-autorizado']);
   }
 
   const requiredPermissions = route.data['permissions'] as Permission[] | undefined;
   if (requiredPermissions?.length) {
-    const hasPermission = requiredPermissions.some((p) => user.permissions.includes(p));
-    if (!hasPermission) return router.createUrlTree(['/admin/dashboard']);
+    const isAdminRole = user.role === UserRole.SUPER_ADMIN || user.role === UserRole.TENANT_ADMIN;
+    const hasPermission = isAdminRole || requiredPermissions.some((p) => user.permissions.includes(p));
+    if (!hasPermission) return router.createUrlTree(['/no-autorizado']);
   }
 
   return true;
