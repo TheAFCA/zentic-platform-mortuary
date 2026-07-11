@@ -1,10 +1,17 @@
 import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { buildPasswordResetEmail } from './templates/password-reset.template';
+import { buildNewUserCredentialsEmail } from './templates/new-user-credentials.template';
 
 type PasswordResetEmailInput = {
   to: string;
   resetUrl: string;
+};
+
+type NewUserCredentialsEmailInput = {
+  to: string;
+  loginUrl: string;
+  temporaryPassword: string;
 };
 
 @Injectable()
@@ -14,11 +21,26 @@ export class EmailService {
   constructor(private readonly config: ConfigService) {}
 
   async sendPasswordResetEmail(input: PasswordResetEmailInput): Promise<void> {
+    const message = buildPasswordResetEmail({ resetUrl: input.resetUrl });
+    await this.send(input.to, message);
+  }
+
+  async sendNewUserCredentialsEmail(input: NewUserCredentialsEmailInput): Promise<void> {
+    const message = buildNewUserCredentialsEmail({
+      loginUrl: input.loginUrl,
+      temporaryPassword: input.temporaryPassword,
+    });
+    await this.send(input.to, message);
+  }
+
+  private async send(
+    to: string,
+    message: { subject: string; html: string; text: string },
+  ): Promise<void> {
     const provider = this.config.get<'resend' | 'sendgrid'>(
       'EMAIL_PROVIDER',
       'resend',
     );
-    const message = buildPasswordResetEmail({ resetUrl: input.resetUrl });
 
     if (provider === 'sendgrid') {
       throw new BadGatewayException('SendGrid provider is not implemented yet');
@@ -28,12 +50,8 @@ export class EmailService {
     const from = this.config.get<string>('EMAIL_FROM', 'noreply@zentic.pro');
 
     if (!apiKey) {
-      this.logger.warn(
-        `Password reset email skipped for ${input.to}: RESEND_API_KEY is missing`,
-      );
-      this.logger.debug(
-        `Password reset link for ${input.to}: ${input.resetUrl}`,
-      );
+      this.logger.warn(`Email skipped for ${to}: RESEND_API_KEY is missing`);
+      this.logger.debug(`Email body for ${to}: ${message.text}`);
       return;
     }
 
@@ -45,7 +63,7 @@ export class EmailService {
       },
       body: JSON.stringify({
         from,
-        to: [input.to],
+        to: [to],
         subject: message.subject,
         html: message.html,
         text: message.text,
@@ -54,9 +72,7 @@ export class EmailService {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new BadGatewayException(
-        `Failed to send password reset email: ${errorText}`,
-      );
+      throw new BadGatewayException(`Failed to send email: ${errorText}`);
     }
   }
 }
