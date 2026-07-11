@@ -1,0 +1,96 @@
+<div class="tenants-page">
+  <header class="tenants-page__header">
+    <p class="tenants-page__eyebrow">Super Admin</p>
+    <h1 class="tenants-page__title">Gestión de Tenants</h1>
+    <p class="tenants-page__subtitle">Funerarias registradas en la plataforma</p>
+  </header>
+
+  <section class="panel-card" *ngIf="showForm()">
+    <div class="panel-card__header">
+      <h2>{{ editingTenant() ? 'Editar tenant' : 'Nuevo Tenant' }}</h2>
+    </div>
+    <div class="panel-card__body">
+      <app-tenant-form
+        [initialValue]="editingTenant() ? {
+          name: editingTenant()!.name,
+          slug: editingTenant()!.slug,
+          country: editingTenant()!.country || '',
+          adminEmail: '',
+          plan: editingTenant()!.plan
+        } : null"
+        [errorMessage]="formError()"
+        (save)="onSave($event)"
+        (cancel)="closeForm()"
+      />
+    </div>
+  </section>
+
+  <section class="panel-card">
+    <div class="panel-card__header panel-card__header--split">
+      <div>
+        <h2>Tenants</h2>
+        <p class="panel-card__count">{{ total() }} tenant(s)</p>
+      </div>
+      <button type="button" class="btn-primary" (click)="openCreate()">
+        <mat-icon>add_business</mat-icon>
+        <span>Nuevo Tenant</span>
+      </button>
+    </div>
+
+    <div class="panel-card__body panel-card__body--flush">
+      <app-data-table [columns]="columns" [rows]="tenants()" emptyMessage="No hay tenants registrados">
+        <ng-template #rowActions let-tenant>
+          <div class="tenants-table__actions">
+            <span class="status-badge">
+              <app-badge [color]="statusBadgeColor(tenant.status)">{{ tenant.status }}</app-badge>
+            </span>
+            <button type="button" class="btn-ghost btn-ghost--sm" (click)="openEdit(tenant)">Editar</button>
+            <button type="button" class="btn-ghost btn-ghost--sm" (click)="askImpersonate(tenant)">
+              Acceder como Admin
+            </button>
+            <button
+              *ngIf="tenant.status !== 'SUSPENDED'"
+              type="button"
+              class="btn-ghost btn-ghost--sm"
+              (click)="askSuspend(tenant)"
+            >
+              Suspender
+            </button>
+            <button
+              *ngIf="tenant.status === 'SUSPENDED'"
+              type="button"
+              class="btn-ghost btn-ghost--sm"
+              (click)="askReactivate(tenant)"
+            >
+              Reactivar
+            </button>
+            <button type="button" class="btn-ghost btn-ghost--sm btn-ghost--danger" (click)="askDelete(tenant)">
+              Eliminar
+            </button>
+          </div>
+        </ng-template>
+      </app-data-table>
+    </div>
+  </section>
+
+  <app-confirm-dialog
+    [open]="confirmAction() !== null"
+    [title]="confirmDialogTitle()"
+    [message]="confirmDialogMessage()"
+    [danger]="isDangerAction()"
+    confirmLabel="Confirmar"
+    (confirm)="onConfirm()"
+    (cancel)="cancelConfirm()"
+  >
+    <p class="tenants-page__confirm-error" *ngIf="confirmError()">{{ confirmError() }}</p>
+    <textarea
+      *ngIf="showReasonInput()"
+      class="tenants-page__reason"
+      rows="3"
+      placeholder="Razón (opcional)"
+      [ngModel]="confirmReason()"
+      (ngModelChange)="confirmReason.set($event)"
+      [ngModelOptions]="{ standalone: true }"
+    ></textarea>
+  </app-confirm-dialog>
+</div>

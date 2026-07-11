@@ -60,6 +60,23 @@ export const routes: Routes = [
     ],
   },
 
+  // Bootstrap de una sesión de impersonación de Super Admin (Módulo 04) — sin authGuard,
+  // ya que la identidad llega vía token en el query param, no vía cookie de sesión.
+  {
+    path: 'impersonate',
+    loadComponent: () =>
+      import('./public/impersonate-entry/impersonate-entry.component').then(
+        (m) => m.ImpersonateEntryComponent,
+      ),
+  },
+  {
+    path: 'impersonate/ended',
+    loadComponent: () =>
+      import('./public/impersonate-ended/impersonate-ended.component').then(
+        (m) => m.ImpersonateEndedComponent,
+      ),
+  },
+
   // Destino de permissionGuard / errorInterceptor cuando falta un permiso (HU-RBAC-002)
   {
     path: 'no-autorizado',

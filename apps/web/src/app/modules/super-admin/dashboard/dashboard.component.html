@@ -1,0 +1,44 @@
+<div class="dashboard-page">
+  <header class="dashboard-page__header">
+    <p class="dashboard-page__eyebrow">Super Admin</p>
+    <h1 class="dashboard-page__title">Dashboard Global</h1>
+    <p class="dashboard-page__subtitle">Estado general de la plataforma</p>
+  </header>
+
+  <ng-container *ngIf="dashboard() as data">
+    <div class="dashboard-page__grid">
+      <app-stat-card label="Tenants activos" [value]="data.tenants.active" icon="check_circle" />
+      <app-stat-card label="Tenants suspendidos" [value]="data.tenants.suspended" icon="block" />
+      <app-stat-card label="Tenants en prueba" [value]="data.tenants.trial" icon="hourglass_top" />
+      <app-stat-card label="Eventos en vivo" [value]="data.liveEvents" icon="sensors" />
+      <app-stat-card
+        label="Obituarios publicados hoy"
+        [value]="data.obituariesPublishedToday"
+        icon="today"
+      />
+      <app-stat-card
+        label="Obituarios esta semana"
+        [value]="data.obituariesPublishedThisWeek"
+        icon="date_range"
+      />
+      <app-stat-card label="Usuarios registrados" [value]="data.totalUsers" icon="group" />
+    </div>
+
+    <section class="panel-card">
+      <div class="panel-card__header">
+        <h2>Últimas acciones</h2>
+      </div>
+      <div class="panel-card__body">
+        <ul class="dashboard-page__log-list">
+          <li *ngFor="let log of data.recentAuditLogs" data-testid="dashboard-audit-row">
+            <span class="dashboard-page__log-action">{{ log.action }}</span>
+            <span class="dashboard-page__log-meta">{{ log.createdAt | date: 'short' }}</span>
+          </li>
+          <li *ngIf="data.recentAuditLogs.length === 0" class="dashboard-page__log-empty">
+            Sin actividad reciente
+          </li>
+        </ul>
+      </div>
+    </section>
+  </ng-container>
+</div>
