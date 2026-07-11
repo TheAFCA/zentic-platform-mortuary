@@ -1,12 +1,19 @@
 <div class="tenants-page">
-  <header class="tenants-page__header">
-    <p class="tenants-page__eyebrow">Super Admin</p>
-    <h1 class="tenants-page__title">Gestión de Tenants</h1>
-    <p class="tenants-page__subtitle">Funerarias registradas en la plataforma</p>
+  <header class="tenants-page__hero">
+    <div class="tenants-page__hero-glow"></div>
+    <span class="tenants-page__hero-icon"><mat-icon>domain</mat-icon></span>
+    <div>
+      <p class="tenants-page__eyebrow">Super Admin · Plataforma</p>
+      <h1 class="tenants-page__title">Gestión de Tenants</h1>
+      <p class="tenants-page__subtitle">Funerarias registradas en la plataforma</p>
+    </div>
   </header>
 
   <section class="panel-card" *ngIf="showForm()">
     <div class="panel-card__header">
+      <span class="panel-card__header-icon">
+        <mat-icon>{{ editingTenant() ? 'edit' : 'add_business' }}</mat-icon>
+      </span>
       <h2>{{ editingTenant() ? 'Editar tenant' : 'Nuevo Tenant' }}</h2>
     </div>
     <div class="panel-card__body">

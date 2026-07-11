@@ -6,26 +6,67 @@
   max-width: 56rem;
 }
 
-.admins-page__header {
-  display: grid;
-  gap: 0.3rem;
+.admins-page__hero {
+  @include panel.sa-hero;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.admins-page__hero-glow {
+  position: absolute;
+  top: -30%;
+  right: -8%;
+  width: 18rem;
+  height: 18rem;
+  border-radius: 999px;
+  background: rgba(107, 144, 128, 0.28);
+  filter: blur(48px);
+  pointer-events: none;
+}
+
+.admins-page__hero-icon {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  flex: 0 0 auto;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+  backdrop-filter: blur(12px);
 }
 
 .admins-page__eyebrow {
-  @include panel.eyebrow;
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.68);
 }
 
 .admins-page__title {
-  margin: 0;
-  font-size: 1.75rem;
+  position: relative;
+  z-index: 1;
+  margin: 0.3rem 0 0.3rem;
+  font-size: 1.85rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: panel.$ink;
+  color: #fff;
 }
 
 .admins-page__subtitle {
+  position: relative;
+  z-index: 1;
   margin: 0;
-  color: panel.$muted;
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .admins-page__error {
@@ -44,24 +85,28 @@
 
 .admins-page__create-row input {
   flex: 1;
-  border: 1px solid panel.$border;
-  border-radius: 0.65rem;
-  padding: 0.6rem 0.75rem;
-  font: inherit;
+  @include panel.sa-pill-input;
 }
 
 .panel-card {
-  @include panel.panel-card;
+  @include panel.sa-card;
 }
 
 .panel-card__header {
-  padding: 1.35rem 1.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1.5rem 1.75rem 0.85rem;
+}
+
+.panel-card__header-icon {
+  @include panel.sa-icon-chip;
 }
 
 .panel-card__header h2 {
   margin: 0;
   font-size: 1.05rem;
-  font-weight: 600;
+  font-weight: 700;
   color: panel.$ink;
 }
 
@@ -72,7 +117,7 @@
 }
 
 .panel-card__body {
-  padding: 0.75rem 1.5rem 1.5rem;
+  padding: 0.85rem 1.75rem 1.75rem;
 }
 
 .panel-card__body--flush {

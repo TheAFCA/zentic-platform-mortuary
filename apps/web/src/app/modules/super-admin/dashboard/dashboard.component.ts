@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { MatIconModule } from '@angular/material/icon';
 import {
   SuperAdminDashboard,
   SuperAdminDashboardApiService,
@@ -9,7 +10,7 @@ import { StatCardComponent } from '../../../shared/molecules/stat-card/stat-card
 @Component({
   selector: 'app-super-admin-dashboard',
   standalone: true,
-  imports: [CommonModule, StatCardComponent],
+  imports: [CommonModule, MatIconModule, StatCardComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })

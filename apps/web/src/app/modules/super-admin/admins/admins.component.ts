@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatIconModule } from '@angular/material/icon';
 import {
   SuperAdminUser,
   SuperAdminUsersApiService,
@@ -16,7 +17,14 @@ import { BadgeComponent } from '../../../shared/atoms/badge/badge.component';
 @Component({
   selector: 'app-super-admin-admins',
   standalone: true,
-  imports: [CommonModule, FormsModule, DataTableComponent, ConfirmDialogComponent, BadgeComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatIconModule,
+    DataTableComponent,
+    ConfirmDialogComponent,
+    BadgeComponent,
+  ],
   templateUrl: './admins.component.html',
   styleUrl: './admins.component.scss',
 })

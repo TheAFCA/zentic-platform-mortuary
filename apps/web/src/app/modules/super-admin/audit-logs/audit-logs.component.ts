@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatIconModule } from '@angular/material/icon';
 import { AuditLogEntry } from '@zentic/shared-types';
 import {
   AuditLogFilters,
@@ -14,7 +15,7 @@ import {
 @Component({
   selector: 'app-audit-logs',
   standalone: true,
-  imports: [CommonModule, FormsModule, DataTableComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, DataTableComponent],
   templateUrl: './audit-logs.component.html',
   styleUrl: './audit-logs.component.scss',
 })
