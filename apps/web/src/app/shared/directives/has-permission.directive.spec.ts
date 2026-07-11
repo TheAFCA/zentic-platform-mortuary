@@ -7,7 +7,9 @@ import { AuthStateService } from '../../core/services/auth-state.service';
 @Component({
   standalone: true,
   imports: [HasPermissionDirective],
-  template: ` <button *appHasPermission="'leads:export'" data-testid="export-btn">Exportar</button> `,
+  template: `
+    <button *appHasPermission="'leads:export'" data-testid="export-btn">Exportar</button>
+  `,
 })
 class HostComponent {}
 

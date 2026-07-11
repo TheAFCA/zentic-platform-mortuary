@@ -18,7 +18,13 @@ export class AdminRepository {
   findManyUsers(tenantId: string): Promise<AdminUserRecord[]> {
     return this.prisma.user.findMany({
       where: { tenantId, deletedAt: null },
-      select: { id: true, email: true, role: true, createdAt: true, lockedUntil: true },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        lockedUntil: true,
+      },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -26,7 +32,13 @@ export class AdminRepository {
   findUserById(tenantId: string, id: string) {
     return this.prisma.user.findFirst({
       where: { id, tenantId, deletedAt: null },
-      select: { id: true, email: true, role: true, createdAt: true, lockedUntil: true },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        lockedUntil: true,
+      },
     });
   }
 
@@ -47,11 +59,21 @@ export class AdminRepository {
         passwordHash: data.passwordHash,
         role: data.role,
       },
-      select: { id: true, email: true, role: true, createdAt: true, lockedUntil: true },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        lockedUntil: true,
+      },
     });
   }
 
-  async updateUserRole(tenantId: string, id: string, role: 'OPERATOR' | 'VIEWER'): Promise<void> {
+  async updateUserRole(
+    tenantId: string,
+    id: string,
+    role: 'OPERATOR' | 'VIEWER',
+  ): Promise<void> {
     await this.prisma.user.updateMany({
       where: { id, tenantId },
       data: { role },

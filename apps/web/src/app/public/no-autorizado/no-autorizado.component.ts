@@ -18,6 +18,6 @@ export class NoAutorizadoComponent {
   constructor(private readonly router: Router) {}
 
   goBack() {
-    this.router.navigate(['/admin/dashboard']);
+    void this.router.navigate(['/admin/dashboard']);
   }
 }

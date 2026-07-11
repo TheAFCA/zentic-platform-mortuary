@@ -35,8 +35,14 @@ export class UserFormComponent implements OnChanges {
   permissions: Permission[] = [];
 
   form = new FormGroup({
-    email: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.email] }),
-    role: new FormControl<'OPERATOR' | 'VIEWER'>('OPERATOR', { nonNullable: true, validators: [Validators.required] }),
+    email: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.email],
+    }),
+    role: new FormControl<'OPERATOR' | 'VIEWER'>('OPERATOR', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
   });
 
   ngOnChanges(): void {

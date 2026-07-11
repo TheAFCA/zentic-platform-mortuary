@@ -43,8 +43,8 @@ export class PermissionEditorComponent implements OnInit, OnChanges {
 
   ngOnInit(): void {
     this.selected = new Set(this.initialPermissions);
-    this.permissionsApi.getCatalog().subscribe(groups => (this.catalogGroups = groups));
-    this.permissionsApi.getPresets().subscribe(presets => (this.presets = presets));
+    this.permissionsApi.getCatalog().subscribe((groups) => (this.catalogGroups = groups));
+    this.permissionsApi.getPresets().subscribe((presets) => (this.presets = presets));
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -59,7 +59,9 @@ export class PermissionEditorComponent implements OnInit, OnChanges {
 
   assignableMetas(moduleName: string): PermissionMeta[] {
     const metas = this.catalogGroups[moduleName] ?? [];
-    return metas.filter(meta => (this.role === 'VIEWER' ? meta.assignableToViewer : meta.assignableToOperator));
+    return metas.filter((meta) =>
+      this.role === 'VIEWER' ? meta.assignableToViewer : meta.assignableToOperator,
+    );
   }
 
   isChecked(code: Permission): boolean {
@@ -73,16 +75,18 @@ export class PermissionEditorComponent implements OnInit, OnChanges {
   }
 
   applyPreset(presetId: string): void {
-    const preset = this.presets.find(p => p.id === presetId);
+    const preset = this.presets.find((p) => p.id === presetId);
     if (!preset) return;
 
     const assignableCodes = new Set(
       Object.values(this.catalogGroups)
         .flat()
-        .filter(meta => (this.role === 'VIEWER' ? meta.assignableToViewer : meta.assignableToOperator))
-        .map(meta => meta.code),
+        .filter((meta) =>
+          this.role === 'VIEWER' ? meta.assignableToViewer : meta.assignableToOperator,
+        )
+        .map((meta) => meta.code),
     );
-    this.selected = new Set(preset.permissions.filter(code => assignableCodes.has(code)));
+    this.selected = new Set(preset.permissions.filter((code) => assignableCodes.has(code)));
     this.emit();
   }
 

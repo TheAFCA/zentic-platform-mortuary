@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   JwtPayload,
   Permission,
@@ -30,7 +35,10 @@ export class PermissionsService {
    * PermissionGuard del backend ya hace este mismo bypass por rol al validar rutas — este método
    * es para cuando de verdad se necesita el set "efectivo" (ej. mostrarlo en la UI de edición).
    */
-  async getEffectivePermissions(userId: string, role: UserRole): Promise<Permission[]> {
+  async getEffectivePermissions(
+    userId: string,
+    role: UserRole,
+  ): Promise<Permission[]> {
     if (role === UserRole.SUPER_ADMIN || role === UserRole.TENANT_ADMIN) {
       return ALL_PERMISSION_CODES;
     }
@@ -43,32 +51,55 @@ export class PermissionsService {
     const target = await this.permissionsRepo.findUserById(tenantId, userId);
     if (!target) throw new NotFoundException('Usuario no encontrado');
 
-    const permissions = await this.getEffectivePermissions(target.id, target.role);
+    const permissions = await this.getEffectivePermissions(
+      target.id,
+      target.role,
+    );
     return { userId: target.id, role: target.role, permissions };
   }
 
-  async setUserPermissions(actor: JwtPayload, targetUserId: string, requested: string[]) {
+  async setUserPermissions(
+    actor: JwtPayload,
+    targetUserId: string,
+    requested: string[],
+  ) {
     assertTenantContext(actor.tenantId);
-    const target = await this.permissionsRepo.findUserById(actor.tenantId, targetUserId);
+    const target = await this.permissionsRepo.findUserById(
+      actor.tenantId,
+      targetUserId,
+    );
     if (!target) throw new NotFoundException('Usuario no encontrado');
 
     // RN-RBAC-002: el SUPER_ADMIN no se gestiona desde el panel de una funeraria.
     if (target.role === UserRole.SUPER_ADMIN) {
-      throw new ForbiddenException('El Super Admin no puede gestionarse desde este panel');
+      throw new ForbiddenException(
+        'El Super Admin no puede gestionarse desde este panel',
+      );
     }
     // RF-RBAC-001: solo se asignan permisos a OPERATOR/VIEWER (TENANT_ADMIN ya tiene todo).
     if (target.role === UserRole.TENANT_ADMIN) {
-      throw new BadRequestException('Solo se pueden asignar permisos a usuarios OPERATOR o VIEWER');
+      throw new BadRequestException(
+        'Solo se pueden asignar permisos a usuarios OPERATOR o VIEWER',
+      );
     }
 
-    const unknownCodes = requested.filter(code => !PERMISSION_CATALOG[code as Permission]);
+    const unknownCodes = requested.filter(
+      (code) => !PERMISSION_CATALOG[code as Permission],
+    );
     if (unknownCodes.length) {
-      throw new BadRequestException(`Permisos inválidos: ${unknownCodes.join(', ')}`);
+      throw new BadRequestException(
+        `Permisos inválidos: ${unknownCodes.join(', ')}`,
+      );
     }
 
     // RN-RBAC-001: un actor no puede otorgar permisos que él mismo no posee.
-    const actorPermissions = await this.getEffectivePermissions(actor.sub, actor.role);
-    const beyondActor = requested.filter(code => !actorPermissions.includes(code as Permission));
+    const actorPermissions = await this.getEffectivePermissions(
+      actor.sub,
+      actor.role,
+    );
+    const beyondActor = requested.filter(
+      (code) => !actorPermissions.includes(code as Permission),
+    );
     if (beyondActor.length) {
       throw new ForbiddenException(
         `No tienes estos permisos, no puedes asignarlos: ${beyondActor.join(', ')}`,
@@ -76,20 +107,27 @@ export class PermissionsService {
     }
 
     // RN-RBAC-003 (VIEWER nunca permisos de escritura) y matriz §5 (qué es asignable a OPERATOR).
-    const assignabilityField = target.role === UserRole.VIEWER ? 'assignableToViewer' : 'assignableToOperator';
-    const notAssignable = requested.filter(code => !PERMISSION_CATALOG[code as Permission][assignabilityField]);
+    const assignabilityField =
+      target.role === UserRole.VIEWER
+        ? 'assignableToViewer'
+        : 'assignableToOperator';
+    const notAssignable = requested.filter(
+      (code) => !PERMISSION_CATALOG[code as Permission][assignabilityField],
+    );
     if (notAssignable.length) {
       throw new BadRequestException(
         `Estos permisos no son asignables a un usuario ${target.role}: ${notAssignable.join(', ')}`,
       );
     }
 
-    const current = await this.permissionsRepo.findGrantedPermissions(target.id);
+    const current = await this.permissionsRepo.findGrantedPermissions(
+      target.id,
+    );
     const requestedSet = new Set(requested);
     const currentSet = new Set(current);
 
-    const toGrant = requested.filter(code => !currentSet.has(code));
-    const toRevoke = current.filter(code => !requestedSet.has(code));
+    const toGrant = requested.filter((code) => !currentSet.has(code));
+    const toRevoke = current.filter((code) => !requestedSet.has(code));
 
     if (toGrant.length || toRevoke.length) {
       await this.permissionsRepo.replacePermissions(
@@ -101,7 +139,11 @@ export class PermissionsService {
       );
     }
 
-    return { userId: target.id, role: target.role, permissions: requested as Permission[] };
+    return {
+      userId: target.id,
+      role: target.role,
+      permissions: requested as Permission[],
+    };
   }
 
   /**
@@ -109,11 +151,23 @@ export class PermissionsService {
    * de escritura que tuviera concedido se revoca de inmediato (nunca queda un VIEWER con permisos
    * de escritura, sin importar lo que intente el admin).
    */
-  async revokeNonAssignableForViewer(tenantId: string, userId: string, actorId: string): Promise<void> {
+  async revokeNonAssignableForViewer(
+    tenantId: string,
+    userId: string,
+    actorId: string,
+  ): Promise<void> {
     const current = await this.permissionsRepo.findGrantedPermissions(userId);
-    const toRevoke = current.filter(code => !PERMISSION_CATALOG[code as Permission]?.assignableToViewer);
+    const toRevoke = current.filter(
+      (code) => !PERMISSION_CATALOG[code as Permission]?.assignableToViewer,
+    );
     if (toRevoke.length) {
-      await this.permissionsRepo.replacePermissions(actorId, tenantId, userId, [], toRevoke);
+      await this.permissionsRepo.replacePermissions(
+        actorId,
+        tenantId,
+        userId,
+        [],
+        toRevoke,
+      );
     }
   }
 }

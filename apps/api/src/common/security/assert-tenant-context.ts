@@ -7,7 +7,9 @@ import { ForbiddenException } from '@nestjs/common';
  * terminan filtrando por un tenantId vacío y devuelven listas vacías en silencio en vez de un
  * error claro — parece "este tenant no tiene usuarios" cuando en realidad es "no hay tenant".
  */
-export function assertTenantContext(tenantId: string | null | undefined): asserts tenantId is string {
+export function assertTenantContext(
+  tenantId: string | null | undefined,
+): asserts tenantId is string {
   if (!tenantId) {
     throw new ForbiddenException(
       'Esta operación requiere un tenant activo. Si eres Super Admin, usa la impersonación desde el panel de Super Admin.',

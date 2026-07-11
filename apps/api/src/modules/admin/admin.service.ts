@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import { JwtPayload } from '@zentic/shared-types';
@@ -35,7 +40,9 @@ export class AdminService {
     assertTenantContext(tenantId);
     const existing = await this.adminRepo.findUserByEmail(tenantId, dto.email);
     if (existing) {
-      throw new ConflictException('Ya existe un usuario con ese email en este tenant');
+      throw new ConflictException(
+        'Ya existe un usuario con ese email en este tenant',
+      );
     }
 
     // TODO(Módulo 05): validar límite de usuarios del plan del tenant (RN-ADMIN-001) antes de crear.
@@ -51,11 +58,18 @@ export class AdminService {
 
     let permissions: string[] = [];
     if (dto.permissions?.length) {
-      const result = await this.permissionsService.setUserPermissions(actor, user.id, dto.permissions);
+      const result = await this.permissionsService.setUserPermissions(
+        actor,
+        user.id,
+        dto.permissions,
+      );
       permissions = result.permissions;
     }
 
-    const frontendUrl = this.config.get<string>('FRONTEND_URL', 'http://localhost:4200');
+    const frontendUrl = this.config.get<string>(
+      'FRONTEND_URL',
+      'http://localhost:4200',
+    );
     await this.emailService.sendNewUserCredentialsEmail({
       to: user.email,
       loginUrl: `${frontendUrl}/auth/login`,
@@ -65,7 +79,12 @@ export class AdminService {
     return { ...user, permissions };
   }
 
-  async updateUser(tenantId: string, actor: JwtPayload, id: string, dto: UpdateUserDto) {
+  async updateUser(
+    tenantId: string,
+    actor: JwtPayload,
+    id: string,
+    dto: UpdateUserDto,
+  ) {
     assertTenantContext(tenantId);
     const target = await this.adminRepo.findUserById(tenantId, id);
     if (!target) throw new NotFoundException('Usuario no encontrado');
@@ -79,17 +98,29 @@ export class AdminService {
       // RN-RBAC-003: si baja a VIEWER y no vienen permisos explícitos en este mismo request,
       // se revoca de inmediato cualquier permiso de escritura que le hubiera quedado concedido.
       if (dto.role === 'VIEWER' && !dto.permissions) {
-        await this.permissionsService.revokeNonAssignableForViewer(tenantId, id, actor.sub);
+        await this.permissionsService.revokeNonAssignableForViewer(
+          tenantId,
+          id,
+          actor.sub,
+        );
       }
     }
 
     let permissions: string[] | undefined;
     if (dto.permissions) {
-      const result = await this.permissionsService.setUserPermissions(actor, id, dto.permissions);
+      const result = await this.permissionsService.setUserPermissions(
+        actor,
+        id,
+        dto.permissions,
+      );
       permissions = result.permissions;
     }
 
-    return { id, ...(dto.role ? { role: dto.role } : {}), ...(permissions ? { permissions } : {}) };
+    return {
+      id,
+      ...(dto.role ? { role: dto.role } : {}),
+      ...(permissions ? { permissions } : {}),
+    };
   }
 
   getSettings(_tenantId: string) {

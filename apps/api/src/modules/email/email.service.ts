@@ -25,7 +25,9 @@ export class EmailService {
     await this.send(input.to, message);
   }
 
-  async sendNewUserCredentialsEmail(input: NewUserCredentialsEmailInput): Promise<void> {
+  async sendNewUserCredentialsEmail(
+    input: NewUserCredentialsEmailInput,
+  ): Promise<void> {
     const message = buildNewUserCredentialsEmail({
       loginUrl: input.loginUrl,
       temporaryPassword: input.temporaryPassword,

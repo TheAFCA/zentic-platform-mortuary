@@ -1,7 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
-import { Permission } from '@zentic/shared-types';
 import { AdminUser, AdminUsersApiService } from '../../../core/services/admin-users-api.service';
 import { PermissionsApiService } from '../../../core/services/permissions-api.service';
 import { HasPermissionDirective } from '../../../shared/directives/has-permission.directive';
@@ -28,7 +27,7 @@ export class UsersComponent implements OnInit {
   }
 
   load(): void {
-    this.adminUsersApi.getUsers().subscribe(users => this.users.set(users));
+    this.adminUsersApi.getUsers().subscribe((users) => this.users.set(users));
   }
 
   initials(email: string): string {
@@ -44,7 +43,7 @@ export class UsersComponent implements OnInit {
 
   openEdit(user: AdminUser): void {
     this.editingUser.set(user);
-    this.permissionsApi.getUserPermissions(user.id).subscribe(result => {
+    this.permissionsApi.getUserPermissions(user.id).subscribe((result) => {
       this.editingFormValue.set({
         email: user.email,
         role: user.role as 'OPERATOR' | 'VIEWER',
@@ -61,11 +60,14 @@ export class UsersComponent implements OnInit {
   onSave(value: UserFormValue): void {
     const editing = this.editingUser();
     const request = editing
-      ? this.adminUsersApi.updateUser(editing.id, { role: value.role, permissions: value.permissions })
+      ? this.adminUsersApi.updateUser(editing.id, {
+          role: value.role,
+          permissions: value.permissions,
+        })
       : this.adminUsersApi.createUser({
           email: value.email,
           role: value.role,
-          permissions: value.permissions as Permission[],
+          permissions: value.permissions,
         });
 
     request.subscribe(() => {

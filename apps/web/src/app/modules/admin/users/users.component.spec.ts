@@ -16,8 +16,14 @@ describe('UsersComponent', () => {
     TestBed.configureTestingModule({
       imports: [UsersComponent],
       providers: [
-        { provide: AdminUsersApiService, useValue: { getUsers: () => of(users), createUser: () => of({}) } },
-        { provide: PermissionsApiService, useValue: { getUserPermissions: () => of({ permissions: [] }) } },
+        {
+          provide: AdminUsersApiService,
+          useValue: { getUsers: () => of(users), createUser: () => of({}) },
+        },
+        {
+          provide: PermissionsApiService,
+          useValue: { getUserPermissions: () => of({ permissions: [] }) },
+        },
       ],
     });
     const fixture = TestBed.createComponent(UsersComponent);
@@ -41,7 +47,7 @@ describe('UsersComponent', () => {
       email: 'viewer@funeraria.com',
       role: UserRole.VIEWER,
       tenantId: 'tenant-1',
-      permissions: ['users:read' as never],
+      permissions: ['users:read'],
     };
     authState.setUser(viewerUser);
     fixture.detectChanges();
@@ -49,7 +55,7 @@ describe('UsersComponent', () => {
     const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')).map(
       (el: unknown) => (el as HTMLElement).textContent?.trim(),
     );
-    expect(buttons.some(text => text?.includes('Nuevo usuario'))).toBe(false);
+    expect(buttons.some((text) => text?.includes('Nuevo usuario'))).toBe(false);
   });
 
   it('shows "Nuevo usuario" for a TENANT_ADMIN', () => {
@@ -67,6 +73,6 @@ describe('UsersComponent', () => {
     const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')).map(
       (el: unknown) => (el as HTMLElement).textContent?.trim(),
     );
-    expect(buttons.some(text => text?.includes('Nuevo usuario'))).toBe(true);
+    expect(buttons.some((text) => text?.includes('Nuevo usuario'))).toBe(true);
   });
 });

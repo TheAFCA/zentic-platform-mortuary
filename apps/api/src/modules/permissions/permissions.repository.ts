@@ -12,7 +12,10 @@ export interface TargetUser {
 export class PermissionsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findUserById(tenantId: string | null, userId: string): Promise<TargetUser | null> {
+  async findUserById(
+    tenantId: string | null,
+    userId: string,
+  ): Promise<TargetUser | null> {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, tenantId, deletedAt: null },
       select: { id: true, role: true, tenantId: true },
@@ -26,7 +29,7 @@ export class PermissionsRepository {
       where: { userId },
       select: { permission: true },
     });
-    return rows.map(row => row.permission);
+    return rows.map((row) => row.permission);
   }
 
   async replacePermissions(
@@ -49,7 +52,11 @@ export class PermissionsRepository {
       ...(toGrant.length
         ? [
             this.prisma.userPermission.createMany({
-              data: toGrant.map(permission => ({ userId, permission, grantedBy: actorId })),
+              data: toGrant.map((permission) => ({
+                userId,
+                permission,
+                grantedBy: actorId,
+              })),
             }),
           ]
         : []),
@@ -57,7 +64,7 @@ export class PermissionsRepository {
         ? [
             this.prisma.permissionAuditLog.createMany({
               data: [
-                ...toGrant.map(permission => ({
+                ...toGrant.map((permission) => ({
                   actorId,
                   targetId: userId,
                   action: 'GRANTED',
@@ -65,7 +72,7 @@ export class PermissionsRepository {
                   tenantId: targetTenantId,
                   createdAt: now,
                 })),
-                ...toRevoke.map(permission => ({
+                ...toRevoke.map((permission) => ({
                   actorId,
                   targetId: userId,
                   action: 'REVOKED',

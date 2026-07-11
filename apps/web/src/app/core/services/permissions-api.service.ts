@@ -28,6 +28,8 @@ export class PermissionsApiService {
   }
 
   setUserPermissions(userId: string, permissions: Permission[]) {
-    return this.http.patch<UserPermissionsResponse>(`${this.baseUrl}/users/${userId}`, { permissions });
+    return this.http.patch<UserPermissionsResponse>(`${this.baseUrl}/users/${userId}`, {
+      permissions,
+    });
   }
 }

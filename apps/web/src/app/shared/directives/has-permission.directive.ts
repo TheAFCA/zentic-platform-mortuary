@@ -32,7 +32,8 @@ export class HasPermissionDirective {
 
   private updateView(): void {
     const authorized =
-      this.required.length === 0 || this.required.some(permission => this.authState.hasPermission(permission));
+      this.required.length === 0 ||
+      this.required.some((permission) => this.authState.hasPermission(permission));
 
     if (authorized && !this.hasView) {
       this.viewContainer.createEmbeddedView(this.templateRef);

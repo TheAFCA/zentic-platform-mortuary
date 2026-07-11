@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { JwtPayload, UserRole } from '@zentic/shared-types';
 import { PermissionsService } from './permissions.service';
 import { PermissionsRepository, TargetUser } from './permissions.repository';
@@ -46,7 +50,7 @@ describe('PermissionsService', () => {
 
       // ASSERT
       expect(catalog.length).toBeGreaterThan(30);
-      expect(catalog.some(meta => meta.code === 'streaming:read')).toBe(true);
+      expect(catalog.some((meta) => meta.code === 'streaming:read')).toBe(true);
       expect(permissionsRepo.findUserById).not.toHaveBeenCalled();
     });
   });
@@ -54,7 +58,10 @@ describe('PermissionsService', () => {
   describe('getEffectivePermissions', () => {
     it('returns every catalog code for TENANT_ADMIN without hitting the repository', async () => {
       // ACT
-      const result = await service.getEffectivePermissions('admin-1', UserRole.TENANT_ADMIN);
+      const result = await service.getEffectivePermissions(
+        'admin-1',
+        UserRole.TENANT_ADMIN,
+      );
 
       // ASSERT
       expect(result).toContain('streaming:delete');
@@ -67,18 +74,25 @@ describe('PermissionsService', () => {
       permissionsRepo.findGrantedPermissions.mockResolvedValue(['leads:read']);
 
       // ACT
-      const result = await service.getEffectivePermissions('operator-1', UserRole.OPERATOR);
+      const result = await service.getEffectivePermissions(
+        'operator-1',
+        UserRole.OPERATOR,
+      );
 
       // ASSERT
       expect(result).toEqual(['leads:read']);
-      expect(permissionsRepo.findGrantedPermissions).toHaveBeenCalledWith('operator-1');
+      expect(permissionsRepo.findGrantedPermissions).toHaveBeenCalledWith(
+        'operator-1',
+      );
     });
   });
 
   describe('getUserPermissions', () => {
     it('throws ForbiddenException when there is no tenant context (e.g. SUPER_ADMIN without impersonation)', async () => {
       // ACT & ASSERT
-      await expect(service.getUserPermissions('', 'op-1')).rejects.toThrow(ForbiddenException);
+      await expect(service.getUserPermissions('', 'op-1')).rejects.toThrow(
+        ForbiddenException,
+      );
       expect(permissionsRepo.findUserById).not.toHaveBeenCalled();
     });
   });
@@ -95,9 +109,9 @@ describe('PermissionsService', () => {
       };
 
       // ACT & ASSERT
-      await expect(service.setUserPermissions(superAdminActor, 'op-1', ['leads:read'])).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        service.setUserPermissions(superAdminActor, 'op-1', ['leads:read']),
+      ).rejects.toThrow(ForbiddenException);
       expect(permissionsRepo.findUserById).not.toHaveBeenCalled();
     });
 
@@ -107,14 +121,20 @@ describe('PermissionsService', () => {
 
       // ACT & ASSERT
       await expect(
-        service.setUserPermissions(tenantAdminActor, 'ghost-user', ['leads:read']),
+        service.setUserPermissions(tenantAdminActor, 'ghost-user', [
+          'leads:read',
+        ]),
       ).rejects.toThrow(NotFoundException);
       expect(permissionsRepo.replacePermissions).not.toHaveBeenCalled();
     });
 
     it('throws ForbiddenException (RN-RBAC-002) when the target is SUPER_ADMIN', async () => {
       // ARRANGE
-      const target: TargetUser = { id: 'super-1', role: UserRole.SUPER_ADMIN, tenantId: null };
+      const target: TargetUser = {
+        id: 'super-1',
+        role: UserRole.SUPER_ADMIN,
+        tenantId: null,
+      };
       permissionsRepo.findUserById.mockResolvedValue(target);
 
       // ACT & ASSERT
@@ -126,7 +146,11 @@ describe('PermissionsService', () => {
 
     it('throws BadRequestException when the target is TENANT_ADMIN', async () => {
       // ARRANGE
-      const target: TargetUser = { id: 'admin-2', role: UserRole.TENANT_ADMIN, tenantId: 'tenant-1' };
+      const target: TargetUser = {
+        id: 'admin-2',
+        role: UserRole.TENANT_ADMIN,
+        tenantId: 'tenant-1',
+      };
       permissionsRepo.findUserById.mockResolvedValue(target);
 
       // ACT & ASSERT
@@ -138,12 +162,18 @@ describe('PermissionsService', () => {
 
     it('throws BadRequestException listing unknown permission codes', async () => {
       // ARRANGE
-      const target: TargetUser = { id: 'op-1', role: UserRole.OPERATOR, tenantId: 'tenant-1' };
+      const target: TargetUser = {
+        id: 'op-1',
+        role: UserRole.OPERATOR,
+        tenantId: 'tenant-1',
+      };
       permissionsRepo.findUserById.mockResolvedValue(target);
 
       // ACT & ASSERT
       await expect(
-        service.setUserPermissions(tenantAdminActor, 'op-1', ['not-a-real-permission']),
+        service.setUserPermissions(tenantAdminActor, 'op-1', [
+          'not-a-real-permission',
+        ]),
       ).rejects.toThrow(BadRequestException);
       expect(permissionsRepo.replacePermissions).not.toHaveBeenCalled();
     });
@@ -157,10 +187,14 @@ describe('PermissionsService', () => {
         tenantId: 'tenant-1',
         permissions: [],
       };
-      const target: TargetUser = { id: 'op-1', role: UserRole.OPERATOR, tenantId: 'tenant-1' };
+      const target: TargetUser = {
+        id: 'op-1',
+        role: UserRole.OPERATOR,
+        tenantId: 'tenant-1',
+      };
       permissionsRepo.findUserById.mockResolvedValue(target);
       // El actor OPERATOR solo tiene 'leads:read' concedido a sí mismo.
-      permissionsRepo.findGrantedPermissions.mockImplementation(userId =>
+      permissionsRepo.findGrantedPermissions.mockImplementation((userId) =>
         Promise.resolve(userId === operatorActor.sub ? ['leads:read'] : []),
       );
 
@@ -173,20 +207,30 @@ describe('PermissionsService', () => {
 
     it('throws BadRequestException (RN-RBAC-003) when the target is VIEWER and a write permission is requested', async () => {
       // ARRANGE
-      const target: TargetUser = { id: 'viewer-1', role: UserRole.VIEWER, tenantId: 'tenant-1' };
+      const target: TargetUser = {
+        id: 'viewer-1',
+        role: UserRole.VIEWER,
+        tenantId: 'tenant-1',
+      };
       permissionsRepo.findUserById.mockResolvedValue(target);
       permissionsRepo.findGrantedPermissions.mockResolvedValue([]);
 
       // ACT & ASSERT
       await expect(
-        service.setUserPermissions(tenantAdminActor, 'viewer-1', ['obituary:create']),
+        service.setUserPermissions(tenantAdminActor, 'viewer-1', [
+          'obituary:create',
+        ]),
       ).rejects.toThrow(BadRequestException);
       expect(permissionsRepo.replacePermissions).not.toHaveBeenCalled();
     });
 
     it('throws BadRequestException when a permission is not assignable to OPERATOR at all', async () => {
       // ARRANGE
-      const target: TargetUser = { id: 'op-1', role: UserRole.OPERATOR, tenantId: 'tenant-1' };
+      const target: TargetUser = {
+        id: 'op-1',
+        role: UserRole.OPERATOR,
+        tenantId: 'tenant-1',
+      };
       permissionsRepo.findUserById.mockResolvedValue(target);
       permissionsRepo.findGrantedPermissions.mockResolvedValue([]);
 
@@ -199,15 +243,20 @@ describe('PermissionsService', () => {
 
     it('diffs current vs requested and replaces via the repository (happy path)', async () => {
       // ARRANGE
-      const target: TargetUser = { id: 'op-1', role: UserRole.OPERATOR, tenantId: 'tenant-1' };
+      const target: TargetUser = {
+        id: 'op-1',
+        role: UserRole.OPERATOR,
+        tenantId: 'tenant-1',
+      };
       permissionsRepo.findUserById.mockResolvedValue(target);
       permissionsRepo.findGrantedPermissions.mockResolvedValue(['leads:read']);
 
       // ACT
-      const result = await service.setUserPermissions(tenantAdminActor, 'op-1', [
-        'leads:read',
-        'leads:export',
-      ]);
+      const result = await service.setUserPermissions(
+        tenantAdminActor,
+        'op-1',
+        ['leads:read', 'leads:export'],
+      );
 
       // ASSERT
       expect(permissionsRepo.replacePermissions).toHaveBeenCalledWith(
@@ -222,12 +271,21 @@ describe('PermissionsService', () => {
 
     it('revokes permissions that are no longer requested', async () => {
       // ARRANGE
-      const target: TargetUser = { id: 'op-1', role: UserRole.OPERATOR, tenantId: 'tenant-1' };
+      const target: TargetUser = {
+        id: 'op-1',
+        role: UserRole.OPERATOR,
+        tenantId: 'tenant-1',
+      };
       permissionsRepo.findUserById.mockResolvedValue(target);
-      permissionsRepo.findGrantedPermissions.mockResolvedValue(['leads:read', 'leads:export']);
+      permissionsRepo.findGrantedPermissions.mockResolvedValue([
+        'leads:read',
+        'leads:export',
+      ]);
 
       // ACT
-      await service.setUserPermissions(tenantAdminActor, 'op-1', ['leads:read']);
+      await service.setUserPermissions(tenantAdminActor, 'op-1', [
+        'leads:read',
+      ]);
 
       // ASSERT
       expect(permissionsRepo.replacePermissions).toHaveBeenCalledWith(
@@ -243,7 +301,10 @@ describe('PermissionsService', () => {
   describe('revokeNonAssignableForViewer', () => {
     it('revokes only the currently-granted permissions that are not viewer-assignable', async () => {
       // ARRANGE
-      permissionsRepo.findGrantedPermissions.mockResolvedValue(['leads:read', 'obituary:create']);
+      permissionsRepo.findGrantedPermissions.mockResolvedValue([
+        'leads:read',
+        'obituary:create',
+      ]);
 
       // ACT
       await service.revokeNonAssignableForViewer('tenant-1', 'op-1', 'admin-1');

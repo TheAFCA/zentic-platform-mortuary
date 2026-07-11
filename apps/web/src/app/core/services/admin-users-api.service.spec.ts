@@ -30,7 +30,11 @@ describe('AdminUsersApiService', () => {
   });
 
   it('createUser() performs a POST with the payload', () => {
-    const payload = { email: 'new@x.com', role: 'OPERATOR' as const, permissions: ['leads:read' as const] };
+    const payload = {
+      email: 'new@x.com',
+      role: 'OPERATOR' as const,
+      permissions: ['leads:read' as const],
+    };
 
     service.createUser(payload).subscribe();
 

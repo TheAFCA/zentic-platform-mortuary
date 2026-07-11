@@ -1,6 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { JwtPayload, UserRole } from '@zentic/shared-types';
 import { AdminService } from './admin.service';
 import { AdminRepository, AdminUserRecord } from './admin.repository';
@@ -75,7 +79,13 @@ describe('AdminService', () => {
     it('returns the users list from the repository', async () => {
       // ARRANGE
       const users: AdminUserRecord[] = [
-        { id: 'u1', email: 'a@x.com', role: 'OPERATOR', createdAt: new Date(), lockedUntil: null },
+        {
+          id: 'u1',
+          email: 'a@x.com',
+          role: 'OPERATOR',
+          createdAt: new Date(),
+          lockedUntil: null,
+        },
       ];
       adminRepo.findManyUsers.mockResolvedValue(users);
 
@@ -91,9 +101,9 @@ describe('AdminService', () => {
   describe('createUser', () => {
     it('throws ForbiddenException when there is no tenant context', async () => {
       // ACT & ASSERT
-      await expect(service.createUser('', actor, { email: 'x@x.com', role: 'OPERATOR' })).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        service.createUser('', actor, { email: 'x@x.com', role: 'OPERATOR' }),
+      ).rejects.toThrow(ForbiddenException);
       expect(adminRepo.findUserByEmail).not.toHaveBeenCalled();
     });
 
@@ -103,7 +113,10 @@ describe('AdminService', () => {
 
       // ACT & ASSERT
       await expect(
-        service.createUser('tenant-1', actor, { email: 'dup@x.com', role: 'OPERATOR' }),
+        service.createUser('tenant-1', actor, {
+          email: 'dup@x.com',
+          role: 'OPERATOR',
+        }),
       ).rejects.toThrow(ConflictException);
       expect(adminRepo.createUser).not.toHaveBeenCalled();
     });
@@ -137,12 +150,21 @@ describe('AdminService', () => {
       expect(createArgs.email).toBe('new@x.com');
       expect(createArgs.role).toBe('OPERATOR');
       expect(createArgs.passwordHash).toBeTruthy();
-      expect(permissionsService.setUserPermissions).toHaveBeenCalledWith(actor, 'new-user', ['leads:read']);
+      expect(permissionsService.setUserPermissions).toHaveBeenCalledWith(
+        actor,
+        'new-user',
+        ['leads:read'],
+      );
       expect(emailService.sendNewUserCredentialsEmail).toHaveBeenCalledWith(
-        expect.objectContaining({ to: 'new@x.com', loginUrl: 'http://localhost:4200/auth/login' }),
+        expect.objectContaining({
+          to: 'new@x.com',
+          loginUrl: 'http://localhost:4200/auth/login',
+        }),
       );
       expect(result.permissions).toEqual(['leads:read']);
-      expect((result as { temporaryPassword?: string }).temporaryPassword).toBeUndefined();
+      expect(
+        (result as { temporaryPassword?: string }).temporaryPassword,
+      ).toBeUndefined();
     });
 
     it('does not call setUserPermissions when no permissions are requested', async () => {
@@ -157,7 +179,10 @@ describe('AdminService', () => {
       });
 
       // ACT
-      const result = await service.createUser('tenant-1', actor, { email: 'new@x.com', role: 'VIEWER' });
+      const result = await service.createUser('tenant-1', actor, {
+        email: 'new@x.com',
+        role: 'VIEWER',
+      });
 
       // ASSERT
       expect(permissionsService.setUserPermissions).not.toHaveBeenCalled();
@@ -171,9 +196,9 @@ describe('AdminService', () => {
       adminRepo.findUserById.mockResolvedValue(null);
 
       // ACT & ASSERT
-      await expect(service.updateUser('tenant-1', actor, 'ghost', { role: 'OPERATOR' })).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.updateUser('tenant-1', actor, 'ghost', { role: 'OPERATOR' }),
+      ).rejects.toThrow(NotFoundException);
       expect(adminRepo.updateUserRole).not.toHaveBeenCalled();
     });
 
@@ -191,8 +216,14 @@ describe('AdminService', () => {
       await service.updateUser('tenant-1', actor, 'u1', { role: 'VIEWER' });
 
       // ASSERT
-      expect(adminRepo.updateUserRole).toHaveBeenCalledWith('tenant-1', 'u1', 'VIEWER');
-      expect(permissionsService.revokeNonAssignableForViewer).toHaveBeenCalledWith('tenant-1', 'u1', actor.sub);
+      expect(adminRepo.updateUserRole).toHaveBeenCalledWith(
+        'tenant-1',
+        'u1',
+        'VIEWER',
+      );
+      expect(
+        permissionsService.revokeNonAssignableForViewer,
+      ).toHaveBeenCalledWith('tenant-1', 'u1', actor.sub);
       expect(permissionsService.setUserPermissions).not.toHaveBeenCalled();
     });
 
@@ -212,11 +243,20 @@ describe('AdminService', () => {
       });
 
       // ACT
-      await service.updateUser('tenant-1', actor, 'u1', { role: 'VIEWER', permissions: ['leads:read'] });
+      await service.updateUser('tenant-1', actor, 'u1', {
+        role: 'VIEWER',
+        permissions: ['leads:read'],
+      });
 
       // ASSERT
-      expect(permissionsService.revokeNonAssignableForViewer).not.toHaveBeenCalled();
-      expect(permissionsService.setUserPermissions).toHaveBeenCalledWith(actor, 'u1', ['leads:read']);
+      expect(
+        permissionsService.revokeNonAssignableForViewer,
+      ).not.toHaveBeenCalled();
+      expect(permissionsService.setUserPermissions).toHaveBeenCalledWith(
+        actor,
+        'u1',
+        ['leads:read'],
+      );
     });
   });
 });

@@ -30,7 +30,13 @@ describe('PermissionEditorComponent', () => {
     const permissionsApiMock = {
       getCatalog: () => of(CATALOG),
       getPresets: () =>
-        of([{ id: 'recepcionista', label: 'Recepcionista', permissions: ['leads:read', 'leads:export'] }]),
+        of([
+          {
+            id: 'recepcionista',
+            label: 'Recepcionista',
+            permissions: ['leads:read', 'leads:export'],
+          },
+        ]),
     };
 
     TestBed.configureTestingModule({
@@ -46,28 +52,28 @@ describe('PermissionEditorComponent', () => {
 
   it('only shows viewer-assignable permissions when the role is VIEWER', () => {
     const fixture = createFixture('VIEWER');
-    const labels = Array.from(fixture.nativeElement.querySelectorAll('label')).map(
-      (el: unknown) => (el as HTMLElement).textContent?.trim(),
+    const labels = Array.from(fixture.nativeElement.querySelectorAll('label')).map((el: unknown) =>
+      (el as HTMLElement).textContent?.trim(),
     );
 
-    expect(labels.some(text => text?.includes('Ver leads'))).toBe(true);
-    expect(labels.some(text => text?.includes('Exportar leads'))).toBe(false);
+    expect(labels.some((text) => text?.includes('Ver leads'))).toBe(true);
+    expect(labels.some((text) => text?.includes('Exportar leads'))).toBe(false);
   });
 
   it('shows every operator-assignable permission when the role is OPERATOR', () => {
     const fixture = createFixture('OPERATOR');
-    const labels = Array.from(fixture.nativeElement.querySelectorAll('label')).map(
-      (el: unknown) => (el as HTMLElement).textContent?.trim(),
+    const labels = Array.from(fixture.nativeElement.querySelectorAll('label')).map((el: unknown) =>
+      (el as HTMLElement).textContent?.trim(),
     );
 
-    expect(labels.some(text => text?.includes('Ver leads'))).toBe(true);
-    expect(labels.some(text => text?.includes('Exportar leads'))).toBe(true);
+    expect(labels.some((text) => text?.includes('Ver leads'))).toBe(true);
+    expect(labels.some((text) => text?.includes('Exportar leads'))).toBe(true);
   });
 
   it('applying a preset only checks the permissions assignable to the current role', () => {
     const fixture = createFixture('VIEWER');
     const emitted: string[][] = [];
-    fixture.componentInstance.permissionsChange.subscribe(value => emitted.push(value));
+    fixture.componentInstance.permissionsChange.subscribe((value) => emitted.push(value));
 
     fixture.componentInstance.applyPreset('recepcionista');
 

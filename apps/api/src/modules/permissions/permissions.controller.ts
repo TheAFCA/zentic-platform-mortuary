@@ -31,7 +31,10 @@ export class PermissionsController {
 
   @Get('users/:userId')
   @RequirePermission('users:read')
-  getUserPermissions(@TenantId() tenantId: string, @Param('userId') userId: string) {
+  getUserPermissions(
+    @TenantId() tenantId: string,
+    @Param('userId') userId: string,
+  ) {
     return this.permissionsService.getUserPermissions(tenantId, userId);
   }
 
@@ -42,10 +45,16 @@ export class PermissionsController {
     @Param('userId') userId: string,
     @Body() dto: SetUserPermissionsDto,
   ) {
-    return this.permissionsService.setUserPermissions(actor, userId, dto.permissions);
+    return this.permissionsService.setUserPermissions(
+      actor,
+      userId,
+      dto.permissions,
+    );
   }
 
-  private groupByModule(catalog: PermissionMeta[]): Record<string, PermissionMeta[]> {
+  private groupByModule(
+    catalog: PermissionMeta[],
+  ): Record<string, PermissionMeta[]> {
     return catalog.reduce<Record<string, PermissionMeta[]>>((groups, meta) => {
       (groups[meta.module] ??= []).push(meta);
       return groups;
