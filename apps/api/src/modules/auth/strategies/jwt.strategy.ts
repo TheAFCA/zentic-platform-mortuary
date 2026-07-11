@@ -17,9 +17,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly securityEvents: SecurityEventsService,
   ) {
     super({
+      // El Bearer header va primero: las sesiones de impersonación (Módulo 04) viajan
+      // como Bearer token, sin cookie, y no deben quedar tapadas por una cookie de
+      // tenant que exista en el mismo navegador/pestaña.
       jwtFromRequest: ExtractJwt.fromExtractors([
-        cookieExtractor,
         ExtractJwt.fromAuthHeaderAsBearerToken(),
+        cookieExtractor,
       ]),
       ignoreExpiration: false,
       secretOrKey: config.getOrThrow<string>('JWT_SECRET'),

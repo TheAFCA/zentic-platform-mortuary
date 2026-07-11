@@ -12,6 +12,7 @@ type TenantRequest = {
   user?: JwtPayload;
   resolvedTenantId?: string;
   tenantId?: string;
+  method?: string;
 };
 
 @Injectable()
@@ -31,8 +32,25 @@ export class TenantGuard implements CanActivate {
 
     if (!user) return false;
 
-    // Super admins bypass tenant isolation
-    if (user.role === UserRole.SUPER_ADMIN) return true;
+    // Super admins bypass tenant isolation, salvo que estén impersonando un tenant
+    // (ver Módulo 04 — Super Admin): en ese caso deben comportarse como si fueran
+    // ese tenant, y no pueden ejecutar acciones destructivas (RN-SA de impersonación).
+    if (user.role === UserRole.SUPER_ADMIN) {
+      if (!user.impersonatedTenantId) return true;
+
+      if (resolvedTenantId && resolvedTenantId !== user.impersonatedTenantId) {
+        throw new ForbiddenException('Tenant context mismatch');
+      }
+
+      if (request.method === 'DELETE') {
+        throw new ForbiddenException(
+          'Las acciones destructivas no están disponibles en modo soporte',
+        );
+      }
+
+      request.tenantId = user.impersonatedTenantId;
+      return true;
+    }
 
     if (!user.tenantId) {
       throw new ForbiddenException('No tenant context found');
