@@ -1,0 +1,35 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="user-form" novalidate>
+  <div class="user-form__fields">
+    <mat-form-field appearance="outline" class="user-form__field">
+      <mat-label>Email</mat-label>
+      <mat-icon matPrefix>mail_outline</mat-icon>
+      <input matInput type="email" formControlName="email" placeholder="usuario@funeraria.com" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="user-form__field user-form__field--role">
+      <mat-label>Rol</mat-label>
+      <mat-icon matPrefix>badge</mat-icon>
+      <mat-select formControlName="role">
+        <mat-option value="OPERATOR">Operador</mat-option>
+        <mat-option value="VIEWER">Visualizador</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <div class="user-form__permissions">
+    <p class="user-form__permissions-title">Permisos</p>
+    <app-permission-editor
+      [role]="form.controls.role.value"
+      [initialPermissions]="initialValue?.permissions ?? []"
+      (permissionsChange)="permissions = $event"
+    />
+  </div>
+
+  <div class="user-form__actions">
+    <button type="submit" class="btn-primary" [disabled]="form.invalid">
+      <mat-icon>check</mat-icon>
+      <span>Guardar</span>
+    </button>
+    <button type="button" class="btn-ghost" (click)="cancel.emit()">Cancelar</button>
+  </div>
+</form>

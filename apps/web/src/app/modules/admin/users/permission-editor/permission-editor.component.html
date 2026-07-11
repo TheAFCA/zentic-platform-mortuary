@@ -1,0 +1,25 @@
+<div class="permission-editor">
+  <mat-form-field appearance="outline" class="preset-field" *ngIf="presets.length">
+    <mat-label>Perfil de permisos (opcional)</mat-label>
+    <mat-icon matPrefix>tune</mat-icon>
+    <mat-select (selectionChange)="applyPreset($event.value)">
+      <mat-option [value]="">-- Elegir un perfil --</mat-option>
+      <mat-option *ngFor="let preset of presets" [value]="preset.id">{{ preset.label }}</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <div class="module-group" *ngFor="let moduleName of moduleNames">
+    <ng-container *ngIf="assignableMetas(moduleName).length">
+      <p class="module-group__title">{{ moduleName }}</p>
+      <div class="module-group__grid">
+        <mat-checkbox
+          *ngFor="let meta of assignableMetas(moduleName)"
+          [checked]="isChecked(meta.code)"
+          (change)="toggle(meta.code, $event.checked)"
+        >
+          <span class="permission-label">{{ meta.label }}</span>
+        </mat-checkbox>
+      </div>
+    </ng-container>
+  </div>
+</div>
