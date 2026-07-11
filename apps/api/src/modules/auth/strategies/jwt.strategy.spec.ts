@@ -105,6 +105,29 @@ describe('JwtStrategy', () => {
     ).rejects.toThrow('Account is temporarily locked');
   });
 
+  it('passes impersonation claims through untouched (Módulo 04 — Super Admin)', async () => {
+    prisma.user.findFirst.mockResolvedValue({
+      id: 'super-1',
+      email: 'super@zentic.pro',
+      role: UserRole.SUPER_ADMIN,
+      tenantId: null,
+      lockedUntil: null,
+      permissions: [],
+    });
+
+    const payload = {
+      sub: 'super-1',
+      email: 'super@zentic.pro',
+      role: UserRole.SUPER_ADMIN,
+      tenantId: null,
+      permissions: [],
+      impersonatedTenantId: 'tenant-1',
+      impersonationLogId: 'log-1',
+    } as JwtPayload;
+
+    await expect(strategy.validate({}, payload)).resolves.toEqual(payload);
+  });
+
   it('rejects tenant mismatches', async () => {
     prisma.user.findFirst.mockResolvedValue({
       id: 'user-1',

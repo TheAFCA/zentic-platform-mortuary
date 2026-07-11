@@ -1,0 +1,164 @@
+@use '../../../shared/styles/panel' as panel;
+
+.dashboard-page {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 72rem;
+}
+
+.dashboard-page__hero {
+  @include panel.sa-hero;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.dashboard-page__hero-glow {
+  position: absolute;
+  top: -30%;
+  right: -8%;
+  width: 18rem;
+  height: 18rem;
+  border-radius: 999px;
+  background: rgba(107, 144, 128, 0.28);
+  filter: blur(48px);
+  pointer-events: none;
+}
+
+.dashboard-page__hero-icon {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  flex: 0 0 auto;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+  backdrop-filter: blur(12px);
+}
+
+.dashboard-page__eyebrow {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.dashboard-page__title {
+  position: relative;
+  z-index: 1;
+  margin: 0.3rem 0 0.3rem;
+  font-size: 1.85rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.dashboard-page__subtitle {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.dashboard-page__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+
+.panel-card {
+  @include panel.sa-card;
+}
+
+.panel-card__header {
+  padding: 1.5rem 1.75rem 0.85rem;
+}
+
+.panel-card__header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: panel.$ink;
+}
+
+.panel-card__count {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  color: panel.$muted;
+}
+
+.panel-card__body {
+  padding: 0.5rem 1.75rem 1.75rem;
+}
+
+.dashboard-page__log-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.dashboard-page__log-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f1f3f6;
+  font-size: 0.9rem;
+}
+
+.dashboard-page__log-list li:last-child {
+  border-bottom: none;
+}
+
+.dashboard-page__log-dot {
+  flex: 0 0 auto;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 999px;
+  background: panel.$brand-primary;
+}
+
+.dashboard-page__log-dot[data-action*='SUSPENDED'],
+.dashboard-page__log-dot[data-action*='FAILED'],
+.dashboard-page__log-dot[data-action*='DEACTIVATED'],
+.dashboard-page__log-dot[data-action*='LOCKED'] {
+  background: #dc2626;
+}
+
+.dashboard-page__log-dot[data-action*='IMPERSONATION'] {
+  background: #d97706;
+}
+
+.dashboard-page__log-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+  gap: 1rem;
+}
+
+.dashboard-page__log-action {
+  font-weight: 600;
+  color: panel.$ink;
+}
+
+.dashboard-page__log-meta {
+  color: panel.$muted;
+  white-space: nowrap;
+}
+
+.dashboard-page__log-empty {
+  color: panel.$muted;
+  padding: 1rem 0;
+}

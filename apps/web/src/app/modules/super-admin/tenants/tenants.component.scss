@@ -1,0 +1,159 @@
+@use '../../../shared/styles/panel' as panel;
+
+.tenants-page {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 72rem;
+}
+
+.tenants-page__hero {
+  @include panel.sa-hero;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.tenants-page__hero-glow {
+  position: absolute;
+  top: -30%;
+  right: -8%;
+  width: 18rem;
+  height: 18rem;
+  border-radius: 999px;
+  background: rgba(107, 144, 128, 0.28);
+  filter: blur(48px);
+  pointer-events: none;
+}
+
+.tenants-page__hero-icon {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  flex: 0 0 auto;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+  backdrop-filter: blur(12px);
+}
+
+.tenants-page__eyebrow {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.tenants-page__title {
+  position: relative;
+  z-index: 1;
+  margin: 0.3rem 0 0.3rem;
+  font-size: 1.85rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.tenants-page__subtitle {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.tenants-page__confirm-error {
+  margin: 0 0 0.75rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 0.6rem;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.85rem;
+}
+
+.tenants-page__reason {
+  width: 100%;
+  @include panel.sa-pill-input;
+  resize: vertical;
+}
+
+.panel-card {
+  @include panel.sa-card;
+}
+
+.panel-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1.5rem 1.75rem 0.85rem;
+}
+
+.panel-card__header-icon {
+  @include panel.sa-icon-chip;
+}
+
+.panel-card__header--split {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.panel-card__header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: panel.$ink;
+}
+
+.panel-card__count {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  color: panel.$muted;
+}
+
+.panel-card__body {
+  padding: 0.85rem 1.75rem 1.75rem;
+}
+
+.panel-card__body--flush {
+  padding: 0.5rem 0 0.25rem;
+}
+
+.btn-primary {
+  @include panel.primary-button;
+}
+
+.btn-ghost {
+  @include panel.ghost-button;
+}
+
+.btn-ghost--sm {
+  min-height: 2.25rem;
+  padding: 0 0.9rem;
+  font-size: 0.85rem;
+}
+
+.btn-ghost--danger {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.tenants-table__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.status-badge {
+  margin-right: 0.25rem;
+}

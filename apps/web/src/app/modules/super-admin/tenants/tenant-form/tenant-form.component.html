@@ -1,0 +1,43 @@
+<form class="tenant-form" [formGroup]="form" (ngSubmit)="submit()">
+  <p class="tenant-form__error" *ngIf="errorMessage" data-testid="tenant-form-error">{{ errorMessage }}</p>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Nombre de la funeraria</mat-label>
+    <input matInput formControlName="name" data-testid="tenant-name-input" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Slug (subdominio)</mat-label>
+    <input
+      matInput
+      formControlName="slug"
+      (input)="onSlugInput($event)"
+      data-testid="tenant-slug-input"
+    />
+    <mat-hint>Solo minúsculas, números y guiones</mat-hint>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>País</mat-label>
+    <input matInput formControlName="country" data-testid="tenant-country-input" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Email del Tenant Admin</mat-label>
+    <input matInput type="email" formControlName="adminEmail" data-testid="tenant-admin-email-input" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Plan</mat-label>
+    <mat-select formControlName="plan" data-testid="tenant-plan-select">
+      <mat-option *ngFor="let plan of plans" [value]="plan">{{ plan }}</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <div class="tenant-form__actions">
+    <button type="button" class="btn-ghost" (click)="cancel.emit()">Cancelar</button>
+    <button type="submit" class="btn-primary" data-testid="tenant-form-submit">
+      {{ isEditing ? 'Guardar cambios' : 'Crear Tenant' }}
+    </button>
+  </div>
+</form>

@@ -1,0 +1,10 @@
+<div class="stat-card" [class]="'stat-card--' + accent">
+  <div class="stat-card__top">
+    <span class="stat-card__icon" *ngIf="icon">
+      <mat-icon>{{ icon }}</mat-icon>
+    </span>
+    <p class="stat-card__label">{{ label }}</p>
+  </div>
+  <p class="stat-card__value">{{ value }}</p>
+  <p class="stat-card__subtitle" *ngIf="subtitle">{{ subtitle }}</p>
+</div>

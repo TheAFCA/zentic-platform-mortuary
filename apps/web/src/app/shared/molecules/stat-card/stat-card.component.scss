@@ -1,0 +1,74 @@
+@use '../../styles/panel' as panel;
+
+:host {
+  display: block;
+}
+
+.stat-card {
+  @include panel.sa-card;
+  @include panel.sa-card-hover;
+  padding: 1.35rem 1.5rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+}
+
+.stat-card__top {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.stat-card__icon {
+  @include panel.sa-icon-chip;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.8rem;
+
+  mat-icon {
+    font-size: 1.3rem;
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+}
+
+.stat-card__label {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: panel.$muted;
+}
+
+.stat-card__value {
+  margin: 0;
+  font-size: 2.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: panel.$ink;
+}
+
+.stat-card__subtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  color: panel.$muted;
+}
+
+.stat-card--success .stat-card__icon {
+  @include panel.sa-icon-chip(#16a34a, #15803d);
+}
+
+.stat-card--warning .stat-card__icon {
+  @include panel.sa-icon-chip(#d97706, #b45309);
+}
+
+.stat-card--danger .stat-card__icon {
+  @include panel.sa-icon-chip(#dc2626, #b91c1c);
+}
+
+.stat-card--neutral .stat-card__icon {
+  @include panel.sa-icon-chip(#475569, #1f2937);
+}

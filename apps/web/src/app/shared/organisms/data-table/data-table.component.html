@@ -1,0 +1,19 @@
+<table class="data-table">
+  <thead>
+    <tr>
+      <th *ngFor="let col of columns">{{ col.label }}</th>
+      <th *ngIf="actionsTemplate"></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let row of rows" data-testid="data-row">
+      <td *ngFor="let col of columns">{{ cellValue(row, col) }}</td>
+      <td *ngIf="actionsTemplate" class="data-table__actions">
+        <ng-container *ngTemplateOutlet="actionsTemplate; context: { $implicit: row }" />
+      </td>
+    </tr>
+    <tr *ngIf="rows.length === 0" data-testid="data-table-empty">
+      <td [attr.colspan]="columnCount" class="data-table__empty">{{ emptyMessage }}</td>
+    </tr>
+  </tbody>
+</table>
