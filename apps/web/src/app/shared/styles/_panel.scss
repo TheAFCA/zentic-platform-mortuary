@@ -1,0 +1,89 @@
+// Tokens y mixins reutilizables para pantallas del panel admin, alineados visualmente con las
+// pantallas de auth (apps/web/src/styles.scss — .login-card/.login-submit/etc).
+
+@use 'sass:color';
+
+$brand-primary: #0f5e59;
+$brand-primary-hover: #0b4c48;
+$ink: #1f2937;
+$muted: #6b7280;
+$border: #e7e9ee;
+
+@mixin panel-card {
+  border-radius: 1.25rem;
+  border: 1px solid $border;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(17, 24, 39, 0.06);
+}
+
+@mixin eyebrow {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: $muted;
+}
+
+@mixin primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 0;
+  border-radius: 0.85rem;
+  padding: 0 1.25rem;
+  min-height: 2.75rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, $brand-primary, $brand-primary-hover);
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(15, 94, 89, 0.2);
+  transition:
+    transform 200ms ease,
+    box-shadow 200ms ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 30px rgba(15, 94, 89, 0.26);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+@mixin ghost-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid $border;
+  border-radius: 0.85rem;
+  padding: 0 1.25rem;
+  min-height: 2.75rem;
+  font-weight: 600;
+  background: #fff;
+  color: $ink;
+  transition:
+    border-color 200ms ease,
+    background-color 200ms ease;
+
+  &:hover:not(:disabled) {
+    border-color: color.adjust($border, $lightness: -12%);
+    background: #f9fafb;
+  }
+}
+
+@mixin role-chip($bg, $fg) {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  background: $bg;
+  color: $fg;
+}

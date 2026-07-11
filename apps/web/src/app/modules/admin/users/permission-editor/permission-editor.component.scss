@@ -1,0 +1,31 @@
+@use '../../../../shared/styles/panel' as panel;
+
+.permission-editor {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.preset-field {
+  width: 100%;
+  max-width: 24rem;
+}
+
+.module-group {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.module-group__title {
+  @include panel.eyebrow;
+}
+
+.module-group__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.5rem 1rem;
+}
+
+.permission-label {
+  font-size: 0.92rem;
+  color: panel.$ink;
+}

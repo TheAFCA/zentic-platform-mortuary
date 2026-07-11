@@ -1,0 +1,65 @@
+<div class="users-page">
+  <header class="users-page__header">
+    <p class="users-page__eyebrow">Administración</p>
+    <h1 class="users-page__title">Usuarios</h1>
+    <p class="users-page__subtitle">Gestiona el equipo de tu funeraria y sus permisos</p>
+  </header>
+
+  <section class="panel-card" *ngIf="showForm()">
+    <div class="panel-card__header">
+      <h2>{{ editingUser() ? 'Editar usuario' : 'Nuevo usuario' }}</h2>
+    </div>
+    <div class="panel-card__body">
+      <app-user-form [initialValue]="editingFormValue()" (save)="onSave($event)" (cancel)="closeForm()" />
+    </div>
+  </section>
+
+  <section class="panel-card">
+    <div class="panel-card__header panel-card__header--split">
+      <div>
+        <h2>Equipo del tenant</h2>
+        <p class="panel-card__count">{{ users().length }} usuario(s)</p>
+      </div>
+      <button *appHasPermission="'users:manage'" type="button" class="btn-primary" (click)="openCreate()">
+        <mat-icon>person_add</mat-icon>
+        <span>Nuevo usuario</span>
+      </button>
+    </div>
+
+    <div class="panel-card__body panel-card__body--flush">
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Rol</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let user of users()" data-testid="user-row">
+            <td>
+              <div class="user-identity">
+                <span class="user-identity__avatar">{{ initials(user.email) }}</span>
+                <span class="user-identity__email">{{ user.email }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="role-chip" [class]="'role-chip--' + user.role.toLowerCase()">{{ user.role }}</span>
+            </td>
+            <td class="users-table__actions">
+              <button
+                *appHasPermission="'users:manage'"
+                type="button"
+                class="btn-ghost btn-ghost--sm"
+                (click)="openEdit(user)"
+              >
+                <mat-icon>tune</mat-icon>
+                <span>Editar permisos</span>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
