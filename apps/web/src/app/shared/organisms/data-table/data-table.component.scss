@@ -1,0 +1,43 @@
+@use '../../styles/panel' as panel;
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table thead th {
+  text-align: left;
+  padding: 0.5rem 1.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: panel.$muted;
+  border-bottom: 1px solid #eef0f3;
+}
+
+.data-table tbody tr {
+  transition: background-color 150ms ease;
+}
+
+.data-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.data-table tbody td {
+  padding: 0.85rem 1.5rem;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 0.92rem;
+  color: panel.$ink;
+}
+
+.data-table__actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.data-table__empty {
+  text-align: center;
+  color: panel.$muted;
+  padding: 2rem 1.5rem;
+}
