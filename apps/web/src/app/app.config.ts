@@ -14,6 +14,7 @@ import { tenantContextInterceptor } from './core/interceptors/tenant-context.int
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { sessionInterceptor } from './core/interceptors/session.interceptor';
+import { impersonationInterceptor } from './core/interceptors/impersonation.interceptor';
 import { AuthSessionService } from './core/services/auth-session.service';
 
 export const appConfig: ApplicationConfig = {
@@ -27,6 +28,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, withComponentInputBinding()),
     provideHttpClient(
       withInterceptors([
+        impersonationInterceptor,
         tenantContextInterceptor,
         authInterceptor,
         errorInterceptor,
