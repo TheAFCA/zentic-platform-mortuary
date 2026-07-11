@@ -7,6 +7,7 @@ import { StreamingModule } from './modules/streaming/streaming.module';
 import { ObituaryModule } from './modules/obituary/obituary.module';
 import { LeadsModule } from './modules/leads/leads.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { PermissionsModule } from './modules/permissions/permissions.module';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 import { TenantModule } from './modules/tenant/tenant.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
@@ -40,6 +41,7 @@ import { AppService } from './app.service';
     StreamingModule,
     ObituaryModule,
     LeadsModule,
+    PermissionsModule,
     AdminModule,
     SuperAdminModule,
     NotificationsModule,
