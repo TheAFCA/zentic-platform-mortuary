@@ -1,0 +1,137 @@
+<div class="venues-page">
+  <header class="venues-page__header">
+    <p class="venues-page__eyebrow">Administración</p>
+    <h1 class="venues-page__title">Sedes</h1>
+    <p class="venues-page__subtitle">Ubicaciones físicas y salas de tu funeraria</p>
+  </header>
+
+  <section class="panel-card" *ngIf="showForm()">
+    <div class="panel-card__header">
+      <h2>{{ editingVenue() ? 'Editar sede' : 'Nueva sede' }}</h2>
+    </div>
+    <div class="panel-card__body">
+      <app-venue-form
+        [initialValue]="editingFormValue()"
+        [errorMessage]="formError()"
+        (save)="onSave($event)"
+        (cancel)="closeForm()"
+      />
+    </div>
+  </section>
+
+  <section class="panel-card">
+    <div class="panel-card__header panel-card__header--split">
+      <div>
+        <h2>Sedes</h2>
+        <p class="panel-card__count">{{ venues().length }} sede(s)</p>
+      </div>
+      <button *appHasPermission="'venues:manage'" type="button" class="btn-primary" (click)="openCreate()">
+        <mat-icon>add_business</mat-icon>
+        <span>Nueva sede</span>
+      </button>
+    </div>
+
+    <div class="panel-card__body panel-card__body--flush">
+      <div class="venue-card" *ngFor="let venue of venues()">
+        <div class="venue-card__row">
+          <div>
+            <p class="venue-card__name">{{ venue.name }}</p>
+            <p class="venue-card__address">{{ venue.address || 'Sin dirección registrada' }}</p>
+          </div>
+          <div class="venue-card__actions">
+            <span class="venue-card__room-count">{{ venue.rooms.length }} sala(s)</span>
+            <button type="button" class="btn-ghost btn-ghost--sm" (click)="toggleRooms(venue)">
+              {{ expandedVenueId() === venue.id ? 'Ocultar salas' : 'Gestionar salas' }}
+            </button>
+            <button
+              *appHasPermission="'venues:manage'"
+              type="button"
+              class="btn-ghost btn-ghost--sm"
+              (click)="openEdit(venue)"
+            >
+              Editar
+            </button>
+            <button
+              *appHasPermission="'venues:manage'"
+              type="button"
+              class="btn-ghost btn-ghost--sm btn-ghost--danger"
+              (click)="askDeleteVenue(venue)"
+            >
+              Eliminar
+            </button>
+          </div>
+        </div>
+
+        <div class="venue-card__rooms" *ngIf="expandedVenueId() === venue.id">
+          <table class="rooms-table" *ngIf="venue.rooms.length">
+            <thead>
+              <tr>
+                <th>Sala</th>
+                <th>Capacidad</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let room of venue.rooms">
+                <td>{{ room.name }}</td>
+                <td>{{ room.capacity ?? '—' }}</td>
+                <td class="rooms-table__actions">
+                  <button
+                    *appHasPermission="'venues:manage'"
+                    type="button"
+                    class="btn-ghost btn-ghost--sm"
+                    (click)="openEditRoom(room)"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    *appHasPermission="'venues:manage'"
+                    type="button"
+                    class="btn-ghost btn-ghost--sm btn-ghost--danger"
+                    (click)="askDeleteRoom(room)"
+                  >
+                    Eliminar
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="venue-card__empty" *ngIf="!venue.rooms.length">Esta sede no tiene salas todavía.</p>
+
+          <app-room-form
+            *ngIf="showRoomForm(); else addRoomButton"
+            [initialValue]="editingRoomFormValue()"
+            [errorMessage]="roomFormError()"
+            (save)="onSaveRoom($event)"
+            (cancel)="closeRoomForm()"
+          />
+          <ng-template #addRoomButton>
+            <button
+              *appHasPermission="'venues:manage'"
+              type="button"
+              class="btn-ghost btn-ghost--sm"
+              (click)="openAddRoom()"
+            >
+              <mat-icon>add</mat-icon>
+              <span>Agregar sala</span>
+            </button>
+          </ng-template>
+        </div>
+      </div>
+
+      <p class="venues-page__empty" *ngIf="!venues().length">No hay sedes registradas</p>
+    </div>
+  </section>
+
+  <app-confirm-dialog
+    [open]="confirmAction() !== null"
+    [title]="confirmDialogTitle()"
+    [message]="confirmDialogMessage()"
+    [danger]="true"
+    confirmLabel="Eliminar"
+    (confirm)="onConfirm()"
+    (cancel)="cancelConfirm()"
+  >
+    <p class="venues-page__confirm-error" *ngIf="confirmError()">{{ confirmError() }}</p>
+  </app-confirm-dialog>
+</div>
