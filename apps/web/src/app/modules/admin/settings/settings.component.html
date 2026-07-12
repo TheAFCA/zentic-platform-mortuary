@@ -1,0 +1,24 @@
+<div class="settings-page">
+  <header class="settings-page__header">
+    <p class="settings-page__eyebrow">Administración</p>
+    <h1 class="settings-page__title">Configuración</h1>
+  </header>
+
+  <nav class="settings-tabs">
+    <a routerLink="seguridad" routerLinkActive="settings-tabs__link--active" class="settings-tabs__link">
+      Seguridad
+    </a>
+    <a routerLink="marca" routerLinkActive="settings-tabs__link--active" class="settings-tabs__link">
+      Marca
+    </a>
+    <a routerLink="cuenta" routerLinkActive="settings-tabs__link--active" class="settings-tabs__link">
+      Cuenta
+    </a>
+  </nav>
+
+  <section class="panel-card">
+    <div class="panel-card__body">
+      <router-outlet />
+    </div>
+  </section>
+</div>

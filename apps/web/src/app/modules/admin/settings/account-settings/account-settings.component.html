@@ -1,0 +1,46 @@
+<div class="account-settings">
+  <p class="account-settings__success" *ngIf="success()" role="status">{{ success() }}</p>
+  <p class="account-settings__error" *ngIf="error()" role="alert">{{ error() }}</p>
+
+  <form class="account-settings__form" [formGroup]="form" (ngSubmit)="onSubmit()" *ngIf="!loading()">
+    <div class="account-settings__field">
+      <label for="timezone">Zona horaria</label>
+      <select id="timezone" formControlName="timezone">
+        <option *ngFor="let tz of timezones" [value]="tz">{{ tz }}</option>
+      </select>
+    </div>
+
+    <div class="account-settings__field">
+      <label for="locale">Idioma por defecto</label>
+      <select id="locale" formControlName="locale">
+        <option value="es">Español</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+
+    <fieldset class="account-settings__fieldset">
+      <legend>Notificaciones por email</legend>
+      <label class="account-settings__checkbox">
+        <input type="checkbox" formControlName="notifyNewLead" />
+        <span>Nuevo lead capturado</span>
+      </label>
+      <label class="account-settings__checkbox">
+        <input type="checkbox" formControlName="notifyPendingMessages" />
+        <span>Mensajes pendientes de moderación</span>
+      </label>
+      <label class="account-settings__checkbox">
+        <input type="checkbox" formControlName="notifyWeeklySummary" />
+        <span>Resumen semanal</span>
+      </label>
+    </fieldset>
+
+    <label class="account-settings__checkbox">
+      <input type="checkbox" formControlName="requireAccessCodeDefault" />
+      <span>Requerir código de acceso en todos los eventos por defecto</span>
+    </label>
+
+    <button type="submit" class="btn-primary" [disabled]="saving()">
+      {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
+    </button>
+  </form>
+</div>
