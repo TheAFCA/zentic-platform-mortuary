@@ -8,6 +8,7 @@ import {
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { provideNativeDateAdapter } from '@angular/material/core';
 import { createErrorHandler } from '@sentry/angular';
 import { routes } from './app.routes';
 import { tenantContextInterceptor } from './core/interceptors/tenant-context.interceptor';
@@ -36,5 +37,6 @@ export const appConfig: ApplicationConfig = {
       ]),
     ),
     provideAnimationsAsync(),
+    provideNativeDateAdapter(),
   ],
 };

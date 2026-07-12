@@ -10,10 +10,24 @@ export const STREAMING_ROUTES: Routes = [
     data: { permissions: ['streaming:read'] },
   },
   {
+    path: 'new',
+    loadComponent: () =>
+      import('./event-form/event-form.component').then((m) => m.EventFormComponent),
+    canActivate: [permissionGuard],
+    data: { permissions: ['streaming:create'] },
+  },
+  {
     path: ':id',
     loadComponent: () =>
       import('./event-detail/event-detail.component').then((m) => m.EventDetailComponent),
     canActivate: [permissionGuard],
     data: { permissions: ['streaming:read'] },
+  },
+  {
+    path: ':id/edit',
+    loadComponent: () =>
+      import('./event-form/event-form.component').then((m) => m.EventFormComponent),
+    canActivate: [permissionGuard],
+    data: { permissions: ['streaming:update'] },
   },
 ];

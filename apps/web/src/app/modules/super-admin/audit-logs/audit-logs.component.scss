@@ -110,11 +110,11 @@
   flex-wrap: wrap;
   gap: 0.75rem;
   align-items: center;
-}
 
-.audit-logs-filters input {
-  @include panel.sa-pill-input;
-  min-width: 9rem;
+  input {
+    @include panel.sa-pill-input;
+    min-width: 9rem;
+  }
 }
 
 .btn-primary {

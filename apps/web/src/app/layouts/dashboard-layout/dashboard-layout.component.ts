@@ -4,9 +4,12 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatButtonModule } from '@angular/material/button';
+import { MatMenuModule } from '@angular/material/menu';
 import { Permission } from '@zentic/shared-types';
 import { ImpersonationSessionService } from '../../core/services/impersonation-session.service';
 import { ImpersonationApiService } from '../../core/services/impersonation-api.service';
+import { AuthStateService } from '../../core/services/auth-state.service';
 import { ImpersonationBannerComponent } from '../../shared/organisms/impersonation-banner/impersonation-banner.component';
 import { HasPermissionDirective } from '../../shared/directives/has-permission.directive';
 
@@ -28,6 +31,8 @@ interface NavItem {
     MatIconModule,
     MatSidenavModule,
     MatToolbarModule,
+    MatButtonModule,
+    MatMenuModule,
     ImpersonationBannerComponent,
     HasPermissionDirective,
   ],
@@ -38,6 +43,7 @@ export class DashboardLayoutComponent {
   protected readonly router = inject(Router);
   protected readonly impersonationSession = inject(ImpersonationSessionService);
   private readonly impersonationApi = inject(ImpersonationApiService);
+  private readonly authState = inject(AuthStateService);
 
   protected readonly superAdminNavItems: NavItem[] = [
     { path: '/super-admin/dashboard', label: 'Dashboard', icon: 'insights' },
@@ -53,8 +59,15 @@ export class DashboardLayoutComponent {
       icon: 'insights',
       permission: 'analytics:read',
     },
-    { path: '/admin/clientes', label: 'Clientes', icon: 'people', permission: 'clients:read' },
+    { path: '/admin/streaming', label: 'Streaming', icon: 'live_tv', permission: 'streaming:read' },
+    {
+      path: '/admin/obituaries',
+      label: 'Obituarios',
+      icon: 'article',
+      permission: 'obituary:read',
+    },
     { path: '/admin/leads', label: 'Leads', icon: 'campaign', permission: 'leads:read' },
+    { path: '/admin/clientes', label: 'Clientes', icon: 'people', permission: 'clients:read' },
     { path: '/admin/sedes', label: 'Sedes', icon: 'domain', permission: 'venues:read' },
     { path: '/admin/users', label: 'Usuarios', icon: 'group', permission: 'users:read' },
     {
@@ -70,6 +83,19 @@ export class DashboardLayoutComponent {
       permission: 'settings:read',
     },
   ];
+
+  get isSuperAdmin(): boolean {
+    return this.router.url.startsWith('/super-admin');
+  }
+
+  get userEmail(): string {
+    return this.authState.currentUser()?.email ?? '';
+  }
+
+  logout(): void {
+    this.authState.clear();
+    void this.router.navigate(['/auth/login']);
+  }
 
   exitImpersonation(): void {
     const session = this.impersonationSession.session();

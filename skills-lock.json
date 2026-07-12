@@ -96,6 +96,11 @@
       "sourceType": "autoskills-registry",
       "computedHash": "be7329a28a492b802061206c2d75603ab294f25f541bc5421d5de8d41abe68b1"
     },
+    "ui-ux-design": {
+      "source": "zentic-platform/ui-ux-skill",
+      "sourceType": "autoskills-registry",
+      "computedHash": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
     "zod": {
       "source": "pproenca/dot-skills",
       "sourceType": "autoskills-registry",

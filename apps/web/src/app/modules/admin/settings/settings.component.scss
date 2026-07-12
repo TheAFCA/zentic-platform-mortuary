@@ -27,6 +27,8 @@
   display: flex;
   gap: 0.5rem;
   border-bottom: 1px solid panel.$border;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .settings-tabs__link {
@@ -35,18 +37,19 @@
   font-size: 0.9rem;
   color: panel.$muted;
   border-bottom: 2px solid transparent;
+  white-space: nowrap;
   transition:
     color 160ms ease,
     border-color 160ms ease;
-}
 
-.settings-tabs__link:hover {
-  color: panel.$ink;
-}
+  &:hover {
+    color: panel.$ink;
+  }
 
-.settings-tabs__link--active {
-  color: panel.$brand-primary;
-  border-color: panel.$brand-primary;
+  &--active {
+    color: panel.$brand-primary;
+    border-color: panel.$brand-primary;
+  }
 }
 
 .panel-card {
