@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { DomSanitizer } from '@angular/platform-browser';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -203,82 +204,105 @@ import { EventStatus } from '@zentic/shared-types';
             }
           </nav>
 
-          <!-- Messages tab -->
+          <!-- Messages tab - Twitch-style chat -->
           @if (activeTab() === 'messages') {
-            <div class="mt-4 space-y-3">
-              @if (canModerate()) {
-                <div class="flex items-center gap-2 mb-4">
-                  <button
-                    mat-stroked-button
-                    (click)="loadPendingMessages()"
-                    [disabled]="messagesLoading()"
-                  >
-                    Pendientes ({{ pendingCount() }})
-                  </button>
-                  <button
-                    mat-stroked-button
-                    (click)="loadMessages()"
-                    [disabled]="messagesLoading()"
-                  >
-                    Todos los mensajes
-                  </button>
-                </div>
-              }
-
-              @if (messagesLoading()) {
-                <div class="flex justify-center py-8">
-                  <mat-spinner diameter="30" />
-                </div>
-              } @else if (messages().length === 0) {
-                <div class="text-center py-8 text-gray-500">
-                  No hay mensajes aún
-                </div>
-              } @else {
-                @for (msg of messages(); track msg.id) {
-                  <div
-                    class="flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-200"
-                  >
-                    <span class="text-xl">{{
-                      iconMap[msg.iconType ?? ''] ?? '💬'
-                    }}</span>
-                    <div class="flex-1 min-w-0">
-                      <p class="font-medium text-sm text-gray-900">
-                        {{ msg.authorName }}
-                      </p>
-                      <p class="text-gray-700 text-sm mt-0.5">
-                        {{ msg.content }}
-                      </p>
-                      <p class="text-xs text-gray-400 mt-1">
-                        {{ msg.createdAt | date : 'dd/MM HH:mm' }}
-                      </p>
-                    </div>
-                    @if (msg.status === 'PENDING' && canModerate()) {
-                      <div class="flex gap-1">
-                        <button
-                          mat-icon-button
-                          color="primary"
-                          (click)="approveMessage(msg.id)"
-                          matTooltip="Aprobar"
-                        >
-                          <mat-icon>check_circle</mat-icon>
-                        </button>
-                        <button
-                          mat-icon-button
-                          color="warn"
-                          (click)="rejectMessage(msg.id)"
-                          matTooltip="Rechazar"
-                        >
-                          <mat-icon>cancel</mat-icon>
-                        </button>
-                      </div>
+            <mat-card class="mt-4">
+              <mat-card-content class="p-0">
+                <div class="flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-gray-50">
+                  <span class="text-sm font-medium text-gray-700">Chat en vivo</span>
+                  <div class="flex items-center gap-2">
+                    @if (ev.status === 'LIVE') {
+                      <span class="flex items-center gap-1 text-xs text-green-600">
+                        <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                        {{ viewerCount() }} viendo
+                      </span>
                     }
-                    @if (msg.status === 'REJECTED') {
-                      <span class="text-xs text-red-500">Rechazado</span>
+                    @if (canModerate()) {
+                      <button mat-button size="small" (click)="loadPendingMessages()">
+                        @if (pendingCount() > 0) {
+                          <span class="flex items-center gap-1 text-orange-600">
+                            <mat-icon class="text-sm">pending</mat-icon>
+                            {{ pendingCount() }} pendientes
+                          </span>
+                        } @else {
+                          <span class="text-gray-500">Pendientes</span>
+                        }
+                      </button>
+                      <button mat-button size="small" (click)="loadMessages()">
+                        <span class="text-gray-500">Todos</span>
+                      </button>
                     }
                   </div>
-                }
-              }
-            </div>
+                </div>
+
+                <div #chatContainer class="h-96 overflow-y-auto p-3 space-y-1 bg-gray-900/5">
+                  @if (messagesLoading()) {
+                    <div class="flex justify-center py-8">
+                      <mat-spinner diameter="24" />
+                    </div>
+                  } @else if (messages().length === 0) {
+                    <div class="text-center py-8 text-gray-400 text-sm">
+                      @if (ev.status === 'SCHEDULED') {
+                        El chat se activará cuando comience el evento
+                      } @else {
+                        No hay mensajes aún. Comparte el enlace para recibir homenajes.
+                      }
+                    </div>
+                  } @else {
+                    @for (msg of messages(); track msg.id) {
+                      <div
+                        class="flex items-start gap-2 px-2 py-1.5 rounded hover:bg-white/50 transition-colors group"
+                        [class.bg-amber-50]="msg.status === 'PENDING'"
+                      >
+                        <span class="flex-shrink-0 text-base leading-none mt-0.5">{{
+                          iconMap[msg.iconType ?? ''] ?? '💬'
+                        }}</span>
+                        <div class="flex-1 min-w-0 leading-tight">
+                          <span class="font-semibold text-sm text-gray-900">
+                            {{ msg.authorName }}
+                          </span>
+                          <span class="text-sm text-gray-700 ml-1 break-words">
+                            {{ msg.content }}
+                          </span>
+                          <span class="text-xs text-gray-400 ml-1">
+                            {{ msg.createdAt | date : 'HH:mm' }}
+                          </span>
+                        </div>
+                        @if (msg.status === 'PENDING' && canModerate()) {
+                          <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                            <button mat-icon-button size="small" color="primary" (click)="approveMessage(msg.id)" matTooltip="Aprobar">
+                              <mat-icon class="text-lg">check_circle</mat-icon>
+                            </button>
+                            <button mat-icon-button size="small" color="warn" (click)="rejectMessage(msg.id)" matTooltip="Rechazar">
+                              <mat-icon class="text-lg">cancel</mat-icon>
+                            </button>
+                          </div>
+                        }
+                        @if (msg.status === 'REJECTED') {
+                          <span class="text-xs text-red-400 flex-shrink-0">Rechazado</span>
+                        }
+                      </div>
+                    }
+                    <div #chatBottom></div>
+                  }
+                </div>
+              </mat-card-content>
+            </mat-card>
+          }
+
+          <!-- Preview tab -->
+          @if (activeTab() === 'preview') {
+            <mat-card class="mt-4">
+              <mat-card-content class="p-0 overflow-hidden rounded-lg">
+                <iframe
+                  [src]="previewUrl()"
+                  class="w-full border-0"
+                  style="height: 80vh"
+                  title="Vista previa del evento"
+                  sandbox="allow-scripts allow-same-origin"
+                ></iframe>
+              </mat-card-content>
+            </mat-card>
           }
 
           <!-- Recording tab -->
@@ -338,9 +362,18 @@ export class EventDetailComponent {
 
   /** Configuración de las tabs de detalle */
   readonly tabs = [
-    { key: 'messages', label: 'Mensajes y Homenajes' },
+    { key: 'messages', label: 'Chat' },
+    { key: 'preview', label: 'Vista previa' },
     { key: 'recording', label: 'Grabación' },
   ];
+
+  /** URL sanitizada para el iframe de vista previa */
+  readonly previewUrl = computed(() => {
+    const ev = this.event();
+    if (!ev) return null;
+    const url = `${window.location.origin}/e/${ev.slug}`;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  });
 
   /** Mapa de iconos por tipo */
   readonly iconMap: Record<string, string> = {
@@ -364,6 +397,7 @@ export class EventDetailComponent {
     INTERRUPTED: 'Interrumpido',
   };
 
+  private readonly sanitizer = inject(DomSanitizer);
   private eventId = '';
 
   constructor() {

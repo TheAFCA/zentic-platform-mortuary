@@ -17,22 +17,9 @@ import {
   StreamingApiService,
   CreateEventInput,
 } from '../../../core/services/streaming-api.service';
+import { VenuesApiService } from '../../../core/services/venues-api.service';
+import { Venue } from '@zentic/shared-types';
 
-/**
- * Componente de formulario para crear y editar eventos de streaming.
- *
- * Proporciona un formulario completo con todos los campos del spec:
- * - Información general (nombre, tipo, duración, descripción)
- * - Fecha y hora programada
- * - Datos del difunto
- * - Configuración de visibilidad y código de acceso
- * - Modo de moderación de mensajes
- *
- * @remarks
- * Si se accede con un ID en la ruta, opera en modo edición cargando
- * los datos existentes del evento. En caso contrario, opera en modo
- * creación. Redirige al listado de eventos tras guardar exitosamente.
- */
 @Component({
   selector: 'app-event-form',
   standalone: true,
@@ -71,15 +58,13 @@ import {
             </div>
           } @else {
             <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-4">
+              <h3 class="font-semibold text-gray-700 flex items-center gap-2">
+                <mat-icon class="text-lg">info</mat-icon> Información del servicio
+              </h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <mat-form-field class="col-span-full">
                   <mat-label>Nombre del evento</mat-label>
-                  <input
-                    matInput
-                    formControlName="title"
-                    placeholder="Ej: Velatorio de María López"
-                    required
-                  />
+                  <input matInput formControlName="title" placeholder="Ej: Velatorio de María López" required />
                   @if (form.get('title')?.invalid && form.get('title')?.touched) {
                     <mat-error>El nombre es requerido</mat-error>
                   }
@@ -98,85 +83,93 @@ import {
 
                 <mat-form-field>
                   <mat-label>Duración estimada (minutos)</mat-label>
-                  <input
-                    matInput
-                    type="number"
-                    formControlName="estimatedDuration"
-                    placeholder="180"
-                  />
+                  <input matInput type="number" formControlName="estimatedDuration" placeholder="180" />
                 </mat-form-field>
 
                 <mat-form-field>
                   <mat-label>Fecha</mat-label>
-                  <input
-                    matInput
-                    [matDatepicker]="picker"
-                    formControlName="scheduledDate"
-                    required
-                  />
+                  <input matInput [matDatepicker]="picker" formControlName="scheduledDate" required />
                   <mat-datepicker-toggle matSuffix [for]="picker" />
                   <mat-datepicker #picker />
                 </mat-form-field>
 
                 <mat-form-field>
                   <mat-label>Hora</mat-label>
-                  <input
-                    matInput
-                    type="time"
-                    formControlName="scheduledTime"
-                    required
-                  />
+                  <input matInput type="time" formControlName="scheduledTime" required />
                 </mat-form-field>
               </div>
 
               <mat-form-field class="w-full">
                 <mat-label>Descripción del servicio</mat-label>
-                <textarea
-                  matInput
-                  formControlName="description"
-                  rows="3"
-                ></textarea>
+                <textarea matInput formControlName="description" rows="3"></textarea>
               </mat-form-field>
 
               <mat-divider />
-              <h3 class="font-semibold text-gray-700">Datos del difunto</h3>
-
+              <h3 class="font-semibold text-gray-700 flex items-center gap-2">
+                <mat-icon class="text-lg">person</mat-icon> Datos del difunto
+              </h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <mat-form-field>
                   <mat-label>Nombre</mat-label>
-                  <input
-                    matInput
-                    formControlName="deceasedFirstName"
-                    placeholder="Nombre"
-                  />
+                  <input matInput formControlName="deceasedFirstName" placeholder="Nombre" />
                 </mat-form-field>
                 <mat-form-field>
                   <mat-label>Apellido</mat-label>
-                  <input
-                    matInput
-                    formControlName="deceasedLastName"
-                    placeholder="Apellido"
-                  />
+                  <input matInput formControlName="deceasedLastName" placeholder="Apellido" />
+                </mat-form-field>
+                <mat-form-field>
+                  <mat-label>Fecha de nacimiento</mat-label>
+                  <input matInput [matDatepicker]="birthPicker" formControlName="deceasedBirthDate" />
+                  <mat-datepicker-toggle matSuffix [for]="birthPicker" />
+                  <mat-datepicker #birthPicker />
+                </mat-form-field>
+                <mat-form-field>
+                  <mat-label>Fecha de fallecimiento</mat-label>
+                  <input matInput [matDatepicker]="deathPicker" formControlName="deceasedDeathDate" />
+                  <mat-datepicker-toggle matSuffix [for]="deathPicker" />
+                  <mat-datepicker #deathPicker />
+                </mat-form-field>
+                <mat-form-field class="col-span-full">
+                  <mat-label>Epitafio o frase</mat-label>
+                  <input matInput formControlName="deceasedEpitaph" placeholder="Ej: Siempre vivirás en nuestros corazones" />
                 </mat-form-field>
               </div>
 
               <mat-divider />
-              <h3 class="font-semibold text-gray-700">
-                Configuración del evento
+              <h3 class="font-semibold text-gray-700 flex items-center gap-2">
+                <mat-icon class="text-lg">location_on</mat-icon> Ubicación
               </h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <mat-form-field>
+                  <mat-label>Sede</mat-label>
+                  <mat-select formControlName="venueId" (selectionChange)="onVenueChange($event.value)">
+                    <mat-option [value]="null">Seleccionar sede</mat-option>
+                    @for (v of venues(); track v.id) {
+                      <mat-option [value]="v.id">{{ v.name }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field>
+                  <mat-label>Sala / Capilla</mat-label>
+                  <mat-select formControlName="roomId" [disabled]="!selectedVenue()">
+                    <mat-option [value]="null">Seleccionar sala</mat-option>
+                    @for (r of rooms(); track r.id) {
+                      <mat-option [value]="r.id">{{ r.name }}{{ r.capacity ? ' ('+r.capacity+' pers.)' : '' }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              </div>
 
+              <mat-divider />
+              <h3 class="font-semibold text-gray-700 flex items-center gap-2">
+                <mat-icon class="text-lg">settings</mat-icon> Configuración del evento
+              </h3>
               <div class="flex items-center gap-4">
-                <mat-slide-toggle formControlName="isPublic">
-                  Evento público
-                </mat-slide-toggle>
+                <mat-slide-toggle formControlName="isPublic">Evento público</mat-slide-toggle>
                 @if (!form.get('isPublic')?.value) {
                   <mat-form-field class="flex-1">
                     <mat-label>Código de acceso</mat-label>
-                    <input
-                      matInput
-                      formControlName="accessCode"
-                      placeholder="Ej: FAMILIA2026"
-                    />
+                    <input matInput formControlName="accessCode" placeholder="Ej: FAMILIA2026" />
                   </mat-form-field>
                 }
               </div>
@@ -184,25 +177,14 @@ import {
               <mat-form-field class="w-full">
                 <mat-label>Moderación de mensajes</mat-label>
                 <mat-select formControlName="moderationMode">
-                  <mat-option value="AUTO"
-                    >Automática (todos se publican)</mat-option
-                  >
-                  <mat-option value="MANUAL"
-                    >Manual (requiere aprobación)</mat-option
-                  >
+                  <mat-option value="AUTO">Automática (todos se publican al instante)</mat-option>
+                  <mat-option value="MANUAL">Manual (requiere aprobación del operador)</mat-option>
                 </mat-select>
               </mat-form-field>
 
               <div class="flex justify-end gap-3 pt-4">
-                <a mat-stroked-button routerLink="/admin/streaming"
-                  >Cancelar</a
-                >
-                <button
-                  mat-raised-button
-                  color="primary"
-                  type="submit"
-                  [disabled]="submitting() || form.invalid"
-                >
+                <a mat-stroked-button routerLink="/admin/streaming">Cancelar</a>
+                <button mat-raised-button color="primary" type="submit" [disabled]="submitting() || form.invalid">
                   @if (submitting()) {
                     <mat-spinner diameter="20" />
                   } @else {
@@ -221,28 +203,33 @@ import {
 export class EventFormComponent {
   private readonly fb = inject(FormBuilder);
   private readonly api = inject(StreamingApiService);
+  private readonly venuesApi = inject(VenuesApiService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly snackBar = inject(MatSnackBar);
 
-  /** Indica si los datos del evento están cargando (modo edición) */
   readonly loading = signal(false);
-  /** Indica si el formulario se está enviando */
   readonly submitting = signal(false);
+  readonly venues = signal<Venue[]>([]);
+  readonly rooms = signal<Venue['rooms']>([]);
+  readonly selectedVenue = signal<Venue | null>(null);
 
-  /** Retorna true si el componente está en modo edición */
   readonly isEdit = () => !!this.route.snapshot.paramMap.get('id');
 
-  /** Formulario reactivo con todos los campos del evento */
   form = this.fb.nonNullable.group({
     title: ['', Validators.required],
     ceremonyType: ['VELATORIO', Validators.required],
-    estimatedDuration: [180],
+    estimatedDuration: [120],
     scheduledDate: ['', Validators.required],
     scheduledTime: ['', Validators.required],
     description: [''],
     deceasedFirstName: [''],
     deceasedLastName: [''],
+    deceasedBirthDate: [''],
+    deceasedDeathDate: [''],
+    deceasedEpitaph: [''],
+    venueId: [null as string | null],
+    roomId: [null as string | null],
     isPublic: [true],
     accessCode: [''],
     moderationMode: ['AUTO'],
@@ -251,14 +238,22 @@ export class EventFormComponent {
   constructor() {
     const editId = this.route.snapshot.paramMap.get('id');
     if (editId) this.loadEvent(editId);
+    this.loadVenues();
   }
 
-  /**
-   * Carga los datos de un evento existente para edición.
-   * Parsea la fecha y hora programada a los campos del formulario.
-   *
-   * @param id - ID del evento a editar
-   */
+  onVenueChange(venueId: string | null): void {
+    const venue = this.venues().find((v) => v.id === venueId) ?? null;
+    this.selectedVenue.set(venue);
+    this.rooms.set(venue?.rooms ?? []);
+    if (!venue) this.form.patchValue({ roomId: null });
+  }
+
+  private loadVenues(): void {
+    this.venuesApi.list().subscribe({
+      next: (list) => this.venues.set(list),
+    });
+  }
+
   private loadEvent(id: string): void {
     this.loading.set(true);
     this.api.findOne(id).subscribe({
@@ -267,31 +262,35 @@ export class EventFormComponent {
         this.form.patchValue({
           title: ev.title,
           ceremonyType: ev.ceremonyType,
-          estimatedDuration: ev.estimatedDuration ?? 180,
+          estimatedDuration: ev.estimatedDuration ?? 120,
           scheduledDate: date.toISOString().split('T')[0],
           scheduledTime: `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`,
           description: ev.description ?? '',
           deceasedFirstName: ev.deceased?.firstName ?? '',
           deceasedLastName: ev.deceased?.lastName ?? '',
+          deceasedBirthDate: ev.deceased?.birthDate?.split('T')[0] ?? '',
+          deceasedDeathDate: ev.deceased?.deathDate?.split('T')[0] ?? '',
+          deceasedEpitaph: ev.deceased?.epitaph ?? '',
+          roomId: ev.room?.id ?? null,
           isPublic: ev.isPublic,
           moderationMode: ev.moderationMode,
         });
+        if (ev.room) {
+          const parentVenue = this.venues().find((v) => v.rooms.some((r) => r.id === ev.room!.id));
+          if (parentVenue) {
+            this.onVenueChange(parentVenue.id);
+            this.form.patchValue({ venueId: parentVenue.id, roomId: ev.room.id });
+          }
+        }
         this.loading.set(false);
       },
       error: () => {
-        this.snackBar.open('Error al cargar evento', 'Cerrar', {
-          duration: 3000,
-        });
+        this.snackBar.open('Error al cargar evento', 'Cerrar', { duration: 3000 });
         this.loading.set(false);
       },
     });
   }
 
-  /**
-   ＊ Procesa el envío del formulario.
-   * Construye el DTO combinando fecha y hora, y determina si es
-   * creación o actualización según la presencia del ID en la ruta.
-   */
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -316,35 +315,31 @@ export class EventFormComponent {
       isPublic: this.form.controls.isPublic.value,
       accessCode: this.form.controls.accessCode.value || undefined,
       moderationMode: this.form.controls.moderationMode.value,
+      roomId: this.form.controls.roomId.value || undefined,
     };
 
     if (deceasedFirstName && deceasedLastName) {
       dto.deceased = {
         firstName: deceasedFirstName,
         lastName: deceasedLastName,
+        birthDate: this.form.controls.deceasedBirthDate.value || undefined,
+        deathDate: this.form.controls.deceasedDeathDate.value || undefined,
+        epitaph: this.form.controls.deceasedEpitaph.value || undefined,
       };
     }
 
     const editId = this.route.snapshot.paramMap.get('id');
-    const request = editId
-      ? this.api.update(editId, dto)
-      : this.api.create(dto);
+    const request = editId ? this.api.update(editId, dto) : this.api.create(dto);
 
     request.subscribe({
       next: () => {
         this.submitting.set(false);
-        this.snackBar.open(
-          editId ? 'Evento actualizado' : 'Evento creado exitosamente',
-          'Cerrar',
-          { duration: 3000 },
-        );
+        this.snackBar.open(editId ? 'Evento actualizado' : 'Evento creado exitosamente', 'Cerrar', { duration: 3000 });
         this.router.navigate(['/admin/streaming']);
       },
       error: (err) => {
         this.submitting.set(false);
-        this.snackBar.open(err.message ?? 'Error al guardar', 'Cerrar', {
-          duration: 3000,
-        });
+        this.snackBar.open(err.message ?? 'Error al guardar', 'Cerrar', { duration: 3000 });
       },
     });
   }

@@ -29,6 +29,15 @@ export const SETTINGS_ROUTES: Routes = [
             (m) => m.AccountSettingsComponent,
           ),
       },
+      {
+        path: 'streaming',
+        canActivate: [permissionGuard],
+        data: { permissions: ['settings:read'] },
+        loadComponent: () =>
+          import('./streaming-settings/streaming-settings.component').then(
+            (m) => m.StreamingSettingsComponent,
+          ),
+      },
       { path: '', redirectTo: 'seguridad', pathMatch: 'full' },
     ],
   },

@@ -53,8 +53,10 @@ export class DashboardLayoutComponent {
       icon: 'insights',
       permission: 'analytics:read',
     },
-    { path: '/admin/clientes', label: 'Clientes', icon: 'people', permission: 'clients:read' },
+    { path: '/admin/streaming', label: 'Streaming', icon: 'live_tv', permission: 'streaming:read' },
+    { path: '/admin/obituaries', label: 'Obituarios', icon: 'article', permission: 'obituary:read' },
     { path: '/admin/leads', label: 'Leads', icon: 'campaign', permission: 'leads:read' },
+    { path: '/admin/clientes', label: 'Clientes', icon: 'people', permission: 'clients:read' },
     { path: '/admin/sedes', label: 'Sedes', icon: 'domain', permission: 'venues:read' },
     { path: '/admin/users', label: 'Usuarios', icon: 'group', permission: 'users:read' },
     {
