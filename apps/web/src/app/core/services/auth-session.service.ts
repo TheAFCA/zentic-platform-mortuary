@@ -46,6 +46,6 @@ export class AuthSessionService {
   }
 
   private getHomeRoute(user: AuthUser) {
-    return user.role === UserRole.SUPER_ADMIN ? '/super-admin/tenants' : '/admin/dashboard';
+    return user.role === UserRole.SUPER_ADMIN ? '/super-admin/dashboard' : '/admin/dashboard';
   }
 }

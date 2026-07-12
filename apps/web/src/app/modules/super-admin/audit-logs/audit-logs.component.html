@@ -1,0 +1,61 @@
+<div class="audit-logs-page">
+  <header class="audit-logs-page__hero">
+    <div class="audit-logs-page__hero-glow"></div>
+    <span class="audit-logs-page__hero-icon"><mat-icon>fact_check</mat-icon></span>
+    <div>
+      <p class="audit-logs-page__eyebrow">Super Admin · Plataforma</p>
+      <h1 class="audit-logs-page__title">Logs de Auditoría</h1>
+      <p class="audit-logs-page__subtitle">Registro inmutable de acciones de toda la plataforma</p>
+    </div>
+  </header>
+
+  <section class="panel-card">
+    <div class="panel-card__body">
+      <div class="audit-logs-filters">
+        <input
+          type="text"
+          placeholder="Tenant ID"
+          [ngModel]="tenantId()"
+          (ngModelChange)="tenantId.set($event)"
+          [ngModelOptions]="{ standalone: true }"
+        />
+        <input
+          type="text"
+          placeholder="Acción (ej. TENANT_CREATED)"
+          [ngModel]="action()"
+          (ngModelChange)="action.set($event)"
+          [ngModelOptions]="{ standalone: true }"
+        />
+        <input
+          type="date"
+          [ngModel]="dateFrom()"
+          (ngModelChange)="dateFrom.set($event)"
+          [ngModelOptions]="{ standalone: true }"
+        />
+        <input
+          type="date"
+          [ngModel]="dateTo()"
+          (ngModelChange)="dateTo.set($event)"
+          [ngModelOptions]="{ standalone: true }"
+        />
+        <button type="button" class="btn-primary" (click)="applyFilters()">Filtrar</button>
+        <button type="button" class="btn-ghost" (click)="clearFilters()">Limpiar</button>
+        <button type="button" class="btn-ghost" (click)="exportCsv()" [disabled]="exporting()">
+          {{ exporting() ? 'Exportando…' : 'Exportar CSV' }}
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel-card">
+    <div class="panel-card__header panel-card__header--split">
+      <div>
+        <h2>Actividad</h2>
+        <p class="panel-card__count">{{ total() }} registro(s)</p>
+      </div>
+    </div>
+    <div class="panel-card__body panel-card__body--flush">
+      <app-data-table [columns]="columns" [rows]="logs()" emptyMessage="No hay registros de auditoría" />
+    </div>
+  </section>
+</div>

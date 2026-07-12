@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import * as Sentry from '@sentry/angular';
 import { AuthStateService } from '../services/auth-state.service';
+import { ImpersonationSessionService } from '../services/impersonation-session.service';
 
 const isAuthEndpoint = (url: string) =>
   url.includes('/auth/login') ||
@@ -17,11 +18,17 @@ const isAuthEndpoint = (url: string) =>
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
   const authState = inject(AuthStateService);
+  const impersonationSession = inject(ImpersonationSessionService);
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
       if (error.status === 401) {
-        if (!isAuthEndpoint(req.url)) {
+        if (impersonationSession.isActive()) {
+          // No tocar authState: pertenece a la sesión real del Super Admin, no a la
+          // sesión de impersonación (que no usa cookies ni ese estado).
+          impersonationSession.end();
+          void router.navigate(['/impersonate/ended']);
+        } else if (!isAuthEndpoint(req.url)) {
           authState.clear();
           void router.navigate(['/auth/login']);
         }

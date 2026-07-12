@@ -1,0 +1,69 @@
+<div class="dashboard-page">
+  <header class="dashboard-page__hero">
+    <div class="dashboard-page__hero-glow"></div>
+    <span class="dashboard-page__hero-icon"><mat-icon>insights</mat-icon></span>
+    <div>
+      <p class="dashboard-page__eyebrow">Super Admin · Plataforma</p>
+      <h1 class="dashboard-page__title">Dashboard Global</h1>
+      <p class="dashboard-page__subtitle">Estado general de todas las funerarias en ZENTIC.pro</p>
+    </div>
+  </header>
+
+  <ng-container *ngIf="dashboard() as data">
+    <div class="dashboard-page__grid">
+      <app-stat-card
+        label="Tenants activos"
+        [value]="data.tenants.active"
+        icon="check_circle"
+        accent="success"
+      />
+      <app-stat-card
+        label="Tenants suspendidos"
+        [value]="data.tenants.suspended"
+        icon="block"
+        accent="danger"
+      />
+      <app-stat-card
+        label="Tenants en prueba"
+        [value]="data.tenants.trial"
+        icon="hourglass_top"
+        accent="warning"
+      />
+      <app-stat-card label="Eventos en vivo" [value]="data.liveEvents" icon="sensors" accent="primary" />
+      <app-stat-card
+        label="Obituarios publicados hoy"
+        [value]="data.obituariesPublishedToday"
+        icon="today"
+        accent="neutral"
+      />
+      <app-stat-card
+        label="Obituarios esta semana"
+        [value]="data.obituariesPublishedThisWeek"
+        icon="date_range"
+        accent="neutral"
+      />
+      <app-stat-card label="Usuarios registrados" [value]="data.totalUsers" icon="group" accent="primary" />
+    </div>
+
+    <section class="panel-card">
+      <div class="panel-card__header">
+        <h2>Últimas acciones</h2>
+        <p class="panel-card__count">Actividad reciente de la plataforma</p>
+      </div>
+      <div class="panel-card__body">
+        <ul class="dashboard-page__log-list">
+          <li *ngFor="let log of data.recentAuditLogs" data-testid="dashboard-audit-row">
+            <span class="dashboard-page__log-dot" [attr.data-action]="log.action"></span>
+            <div class="dashboard-page__log-body">
+              <span class="dashboard-page__log-action">{{ log.action }}</span>
+              <span class="dashboard-page__log-meta">{{ log.createdAt | date: 'short' }}</span>
+            </div>
+          </li>
+          <li *ngIf="data.recentAuditLogs.length === 0" class="dashboard-page__log-empty">
+            Sin actividad reciente
+          </li>
+        </ul>
+      </div>
+    </section>
+  </ng-container>
+</div>

@@ -82,14 +82,17 @@ enum LeadSource {
 // =============================================================================
 
 model Tenant {
-  id        String       @id @default(cuid())
-  slug      String       @unique
-  name      String
-  plan      TenantPlan   @default(BASIC)
-  status    TenantStatus @default(TRIAL)
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-  deletedAt DateTime?
+  id            String       @id @default(cuid())
+  slug          String       @unique
+  name          String
+  country       String?
+  plan          TenantPlan   @default(BASIC)
+  status        TenantStatus @default(TRIAL)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  deletedAt     DateTime?
+  suspendedAt   DateTime?
+  suspendReason String?
 
   brandConfig         TenantBrandConfig?
   featureFlags        TenantFeatureFlag[]
@@ -243,6 +246,7 @@ model ImpersonationLog {
   endedAt      DateTime?
 
   @@index([tenantId])
+  @@index([superAdminId])
 }
 
 // =============================================================================

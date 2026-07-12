@@ -2,6 +2,8 @@ import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { buildPasswordResetEmail } from './templates/password-reset.template';
 import { buildNewUserCredentialsEmail } from './templates/new-user-credentials.template';
+import { buildTenantSuspendedEmail } from './templates/tenant-suspended.template';
+import { buildTenantReactivatedEmail } from './templates/tenant-reactivated.template';
 
 type PasswordResetEmailInput = {
   to: string;
@@ -12,6 +14,18 @@ type NewUserCredentialsEmailInput = {
   to: string;
   loginUrl: string;
   temporaryPassword: string;
+};
+
+type TenantSuspendedEmailInput = {
+  to: string;
+  tenantName: string;
+  reason?: string;
+};
+
+type TenantReactivatedEmailInput = {
+  to: string;
+  tenantName: string;
+  loginUrl: string;
 };
 
 @Injectable()
@@ -31,6 +45,26 @@ export class EmailService {
     const message = buildNewUserCredentialsEmail({
       loginUrl: input.loginUrl,
       temporaryPassword: input.temporaryPassword,
+    });
+    await this.send(input.to, message);
+  }
+
+  async sendTenantSuspendedEmail(
+    input: TenantSuspendedEmailInput,
+  ): Promise<void> {
+    const message = buildTenantSuspendedEmail({
+      tenantName: input.tenantName,
+      reason: input.reason,
+    });
+    await this.send(input.to, message);
+  }
+
+  async sendTenantReactivatedEmail(
+    input: TenantReactivatedEmailInput,
+  ): Promise<void> {
+    const message = buildTenantReactivatedEmail({
+      tenantName: input.tenantName,
+      loginUrl: input.loginUrl,
     });
     await this.send(input.to, message);
   }

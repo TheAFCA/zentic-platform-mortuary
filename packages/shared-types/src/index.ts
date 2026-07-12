@@ -502,6 +502,9 @@ export interface JwtPayload {
   role: UserRole;
   tenantId: string | null;
   permissions: Permission[];
+  /** Presente solo en tokens de impersonación de Super Admin (ver Módulo 04). */
+  impersonatedTenantId?: string;
+  impersonationLogId?: string;
   iat?: number;
   exp?: number;
 }
@@ -521,6 +524,19 @@ export interface AuthUser {
 }
 
 // ---------- Tenant ----------------------------------------------------------
+
+export interface Tenant {
+  id: string;
+  slug: string;
+  name: string;
+  country: string | null;
+  plan: TenantPlan;
+  status: TenantStatus;
+  suspendedAt: string | null;
+  suspendReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface TenantBrandConfig {
   logoUrl: string | null;
@@ -573,6 +589,29 @@ export interface SecurityEventAlert {
   message: string;
   metadata: Record<string, unknown>;
   createdAt: string;
+}
+
+// ---------- Super Admin (Módulo 04) ------------------------------------------
+
+export interface AuditLogEntry {
+  id: string;
+  actorId: string;
+  role: UserRole;
+  action: string;
+  entityType: string | null;
+  entityId: string | null;
+  metadata: Record<string, unknown> | null;
+  ipAddress: string | null;
+  tenantId: string | null;
+  createdAt: string;
+}
+
+export interface ImpersonationSession {
+  accessToken: string;
+  expiresAt: string;
+  tenantSlug: string;
+  tenantName: string;
+  impersonationLogId: string;
 }
 
 // ---------- WebSocket events ------------------------------------------------

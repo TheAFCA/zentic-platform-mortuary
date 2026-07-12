@@ -9,6 +9,11 @@ export const SUPER_ADMIN_ROUTES: Routes = [
       ),
     children: [
       {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./dashboard/dashboard.component').then((m) => m.SuperAdminDashboardComponent),
+      },
+      {
         path: 'tenants',
         loadComponent: () => import('./tenants/tenants.component').then((m) => m.TenantsComponent),
       },
@@ -17,7 +22,12 @@ export const SUPER_ADMIN_ROUTES: Routes = [
         loadComponent: () =>
           import('./audit-logs/audit-logs.component').then((m) => m.AuditLogsComponent),
       },
-      { path: '', redirectTo: 'tenants', pathMatch: 'full' },
+      {
+        path: 'admins',
+        loadComponent: () =>
+          import('./admins/admins.component').then((m) => m.SuperAdminAdminsComponent),
+      },
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },
 ];
