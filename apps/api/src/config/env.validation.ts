@@ -25,6 +25,7 @@ const envSchema = z.object({
 
   // App
   FRONTEND_URL: z.string().url().default('http://localhost:4200'),
+  BACKEND_URL: z.string().url().default('http://localhost:3000'),
   PLATFORM_DOMAIN: z.string().default('localhost'),
   SENTRY_DSN: z.preprocess(
     (value) => (value === '' ? undefined : value),

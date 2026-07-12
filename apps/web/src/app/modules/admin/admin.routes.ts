@@ -27,15 +27,33 @@ export const ADMIN_ROUTES: Routes = [
         loadChildren: () => import('../leads/leads.routes').then((m) => m.LEADS_ROUTES),
       },
       {
+        path: 'clientes',
+        canActivate: [permissionGuard],
+        data: { permissions: ['clients:read'] },
+        loadChildren: () => import('../clients/clients.routes').then((m) => m.CLIENTS_ROUTES),
+      },
+      {
+        path: 'sedes',
+        canActivate: [permissionGuard],
+        data: { permissions: ['venues:read'] },
+        loadChildren: () => import('../venues/venues.routes').then((m) => m.VENUES_ROUTES),
+      },
+      {
         path: 'users',
         canActivate: [permissionGuard],
         data: { permissions: ['users:read'] },
         loadComponent: () => import('./users/users.component').then((m) => m.UsersComponent),
       },
       {
-        path: 'settings',
+        path: 'descargas',
+        canActivate: [permissionGuard],
+        data: { permissions: ['downloads:access'] },
         loadComponent: () =>
-          import('./settings/settings.component').then((m) => m.SettingsComponent),
+          import('./downloads/downloads.component').then((m) => m.DownloadsComponent),
+      },
+      {
+        path: 'settings',
+        loadChildren: () => import('./settings/settings.routes').then((m) => m.SETTINGS_ROUTES),
       },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],

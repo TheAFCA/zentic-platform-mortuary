@@ -67,6 +67,11 @@ export enum LeadSource {
   INVITATION = 'INVITATION',
 }
 
+export enum ClientStatus {
+  ACTIVE = 'ACTIVE',
+  FINISHED = 'FINISHED',
+}
+
 // ---------- Permission codes ------------------------------------------------
 
 export type Permission =
@@ -99,6 +104,9 @@ export type Permission =
   | 'leads:read'
   | 'leads:manage'
   | 'leads:export'
+  // Sedes / Salas
+  | 'venues:read'
+  | 'venues:manage'
   // Invitaciones
   | 'invitations:read'
   | 'invitations:manage'
@@ -326,6 +334,22 @@ export const PERMISSION_CATALOG: Record<Permission, PermissionMeta> = {
     assignableToOperator: true,
     assignableToViewer: false,
   },
+  'venues:read': {
+    code: 'venues:read',
+    module: 'Sedes / Salas',
+    label: 'Ver sedes',
+    description: 'Ver listado de sedes y salas',
+    assignableToOperator: true,
+    assignableToViewer: true,
+  },
+  'venues:manage': {
+    code: 'venues:manage',
+    module: 'Sedes / Salas',
+    label: 'Gestionar sedes',
+    description: 'Crear, editar y eliminar sedes y salas',
+    assignableToOperator: true,
+    assignableToViewer: false,
+  },
   'invitations:read': {
     code: 'invitations:read',
     module: 'Invitaciones',
@@ -545,6 +569,65 @@ export interface TenantBrandConfig {
   secondaryColor: string;
   textColor: string;
   backgroundColor: string;
+}
+
+export interface TenantAccountSettings {
+  timezone: string;
+  locale: string;
+  notifyNewLead: boolean;
+  notifyPendingMessages: boolean;
+  notifyWeeklySummary: boolean;
+  requireAccessCodeDefault: boolean;
+}
+
+// ---------- Admin General (Módulo 05) ----------------------------------------
+
+export interface AdminDashboardMetrics {
+  activeEventsToday: number;
+  obituariesPublishedThisMonth: number;
+  pendingMessages: number;
+  leadsThisMonth: number;
+  leadsLastMonth: number;
+  leadsDeltaPercent: number | null;
+  liveViewers: number;
+  totalClients: number;
+}
+
+// ---------- Clientes / Familias (Módulo 05) ----------------------------------
+
+export interface Client {
+  id: string;
+  tenantId: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  relationship: string | null;
+  notes: string | null;
+  status: ClientStatus;
+  serviceDate: string | null;
+  convertedFrom: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ---------- Sedes / Salas (Módulo 05) -----------------------------------------
+
+export interface Room {
+  id: string;
+  venueId: string;
+  name: string;
+  capacity: number | null;
+  createdAt: string;
+}
+
+export interface Venue {
+  id: string;
+  tenantId: string;
+  name: string;
+  address: string | null;
+  createdAt: string;
+  updatedAt: string;
+  rooms: Room[];
 }
 
 // ---------- Pagination ------------------------------------------------------

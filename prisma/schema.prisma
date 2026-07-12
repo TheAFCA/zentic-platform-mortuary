@@ -77,6 +77,11 @@ enum LeadSource {
   INVITATION
 }
 
+enum ClientStatus {
+  ACTIVE
+  FINISHED
+}
+
 // =============================================================================
 // ENTIDADES GLOBALES (sin tenantId)
 // =============================================================================
@@ -95,6 +100,7 @@ model Tenant {
   suspendReason String?
 
   brandConfig         TenantBrandConfig?
+  accountSettings     TenantAccountSettings?
   featureFlags        TenantFeatureFlag[]
   users               User[]
   events              Event[]
@@ -119,6 +125,19 @@ model TenantBrandConfig {
   textColor       String   @default("#333333")
   backgroundColor String   @default("#f5f5f5")
   updatedAt       DateTime @updatedAt
+}
+
+model TenantAccountSettings {
+  id                       String   @id @default(cuid())
+  tenantId                 String   @unique
+  tenant                   Tenant   @relation(fields: [tenantId], references: [id])
+  timezone                 String   @default("America/Bogota")
+  locale                   String   @default("es")
+  notifyNewLead            Boolean  @default(true)
+  notifyPendingMessages    Boolean  @default(true)
+  notifyWeeklySummary      Boolean  @default(false)
+  requireAccessCodeDefault Boolean  @default(false)
+  updatedAt                DateTime @updatedAt
 }
 
 model TenantFeatureFlag {
@@ -313,6 +332,7 @@ model Event {
   @@index([tenantId])
   @@index([tenantId, createdAt])
   @@index([tenantId, status])
+  @@index([tenantId, clientId])
 }
 
 model Message {
@@ -383,15 +403,19 @@ model ObituaryMessage {
 // =============================================================================
 
 model Client {
-  id            String    @id @default(cuid())
+  id            String       @id @default(cuid())
   tenantId      String
-  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+  tenant        Tenant       @relation(fields: [tenantId], references: [id])
   name          String
   email         String?
   phone         String?
+  relationship  String?
+  notes         String?
+  status        ClientStatus @default(ACTIVE)
+  serviceDate   DateTime?
   convertedFrom String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
   deletedAt     DateTime?
 
   leads Lead[]
@@ -461,14 +485,15 @@ model Venue {
 }
 
 model Room {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
   venueId   String
-  venue     Venue    @relation(fields: [venueId], references: [id])
+  venue     Venue     @relation(fields: [venueId], references: [id])
   name      String
   capacity  Int?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
 
   events Event[]
 

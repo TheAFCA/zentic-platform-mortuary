@@ -1,0 +1,23 @@
+<div class="color-picker">
+  <label class="color-picker__label" *ngIf="label">{{ label }}</label>
+  <div class="color-picker__row">
+    <input
+      type="color"
+      class="color-picker__swatch"
+      [ngModel]="value"
+      (ngModelChange)="onSwatchChange($event)"
+      [disabled]="disabled"
+      [ngModelOptions]="{ standalone: true }"
+    />
+    <input
+      type="text"
+      class="color-picker__text"
+      [class.color-picker__text--invalid]="!isValid"
+      [ngModel]="value"
+      (ngModelChange)="onTextChange($event)"
+      (blur)="onTouched()"
+      [disabled]="disabled"
+      [ngModelOptions]="{ standalone: true }"
+    />
+  </div>
+</div>

@@ -1,0 +1,73 @@
+@use '../../../../shared/styles/panel' as panel;
+
+.account-settings__success,
+.account-settings__error {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: 0.6rem;
+  font-size: 0.85rem;
+}
+
+.account-settings__success {
+  background: #ecfdf5;
+  color: #166534;
+}
+
+.account-settings__error {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.account-settings__form {
+  display: grid;
+  gap: 1.25rem;
+  max-width: 28rem;
+}
+
+.account-settings__field {
+  display: grid;
+  gap: 0.35rem;
+
+  label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: panel.$muted;
+  }
+
+  select {
+    @include panel.sa-pill-input;
+  }
+}
+
+.account-settings__fieldset {
+  display: grid;
+  gap: 0.6rem;
+  border: 1px solid panel.$border;
+  border-radius: 0.85rem;
+  padding: 0.85rem 1rem;
+
+  legend {
+    padding: 0 0.35rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: panel.$muted;
+  }
+}
+
+.account-settings__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  color: panel.$ink;
+
+  input {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+}
+
+.btn-primary {
+  @include panel.primary-button;
+  justify-self: start;
+}
