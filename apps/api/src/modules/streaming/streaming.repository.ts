@@ -32,7 +32,9 @@ export class StreamingRepository {
       where: { tenantId, deletedAt: null },
       include: {
         deceased: { select: { id: true, firstName: true, lastName: true, photoUrl: true } },
-        room: { select: { id: true, name: true, venue: { select: { name: true } } } },
+        room: { select: { id: true, name: true, venue: { select: { id: true, name: true } } } },
+        client: { select: { id: true, name: true } },
+        assignedTo: { select: { id: true, email: true } },
         _count: { select: { messages: true, leads: true } },
       },
       orderBy: { scheduledAt: 'desc' },
@@ -52,6 +54,8 @@ export class StreamingRepository {
       include: {
         deceased: true,
         room: { include: { venue: true } },
+        client: { select: { id: true, name: true, phone: true, email: true } },
+        assignedTo: { select: { id: true, email: true } },
       },
     });
   }

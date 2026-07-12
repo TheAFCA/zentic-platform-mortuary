@@ -18,7 +18,9 @@ import {
   CreateEventInput,
 } from '../../../core/services/streaming-api.service';
 import { VenuesApiService } from '../../../core/services/venues-api.service';
-import { Venue } from '@zentic/shared-types';
+import { ClientsApiService } from '../../../core/services/clients-api.service';
+import { UsersService, AdminUser } from '../../../core/services/users.service';
+import { Client, Venue } from '@zentic/shared-types';
 
 @Component({
   selector: 'app-event-form',
@@ -162,6 +164,31 @@ import { Venue } from '@zentic/shared-types';
 
               <mat-divider />
               <h3 class="font-semibold text-gray-700 flex items-center gap-2">
+                <mat-icon class="text-lg">people</mat-icon> Cliente y operador
+              </h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <mat-form-field>
+                  <mat-label>Cliente / Familia</mat-label>
+                  <mat-select formControlName="clientId">
+                    <mat-option [value]="null">Sin cliente</mat-option>
+                    @for (c of clients(); track c.id) {
+                      <mat-option [value]="c.id">{{ c.name }}{{ c.phone ? ' — ' + c.phone : '' }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field>
+                  <mat-label>Operador asignado</mat-label>
+                  <mat-select formControlName="assignedToId">
+                    <mat-option [value]="null">Sin asignar</mat-option>
+                    @for (op of operators(); track op.id) {
+                      <mat-option [value]="op.id">{{ op.email }} ({{ op.role }})</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              </div>
+
+              <mat-divider />
+              <h3 class="font-semibold text-gray-700 flex items-center gap-2">
                 <mat-icon class="text-lg">settings</mat-icon> Configuración del evento
               </h3>
               <div class="flex items-center gap-4">
@@ -204,6 +231,8 @@ export class EventFormComponent {
   private readonly fb = inject(FormBuilder);
   private readonly api = inject(StreamingApiService);
   private readonly venuesApi = inject(VenuesApiService);
+  private readonly clientsApi = inject(ClientsApiService);
+  private readonly usersService = inject(UsersService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly snackBar = inject(MatSnackBar);
@@ -213,6 +242,8 @@ export class EventFormComponent {
   readonly venues = signal<Venue[]>([]);
   readonly rooms = signal<Venue['rooms']>([]);
   readonly selectedVenue = signal<Venue | null>(null);
+  readonly clients = signal<Client[]>([]);
+  readonly operators = signal<AdminUser[]>([]);
 
   readonly isEdit = () => !!this.route.snapshot.paramMap.get('id');
 
@@ -230,6 +261,8 @@ export class EventFormComponent {
     deceasedEpitaph: [''],
     venueId: [null as string | null],
     roomId: [null as string | null],
+    clientId: [null as string | null],
+    assignedToId: [null as string | null],
     isPublic: [true],
     accessCode: [''],
     moderationMode: ['AUTO'],
@@ -239,6 +272,8 @@ export class EventFormComponent {
     const editId = this.route.snapshot.paramMap.get('id');
     if (editId) this.loadEvent(editId);
     this.loadVenues();
+    this.loadClients();
+    this.loadOperators();
   }
 
   onVenueChange(venueId: string | null): void {
@@ -246,6 +281,18 @@ export class EventFormComponent {
     this.selectedVenue.set(venue);
     this.rooms.set(venue?.rooms ?? []);
     if (!venue) this.form.patchValue({ roomId: null });
+  }
+
+  private loadClients(): void {
+    this.clientsApi.list({ page: 1, limit: 200 }).subscribe({
+      next: (res) => this.clients.set(res.data),
+    });
+  }
+
+  private loadOperators(): void {
+    this.usersService.list().subscribe({
+      next: (list) => this.operators.set(list),
+    });
   }
 
   private loadVenues(): void {
@@ -272,6 +319,8 @@ export class EventFormComponent {
           deceasedDeathDate: ev.deceased?.deathDate?.split('T')[0] ?? '',
           deceasedEpitaph: ev.deceased?.epitaph ?? '',
           roomId: ev.room?.id ?? null,
+          clientId: ev.client?.id ?? null,
+          assignedToId: ev.assignedTo?.id ?? null,
           isPublic: ev.isPublic,
           moderationMode: ev.moderationMode,
         });
@@ -316,6 +365,8 @@ export class EventFormComponent {
       accessCode: this.form.controls.accessCode.value || undefined,
       moderationMode: this.form.controls.moderationMode.value,
       roomId: this.form.controls.roomId.value || undefined,
+      clientId: this.form.controls.clientId.value || undefined,
+      assignedToId: this.form.controls.assignedToId.value || undefined,
     };
 
     if (deceasedFirstName && deceasedLastName) {

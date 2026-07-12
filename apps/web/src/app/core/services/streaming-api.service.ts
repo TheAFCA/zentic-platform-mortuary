@@ -38,8 +38,10 @@ export interface StreamingEvent {
   room: {
     id: string;
     name: string;
-    venue: { name: string };
+    venue: { id: string; name: string };
   } | null;
+  client: { id: string; name: string } | null;
+  assignedTo: { id: string; email: string } | null;
   _count?: {
     messages: number;
     leads: number;
@@ -112,6 +114,7 @@ export interface CreateEventInput {
   };
   roomId?: string;
   clientId?: string;
+  assignedToId?: string;
   description?: string;
   ceremonyType: string;
   scheduledAt: string;

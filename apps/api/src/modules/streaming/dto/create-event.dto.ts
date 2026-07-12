@@ -85,6 +85,11 @@ export class CreateEventDto {
   @IsOptional()
   clientId?: string;
 
+  /** ID del operador asignado para gestionar el evento */
+  @IsString()
+  @IsOptional()
+  assignedToId?: string;
+
   /** Descripción del servicio funeral */
   @IsString()
   @IsOptional()

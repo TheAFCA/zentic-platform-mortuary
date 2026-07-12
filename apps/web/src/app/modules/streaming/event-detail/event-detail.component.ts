@@ -74,9 +74,19 @@ import { EventStatus } from '@zentic/shared-types';
               <p class="text-sm text-gray-500 mt-1">
                 {{ ev.scheduledAt | date : 'dd/MM/yyyy HH:mm' }}
                 @if (ev.room) {
-                  · {{ ev.room.name }} - {{ ev.room.venue.name }}
+                  · <a [routerLink]="['/admin/venues']" class="text-indigo-600 hover:underline">{{ ev.room.venue.name }} · {{ ev.room.name }}</a>
                 }
               </p>
+              @if (ev.client) {
+                <a [routerLink]="['/admin/clients', ev.client.id]" class="inline-flex items-center gap-1 mt-1 text-sm text-indigo-600 hover:underline">
+                  <mat-icon class="text-sm">person</mat-icon> {{ ev.client.name }}
+                </a>
+              }
+              @if (ev.assignedTo) {
+                <span class="inline-flex items-center gap-1 mt-1 ml-3 text-sm text-gray-500">
+                  <mat-icon class="text-sm">support_agent</mat-icon> Operador: {{ ev.assignedTo.email }}
+                </span>
+              }
             </div>
             <span
               class="px-3 py-1 text-sm font-medium rounded-full {{ statusClass(ev.status) }}"

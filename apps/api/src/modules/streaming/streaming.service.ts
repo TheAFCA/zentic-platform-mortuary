@@ -180,6 +180,7 @@ export class StreamingService {
       deceased: { connect: { id: deceasedId } },
       ...(dto.roomId ? { room: { connect: { id: dto.roomId } } } : {}),
       ...(dto.clientId ? { client: { connect: { id: dto.clientId } } } : {}),
+      ...(dto.assignedToId ? { assignedTo: { connect: { id: dto.assignedToId } } } : {}),
     };
 
     return this.repo.create(eventData);
@@ -215,7 +216,10 @@ export class StreamingService {
       updateData.room = dto.roomId ? { connect: { id: dto.roomId } } : { disconnect: true };
     }
     if (dto.clientId !== undefined) {
-      updateData.clientId = dto.clientId || null;
+      updateData.client = dto.clientId ? { connect: { id: dto.clientId } } : { disconnect: true };
+    }
+    if (dto.assignedToId !== undefined) {
+      updateData.assignedTo = dto.assignedToId ? { connect: { id: dto.assignedToId } } : { disconnect: true };
     }
     if (dto.accessCode !== undefined) {
       updateData.accessCode = dto.accessCode ? this.hashAccessCode(dto.accessCode) : null;

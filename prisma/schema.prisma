@@ -173,6 +173,7 @@ model User {
   sessions       Session[]
   passwordResets PasswordReset[]
   permissions    UserPermission[]
+  assignedEvents Event[]
 
   @@unique([email, tenantId])
   @@index([tenantId])
@@ -305,6 +306,9 @@ model Event {
   roomId           String?
   room             Room?          @relation(fields: [roomId], references: [id])
   clientId         String?
+  client           Client?        @relation(fields: [clientId], references: [id])
+  assignedToId     String?
+  assignedTo       User?          @relation(fields: [assignedToId], references: [id])
   title            String
   slug             String         @unique
   description      String?        @db.Text
@@ -333,6 +337,7 @@ model Event {
   @@index([tenantId, createdAt])
   @@index([tenantId, status])
   @@index([tenantId, clientId])
+  @@index([assignedToId])
 }
 
 model Message {
@@ -418,7 +423,8 @@ model Client {
   updatedAt     DateTime     @updatedAt
   deletedAt     DateTime?
 
-  leads Lead[]
+  leads  Lead[]
+  events Event[]
 
   @@index([tenantId])
 }
