@@ -10,6 +10,7 @@ import {
   AdminDashboardMetrics,
   JwtPayload,
   TenantAccountSettings,
+  TenantBrandConfig,
 } from '@zentic/shared-types';
 import { AdminRepository } from './admin.repository';
 import { PermissionsService } from '../permissions/permissions.service';
@@ -198,6 +199,19 @@ export class AdminService {
   async updateSettings(tenantId: string, dto: UpdateSettingsDto) {
     assertTenantContext(tenantId);
     return this.adminRepo.upsertAccountSettings(tenantId, dto);
+  }
+
+  async getBrand(tenantId: string): Promise<TenantBrandConfig> {
+    assertTenantContext(tenantId);
+    const brand = await this.adminRepo.findBrandConfig(tenantId);
+    return {
+      logoUrl: brand?.logoUrl ?? null,
+      faviconUrl: brand?.faviconUrl ?? null,
+      primaryColor: brand?.primaryColor ?? '#1a1a2e',
+      secondaryColor: brand?.secondaryColor ?? '#16213e',
+      textColor: brand?.textColor ?? '#333333',
+      backgroundColor: brand?.backgroundColor ?? '#f5f5f5',
+    };
   }
 
   async updateBrand(tenantId: string, dto: UpdateBrandDto) {

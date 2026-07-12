@@ -77,6 +77,12 @@ export class AdminController {
     return this.adminService.updateSettings(tenantId, dto);
   }
 
+  @Get('settings/brand')
+  @RequirePermission('settings:read')
+  getBrand(@TenantId() tenantId: string) {
+    return this.adminService.getBrand(tenantId);
+  }
+
   @Patch('settings/brand')
   @RequirePermission('settings:manage')
   updateBrand(@TenantId() tenantId: string, @Body() dto: UpdateBrandDto) {

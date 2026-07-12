@@ -214,6 +214,49 @@ describe('AdminService', () => {
     });
   });
 
+  describe('getBrand', () => {
+    it('throws ForbiddenException when there is no tenant context', async () => {
+      await expect(service.getBrand('')).rejects.toThrow(ForbiddenException);
+    });
+
+    it('returns Prisma-schema defaults when the tenant has no brand config yet', async () => {
+      // ARRANGE
+      adminRepo.findBrandConfig.mockResolvedValue(null);
+
+      // ACT
+      const result = await service.getBrand('tenant-1');
+
+      // ASSERT
+      expect(result).toEqual({
+        logoUrl: null,
+        faviconUrl: null,
+        primaryColor: '#1a1a2e',
+        secondaryColor: '#16213e',
+        textColor: '#333333',
+        backgroundColor: '#f5f5f5',
+      });
+    });
+
+    it('returns the persisted brand config when it exists', async () => {
+      // ARRANGE
+      adminRepo.findBrandConfig.mockResolvedValue({
+        logoUrl: 'http://localhost:3000/uploads/brand/tenant-1/logo.png',
+        faviconUrl: null,
+        primaryColor: '#111111',
+        secondaryColor: '#222222',
+        textColor: '#333333',
+        backgroundColor: '#f5f5f5',
+      } as never);
+
+      // ACT
+      const result = await service.getBrand('tenant-1');
+
+      // ASSERT
+      expect(result.primaryColor).toBe('#111111');
+      expect(result.logoUrl).toBe('http://localhost:3000/uploads/brand/tenant-1/logo.png');
+    });
+  });
+
   describe('updateBrand', () => {
     it('throws ForbiddenException when there is no tenant context', async () => {
       await expect(
