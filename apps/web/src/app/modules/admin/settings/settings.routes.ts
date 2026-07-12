@@ -7,13 +7,6 @@ export const SETTINGS_ROUTES: Routes = [
     loadComponent: () => import('./settings.component').then((m) => m.SettingsComponent),
     children: [
       {
-        path: 'seguridad',
-        loadComponent: () =>
-          import('./security-settings/security-settings.component').then(
-            (m) => m.SecuritySettingsComponent,
-          ),
-      },
-      {
         path: 'marca',
         canActivate: [permissionGuard],
         data: { permissions: ['settings:manage'] },
@@ -38,7 +31,7 @@ export const SETTINGS_ROUTES: Routes = [
             (m) => m.StreamingSettingsComponent,
           ),
       },
-      { path: '', redirectTo: 'seguridad', pathMatch: 'full' },
+      { path: '', redirectTo: 'marca', pathMatch: 'full' },
     ],
   },
 ];
