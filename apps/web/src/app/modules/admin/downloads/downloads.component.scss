@@ -1,0 +1,67 @@
+@use '../../../shared/styles/panel' as panel;
+
+.downloads-page {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 56rem;
+}
+
+.downloads-page__header {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.downloads-page__eyebrow {
+  @include panel.eyebrow;
+}
+
+.downloads-page__title {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: panel.$ink;
+}
+
+.downloads-page__subtitle {
+  margin: 0;
+  color: panel.$muted;
+}
+
+.panel-card {
+  @include panel.panel-card;
+}
+
+.panel-card__body {
+  padding: 1.25rem 1.5rem;
+}
+
+.download-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.download-item__info {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.download-item__title {
+  margin: 0;
+  font-weight: 600;
+  color: panel.$ink;
+}
+
+.download-item__subtitle {
+  margin: 0.15rem 0 0;
+  font-size: 0.85rem;
+  color: panel.$muted;
+}
+
+.btn-primary {
+  @include panel.primary-button;
+}

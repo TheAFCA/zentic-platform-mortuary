@@ -1,0 +1,25 @@
+<div class="downloads-page">
+  <header class="downloads-page__header">
+    <p class="downloads-page__eyebrow">Administración</p>
+    <h1 class="downloads-page__title">Descargas</h1>
+    <p class="downloads-page__subtitle">Exporta la información de tu funeraria</p>
+  </header>
+
+  <section class="panel-card">
+    <div class="panel-card__body">
+      <div class="download-item">
+        <div class="download-item__info">
+          <mat-icon>groups</mat-icon>
+          <div>
+            <p class="download-item__title">Exportar clientes (CSV)</p>
+            <p class="download-item__subtitle">Listado completo de clientes con sus datos de contacto</p>
+          </div>
+        </div>
+        <button type="button" class="btn-primary" (click)="exportClients()">
+          <mat-icon>download</mat-icon>
+          <span>Descargar</span>
+        </button>
+      </div>
+    </div>
+  </section>
+</div>
