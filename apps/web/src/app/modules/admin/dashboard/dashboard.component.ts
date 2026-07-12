@@ -1,22 +1,46 @@
-import { Component } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { interval, startWith, switchMap } from 'rxjs';
+import { AdminDashboardMetrics } from '@zentic/shared-types';
+import { AdminDashboardApiService } from '../../../core/services/admin-dashboard-api.service';
 import { StatCardComponent } from '../../../shared/molecules/stat-card/stat-card.component';
+
+const REFRESH_INTERVAL_MS = 60_000;
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [CommonModule, StatCardComponent],
-  template: `
-    <div>
-      <h1 class="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <app-stat-card label="Eventos activos" value="—" icon="live_tv" />
-        <app-stat-card label="Obituarios publicados" value="—" icon="article" />
-        <app-stat-card label="Leads nuevos" value="—" icon="person_add" />
-        <app-stat-card label="Clientes totales" value="—" icon="people" />
-      </div>
-      <!-- TODO: Implement dashboard widgets in Module 05 -->
-    </div>
-  `,
+  templateUrl: './dashboard.component.html',
 })
-export class DashboardComponent {}
+export class DashboardComponent implements OnInit {
+  private readonly dashboardApi = inject(AdminDashboardApiService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  readonly metrics = signal<AdminDashboardMetrics | null>(null);
+  readonly loading = signal(true);
+
+  ngOnInit(): void {
+    interval(REFRESH_INTERVAL_MS)
+      .pipe(
+        startWith(0),
+        switchMap(() => this.dashboardApi.get()),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (metrics) => {
+          this.metrics.set(metrics);
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
+      });
+  }
+
+  leadsDeltaSubtitle(): string {
+    const metrics = this.metrics();
+    if (!metrics || metrics.leadsDeltaPercent === null) return 'vs. mes anterior: sin datos';
+    const sign = metrics.leadsDeltaPercent >= 0 ? '+' : '';
+    return `${sign}${metrics.leadsDeltaPercent}% vs. mes anterior`;
+  }
+}
