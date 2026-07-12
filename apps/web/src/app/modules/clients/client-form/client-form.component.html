@@ -1,0 +1,50 @@
+<form class="client-form" [formGroup]="form" (ngSubmit)="submit()">
+  <p class="client-form__error" *ngIf="errorMessage" data-testid="client-form-error">{{ errorMessage }}</p>
+  <p class="client-form__hint" *ngIf="convertedFromLeadName">
+    Se está creando a partir del lead <strong>{{ convertedFromLeadName }}</strong>.
+  </p>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Nombre del responsable familiar</mat-label>
+    <input matInput formControlName="name" data-testid="client-name-input" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Email</mat-label>
+    <input matInput type="email" formControlName="email" data-testid="client-email-input" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Teléfono</mat-label>
+    <input matInput formControlName="phone" data-testid="client-phone-input" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Relación con el difunto</mat-label>
+    <input matInput formControlName="relationship" data-testid="client-relationship-input" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Fecha del servicio</mat-label>
+    <input matInput type="date" formControlName="serviceDate" data-testid="client-service-date-input" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Estado</mat-label>
+    <mat-select formControlName="status" data-testid="client-status-select">
+      <mat-option *ngFor="let status of statuses" [value]="status">{{ status }}</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Notas internas</mat-label>
+    <textarea matInput rows="3" formControlName="notes" data-testid="client-notes-input"></textarea>
+  </mat-form-field>
+
+  <div class="client-form__actions">
+    <button type="button" class="btn-ghost" (click)="cancel.emit()">Cancelar</button>
+    <button type="submit" class="btn-primary" data-testid="client-form-submit">
+      {{ isEditing ? 'Guardar cambios' : 'Crear cliente' }}
+    </button>
+  </div>
+</form>

@@ -1,0 +1,39 @@
+<div>
+  <h1 class="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <app-stat-card
+      label="Eventos activos hoy"
+      [value]="loading() ? '—' : (metrics()?.activeEventsToday ?? 0)"
+      icon="live_tv"
+    />
+    <app-stat-card
+      label="Obituarios publicados"
+      subtitle="este mes"
+      [value]="loading() ? '—' : (metrics()?.obituariesPublishedThisMonth ?? 0)"
+      icon="article"
+    />
+    <app-stat-card
+      label="Leads este mes"
+      [subtitle]="loading() ? '' : leadsDeltaSubtitle()"
+      [value]="loading() ? '—' : (metrics()?.leadsThisMonth ?? 0)"
+      icon="person_add"
+    />
+    <app-stat-card
+      label="Clientes totales"
+      [value]="loading() ? '—' : (metrics()?.totalClients ?? 0)"
+      icon="people"
+    />
+    <app-stat-card
+      label="Mensajes pendientes"
+      subtitle="de moderación"
+      [value]="loading() ? '—' : (metrics()?.pendingMessages ?? 0)"
+      icon="mark_chat_unread"
+      [accent]="(metrics()?.pendingMessages ?? 0) > 0 ? 'warning' : 'primary'"
+    />
+    <app-stat-card
+      label="Viewers en vivo"
+      [value]="loading() ? '—' : (metrics()?.liveViewers ?? 0)"
+      icon="visibility"
+    />
+  </div>
+</div>

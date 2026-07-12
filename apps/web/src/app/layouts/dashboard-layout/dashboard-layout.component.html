@@ -16,7 +16,6 @@
       </div>
     </div>
 
-    <!-- Navegación temporal del panel Super Admin (Módulo 04) — el sidebar real es de Módulo 05 -->
     <nav class="dashboard-layout__nav" *ngIf="router.url.startsWith('/super-admin')">
       <p class="dashboard-layout__nav-eyebrow">Plataforma</p>
       <a
@@ -28,6 +27,21 @@
         <mat-icon>{{ item.icon }}</mat-icon>
         <span>{{ item.label }}</span>
       </a>
+    </nav>
+
+    <nav class="dashboard-layout__nav" *ngIf="!router.url.startsWith('/super-admin')">
+      <p class="dashboard-layout__nav-eyebrow">Panel</p>
+      <ng-container *ngFor="let item of tenantAdminNavItems">
+        <a
+          *appHasPermission="item.permission ?? []"
+          class="dashboard-layout__nav-link"
+          routerLinkActive="dashboard-layout__nav-link--active"
+          [routerLink]="item.path"
+        >
+          <mat-icon>{{ item.icon }}</mat-icon>
+          <span>{{ item.label }}</span>
+        </a>
+      </ng-container>
     </nav>
   </mat-sidenav>
 

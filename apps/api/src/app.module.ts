@@ -12,6 +12,8 @@ import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 import { TenantModule } from './modules/tenant/tenant.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { FilesModule } from './modules/files/files.module';
+import { ClientsModule } from './modules/clients/clients.module';
+import { VenuesModule } from './modules/venues/venues.module';
 import { validateEnv } from './config/env.validation';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -46,6 +48,8 @@ import { AppService } from './app.service';
     SuperAdminModule,
     NotificationsModule,
     FilesModule,
+    ClientsModule,
+    VenuesModule,
   ],
 })
 export class AppModule implements NestModule {

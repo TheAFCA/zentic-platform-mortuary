@@ -1,0 +1,31 @@
+<div class="file-dropzone">
+  <div
+    class="file-dropzone__area"
+    [class.file-dropzone__area--dragging]="dragging()"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave()"
+    (drop)="onDrop($event)"
+    (click)="openFileBrowser()"
+  >
+    <img
+      *ngIf="localPreview() || previewUrl; else placeholder"
+      class="file-dropzone__preview"
+      [src]="localPreview() || previewUrl"
+      alt=""
+    />
+    <ng-template #placeholder>
+      <mat-icon class="file-dropzone__icon">cloud_upload</mat-icon>
+    </ng-template>
+    <p class="file-dropzone__label">{{ label }}</p>
+    <p class="file-dropzone__hint">{{ hint }}</p>
+    <input
+      #fileInput
+      type="file"
+      class="file-dropzone__input"
+      [accept]="accept"
+      (change)="onFileInputChange($event)"
+      (click)="$event.stopPropagation()"
+    />
+  </div>
+  <p class="file-dropzone__error" *ngIf="error()" data-testid="file-dropzone-error">{{ error() }}</p>
+</div>

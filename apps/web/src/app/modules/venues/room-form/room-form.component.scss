@@ -1,0 +1,45 @@
+@use '../../../shared/styles/panel' as panel;
+
+.room-form {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.room-form__error {
+  flex-basis: 100%;
+  margin: 0 0 0.25rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.6rem;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.8rem;
+}
+
+.room-form__actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding-top: 0.4rem;
+}
+
+.btn-primary {
+  @include panel.primary-button;
+}
+
+.btn-primary--sm {
+  min-height: 2.25rem;
+  padding: 0 0.9rem;
+  font-size: 0.85rem;
+}
+
+.btn-ghost {
+  @include panel.ghost-button;
+}
+
+.btn-ghost--sm {
+  min-height: 2.25rem;
+  padding: 0 0.9rem;
+  font-size: 0.85rem;
+}

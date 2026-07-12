@@ -1,0 +1,49 @@
+<div class="brand-settings">
+  <p class="brand-settings__success" *ngIf="success()" role="status">{{ success() }}</p>
+  <p class="brand-settings__error" *ngIf="error()" role="alert">{{ error() }}</p>
+
+  <div class="brand-settings__grid" *ngIf="!loading()">
+    <section class="brand-settings__uploads">
+      <app-file-dropzone
+        label="Logo"
+        hint="PNG, JPG o SVG · máx. 2MB"
+        [maxSizeBytes]="2 * 1024 * 1024"
+        [previewUrl]="logoUrl()"
+        (fileSelected)="onLogoSelected($event)"
+      />
+      <app-file-dropzone
+        label="Favicon"
+        hint="PNG, JPG o SVG · máx. 512KB"
+        [maxSizeBytes]="512 * 1024"
+        [previewUrl]="faviconUrl()"
+        (fileSelected)="onFaviconSelected($event)"
+      />
+    </section>
+
+    <form class="brand-settings__form" [formGroup]="form" (ngSubmit)="onSubmit()">
+      <app-color-picker label="Color primario" formControlName="primaryColor" />
+      <app-color-picker label="Color secundario" formControlName="secondaryColor" />
+      <app-color-picker label="Color de texto" formControlName="textColor" />
+      <app-color-picker label="Color de fondo" formControlName="backgroundColor" />
+
+      <button type="submit" class="btn-primary" [disabled]="saving()">
+        {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
+      </button>
+    </form>
+
+    <section class="brand-settings__preview" [ngStyle]="previewStyle">
+      <p class="brand-settings__preview-label">Vista previa</p>
+      <div class="brand-preview">
+        <div class="brand-preview__header">
+          <img *ngIf="logoUrl()" [src]="logoUrl()" alt="Logo" class="brand-preview__logo" />
+          <span *ngIf="!logoUrl()" class="brand-preview__logo-placeholder">LOGO</span>
+        </div>
+        <div class="brand-preview__body">
+          <p class="brand-preview__title">Homenaje a un ser querido</p>
+          <p class="brand-preview__text">Así se verá el texto en las páginas públicas.</p>
+          <button type="button" class="brand-preview__button">Botón de ejemplo</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

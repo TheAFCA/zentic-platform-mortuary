@@ -1,0 +1,66 @@
+<div class="clients-page">
+  <header class="clients-page__header">
+    <p class="clients-page__eyebrow">Administración</p>
+    <h1 class="clients-page__title">Clientes</h1>
+    <p class="clients-page__subtitle">Familias que han contratado servicios con tu funeraria</p>
+  </header>
+
+  <section class="panel-card" *ngIf="showForm()">
+    <div class="panel-card__header">
+      <h2>{{ editingClient() ? 'Editar cliente' : 'Nuevo cliente' }}</h2>
+    </div>
+    <div class="panel-card__body">
+      <app-client-form
+        [initialValue]="editingFormValue()"
+        [errorMessage]="formError()"
+        (save)="onSave($event)"
+        (cancel)="closeForm()"
+      />
+    </div>
+  </section>
+
+  <section class="panel-card">
+    <div class="panel-card__header panel-card__header--split">
+      <div>
+        <h2>Clientes</h2>
+        <p class="panel-card__count">{{ total() }} cliente(s)</p>
+      </div>
+      <div class="clients-page__actions">
+        <input
+          type="search"
+          class="clients-page__search"
+          placeholder="Buscar por nombre, email o teléfono"
+          [ngModel]="search()"
+          (ngModelChange)="onSearchChange($event)"
+          [ngModelOptions]="{ standalone: true }"
+        />
+        <button *appHasPermission="'downloads:access'" type="button" class="btn-ghost" (click)="exportCsv()">
+          <mat-icon>download</mat-icon>
+          <span>Exportar CSV</span>
+        </button>
+        <button *appHasPermission="'clients:manage'" type="button" class="btn-primary" (click)="openCreate()">
+          <mat-icon>person_add</mat-icon>
+          <span>Nuevo cliente</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="panel-card__body panel-card__body--flush">
+      <app-data-table [columns]="columns" [rows]="clients()" emptyMessage="No hay clientes registrados">
+        <ng-template #rowActions let-client>
+          <div class="clients-table__actions">
+            <app-badge [color]="statusBadgeColor(client.status)">{{ client.status }}</app-badge>
+            <button
+              *appHasPermission="'clients:manage'"
+              type="button"
+              class="btn-ghost btn-ghost--sm"
+              (click)="openEdit(client)"
+            >
+              Editar
+            </button>
+          </div>
+        </ng-template>
+      </app-data-table>
+    </div>
+  </section>
+</div>

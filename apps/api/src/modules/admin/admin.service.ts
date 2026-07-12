@@ -6,16 +6,33 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
-import { JwtPayload } from '@zentic/shared-types';
+import {
+  AdminDashboardMetrics,
+  JwtPayload,
+  TenantAccountSettings,
+  TenantBrandConfig,
+} from '@zentic/shared-types';
 import { AdminRepository } from './admin.repository';
 import { PermissionsService } from '../permissions/permissions.service';
 import { EmailService } from '../email/email.service';
+import { FilesService, UploadableFile } from '../files/files.service';
 import { hashPassword } from '../../common/security/password.util';
 import { assertTenantContext } from '../../common/security/assert-tenant-context';
+import {
+  getMonthBoundsUtc,
+  getTenantDayBoundsUtc,
+} from '../../common/utils/date-range.util';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateBrandDto } from './dto/update-brand.dto';
+import { UpdateSettingsDto } from './dto/update-settings.dto';
+
+const DEFAULT_TENANT_TIMEZONE = 'America/Bogota';
 
 const MANAGEABLE_ROLES = ['OPERATOR', 'VIEWER'] as const;
+
+const LOGO_MAX_SIZE_BYTES = 2 * 1024 * 1024;
+const FAVICON_MAX_SIZE_BYTES = 512 * 1024;
 
 @Injectable()
 export class AdminService {
@@ -23,12 +40,55 @@ export class AdminService {
     private readonly adminRepo: AdminRepository,
     private readonly permissionsService: PermissionsService,
     private readonly emailService: EmailService,
+    private readonly filesService: FilesService,
     private readonly config: ConfigService,
   ) {}
 
-  // TODO: Implement in Module 05 — Admin General
-  getDashboard(_tenantId: string) {
-    throw new Error('Not implemented');
+  async getDashboard(tenantId: string): Promise<AdminDashboardMetrics> {
+    assertTenantContext(tenantId);
+
+    const accountSettings = await this.adminRepo.findAccountSettings(tenantId);
+    const timezone = accountSettings?.timezone ?? DEFAULT_TENANT_TIMEZONE;
+
+    const todayRange = getTenantDayBoundsUtc(timezone);
+    const thisMonthRange = getMonthBoundsUtc(0);
+    const lastMonthRange = getMonthBoundsUtc(-1);
+
+    const [
+      activeEventsToday,
+      obituariesPublishedThisMonth,
+      pendingMessages,
+      leadsThisMonth,
+      leadsLastMonth,
+      liveViewers,
+      totalClients,
+    ] = await Promise.all([
+      this.adminRepo.countActiveEventsToday(tenantId, todayRange),
+      this.adminRepo.countObituariesPublished(tenantId, thisMonthRange),
+      this.adminRepo.countPendingMessages(tenantId),
+      this.adminRepo.countLeadsInRange(tenantId, thisMonthRange),
+      this.adminRepo.countLeadsInRange(tenantId, lastMonthRange),
+      this.adminRepo.sumLiveViewers(tenantId),
+      this.adminRepo.countActiveClients(tenantId),
+    ]);
+
+    const leadsDeltaPercent =
+      leadsLastMonth === 0
+        ? null
+        : Math.round(
+            ((leadsThisMonth - leadsLastMonth) / leadsLastMonth) * 100,
+          );
+
+    return {
+      activeEventsToday,
+      obituariesPublishedThisMonth,
+      pendingMessages,
+      leadsThisMonth,
+      leadsLastMonth,
+      leadsDeltaPercent,
+      liveViewers,
+      totalClients,
+    };
   }
 
   getUsers(tenantId: string) {
@@ -123,13 +183,82 @@ export class AdminService {
     };
   }
 
-  getSettings(_tenantId: string) {
-    throw new Error('Not implemented');
+  async getSettings(tenantId: string): Promise<TenantAccountSettings> {
+    assertTenantContext(tenantId);
+    const settings = await this.adminRepo.findAccountSettings(tenantId);
+    return {
+      timezone: settings?.timezone ?? DEFAULT_TENANT_TIMEZONE,
+      locale: settings?.locale ?? 'es',
+      notifyNewLead: settings?.notifyNewLead ?? true,
+      notifyPendingMessages: settings?.notifyPendingMessages ?? true,
+      notifyWeeklySummary: settings?.notifyWeeklySummary ?? false,
+      requireAccessCodeDefault: settings?.requireAccessCodeDefault ?? false,
+    };
   }
-  updateSettings(_tenantId: string, _dto: unknown) {
-    throw new Error('Not implemented');
+
+  async updateSettings(tenantId: string, dto: UpdateSettingsDto) {
+    assertTenantContext(tenantId);
+    return this.adminRepo.upsertAccountSettings(tenantId, dto);
   }
-  updateBrand(_tenantId: string, _dto: unknown) {
-    throw new Error('Not implemented');
+
+  async getBrand(tenantId: string): Promise<TenantBrandConfig> {
+    assertTenantContext(tenantId);
+    const brand = await this.adminRepo.findBrandConfig(tenantId);
+    return {
+      logoUrl: brand?.logoUrl ?? null,
+      faviconUrl: brand?.faviconUrl ?? null,
+      primaryColor: brand?.primaryColor ?? '#1a1a2e',
+      secondaryColor: brand?.secondaryColor ?? '#16213e',
+      textColor: brand?.textColor ?? '#333333',
+      backgroundColor: brand?.backgroundColor ?? '#f5f5f5',
+    };
+  }
+
+  async updateBrand(tenantId: string, dto: UpdateBrandDto) {
+    assertTenantContext(tenantId);
+    return this.adminRepo.upsertBrandConfig(tenantId, dto);
+  }
+
+  async uploadBrandLogo(tenantId: string, file: UploadableFile) {
+    assertTenantContext(tenantId);
+    return this.uploadBrandAsset(
+      tenantId,
+      file,
+      'logoUrl',
+      LOGO_MAX_SIZE_BYTES,
+    );
+  }
+
+  async uploadBrandFavicon(tenantId: string, file: UploadableFile) {
+    assertTenantContext(tenantId);
+    return this.uploadBrandAsset(
+      tenantId,
+      file,
+      'faviconUrl',
+      FAVICON_MAX_SIZE_BYTES,
+    );
+  }
+
+  private async uploadBrandAsset(
+    tenantId: string,
+    file: UploadableFile,
+    field: 'logoUrl' | 'faviconUrl',
+    maxSizeBytes: number,
+  ) {
+    const existing = await this.adminRepo.findBrandConfig(tenantId);
+    const url = await this.filesService.upload(file, `brand/${tenantId}`, {
+      maxSizeBytes,
+    });
+
+    const updated = await this.adminRepo.upsertBrandConfig(tenantId, {
+      [field]: url,
+    });
+
+    const previousUrl = existing?.[field];
+    if (previousUrl && previousUrl !== url) {
+      await this.filesService.delete(previousUrl);
+    }
+
+    return updated;
   }
 }
