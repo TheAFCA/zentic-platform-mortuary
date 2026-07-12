@@ -58,5 +58,5 @@ Competencia Adiau/
 mds/
 
 # Agents
-.agents
-skills-lock.json
+#.agents
+#skills-lock.json
