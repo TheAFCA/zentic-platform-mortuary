@@ -253,7 +253,9 @@ describe('AdminService', () => {
 
       // ASSERT
       expect(result.primaryColor).toBe('#111111');
-      expect(result.logoUrl).toBe('http://localhost:3000/uploads/brand/tenant-1/logo.png');
+      expect(result.logoUrl).toBe(
+        'http://localhost:3000/uploads/brand/tenant-1/logo.png',
+      );
     });
   });
 
