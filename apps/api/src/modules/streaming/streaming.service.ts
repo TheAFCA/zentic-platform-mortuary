@@ -84,7 +84,8 @@ export class StreamingService {
    */
   async findPublic(slug: string) {
     const event = await this.repo.findBySlug(slug);
-    if (!event || event.deletedAt) throw new NotFoundException('Evento no encontrado');
+    if (!event || event.deletedAt)
+      throw new NotFoundException('Evento no encontrado');
 
     return {
       id: event.id,
@@ -130,8 +131,12 @@ export class StreamingService {
         tenantId,
         firstName: dto.deceased.firstName,
         lastName: dto.deceased.lastName,
-        birthDate: dto.deceased.birthDate ? new Date(dto.deceased.birthDate) : undefined,
-        deathDate: dto.deceased.deathDate ? new Date(dto.deceased.deathDate) : undefined,
+        birthDate: dto.deceased.birthDate
+          ? new Date(dto.deceased.birthDate)
+          : undefined,
+        deathDate: dto.deceased.deathDate
+          ? new Date(dto.deceased.deathDate)
+          : undefined,
         photoUrl: dto.deceased.photoUrl,
         biography: dto.deceased.biography,
         epitaph: dto.deceased.epitaph,
@@ -140,12 +145,18 @@ export class StreamingService {
     }
 
     if (!deceasedId) {
-      throw new BadRequestException('Se requiere un difunto asociado (deceasedId o deceased)');
+      throw new BadRequestException(
+        'Se requiere un difunto asociado (deceasedId o deceased)',
+      );
     }
 
     if (!dto.deceasedId) {
-      const existingDeceased = await this.repo.findDeceasedByTenant(tenantId, deceasedId);
-      if (!existingDeceased) throw new BadRequestException('Difunto no encontrado');
+      const existingDeceased = await this.repo.findDeceasedByTenant(
+        tenantId,
+        deceasedId,
+      );
+      if (!existingDeceased)
+        throw new BadRequestException('Difunto no encontrado');
     }
 
     if (dto.roomId && dto.estimatedDuration) {
@@ -173,14 +184,18 @@ export class StreamingService {
       description: dto.description,
       estimatedDuration: dto.estimatedDuration,
       isPublic: dto.isPublic ?? true,
-      accessCode: dto.accessCode ? this.hashAccessCode(dto.accessCode) : undefined,
-      moderationMode: (dto.moderationMode as any) ?? 'AUTO',
+      accessCode: dto.accessCode
+        ? this.hashAccessCode(dto.accessCode)
+        : undefined,
+      moderationMode: dto.moderationMode ?? 'AUTO',
       scheduledAt: new Date(dto.scheduledAt),
       tenant: { connect: { id: tenantId } },
       deceased: { connect: { id: deceasedId } },
       ...(dto.roomId ? { room: { connect: { id: dto.roomId } } } : {}),
       ...(dto.clientId ? { client: { connect: { id: dto.clientId } } } : {}),
-      ...(dto.assignedToId ? { assignedTo: { connect: { id: dto.assignedToId } } } : {}),
+      ...(dto.assignedToId
+        ? { assignedTo: { connect: { id: dto.assignedToId } } }
+        : {}),
     };
 
     return this.repo.create(eventData);
@@ -200,29 +215,43 @@ export class StreamingService {
   async update(tenantId: string, id: string, dto: UpdateEventDto) {
     const event = await this.findOne(tenantId, id);
     if (event.status === 'LIVE' || event.status === 'FINISHED') {
-      throw new BadRequestException('No se puede modificar un evento en curso o finalizado');
+      throw new BadRequestException(
+        'No se puede modificar un evento en curso o finalizado',
+      );
     }
 
     const updateData: Prisma.EventUpdateInput = {};
 
     if (dto.title !== undefined) updateData.title = dto.title;
     if (dto.description !== undefined) updateData.description = dto.description;
-    if (dto.ceremonyType !== undefined) updateData.ceremonyType = dto.ceremonyType;
-    if (dto.estimatedDuration !== undefined) updateData.estimatedDuration = dto.estimatedDuration;
+    if (dto.ceremonyType !== undefined)
+      updateData.ceremonyType = dto.ceremonyType;
+    if (dto.estimatedDuration !== undefined)
+      updateData.estimatedDuration = dto.estimatedDuration;
     if (dto.isPublic !== undefined) updateData.isPublic = dto.isPublic;
-    if (dto.moderationMode !== undefined) updateData.moderationMode = dto.moderationMode as any;
-    if (dto.scheduledAt !== undefined) updateData.scheduledAt = new Date(dto.scheduledAt);
+    if (dto.moderationMode !== undefined)
+      updateData.moderationMode = dto.moderationMode;
+    if (dto.scheduledAt !== undefined)
+      updateData.scheduledAt = new Date(dto.scheduledAt);
     if (dto.roomId !== undefined) {
-      updateData.room = dto.roomId ? { connect: { id: dto.roomId } } : { disconnect: true };
+      updateData.room = dto.roomId
+        ? { connect: { id: dto.roomId } }
+        : { disconnect: true };
     }
     if (dto.clientId !== undefined) {
-      updateData.client = dto.clientId ? { connect: { id: dto.clientId } } : { disconnect: true };
+      updateData.client = dto.clientId
+        ? { connect: { id: dto.clientId } }
+        : { disconnect: true };
     }
     if (dto.assignedToId !== undefined) {
-      updateData.assignedTo = dto.assignedToId ? { connect: { id: dto.assignedToId } } : { disconnect: true };
+      updateData.assignedTo = dto.assignedToId
+        ? { connect: { id: dto.assignedToId } }
+        : { disconnect: true };
     }
     if (dto.accessCode !== undefined) {
-      updateData.accessCode = dto.accessCode ? this.hashAccessCode(dto.accessCode) : null;
+      updateData.accessCode = dto.accessCode
+        ? this.hashAccessCode(dto.accessCode)
+        : null;
     }
     if (dto.deceasedId !== undefined) {
       updateData.deceased = { connect: { id: dto.deceasedId } };
@@ -267,14 +296,14 @@ export class StreamingService {
     }
 
     const updated = await this.repo.update(tenantId, id, {
-      status: 'LIVE' as EventStatus,
+      status: 'LIVE',
       startedAt: new Date(),
     });
 
     this.gateway.broadcastStreamStatus(id, {
       eventId: id,
       tenantId,
-      status: 'LIVE' as any,
+      status: EventStatus.LIVE,
     });
 
     this.logger.log(`Stream started: ${id}`);
@@ -300,14 +329,14 @@ export class StreamingService {
     }
 
     const updated = await this.repo.update(tenantId, id, {
-      status: 'FINISHED' as EventStatus,
+      status: 'FINISHED',
       finishedAt: new Date(),
     });
 
     this.gateway.broadcastStreamStatus(id, {
       eventId: id,
       tenantId,
-      status: 'FINISHED' as any,
+      status: EventStatus.FINISHED,
     });
 
     this.logger.log(`Stream finished: ${id}`);
@@ -353,16 +382,14 @@ export class StreamingService {
    */
   async sendMessage(slug: string, dto: SendMessageDto) {
     const event = await this.repo.findBySlug(slug);
-    if (!event || event.deletedAt) throw new NotFoundException('Evento no encontrado');
+    if (!event || event.deletedAt)
+      throw new NotFoundException('Evento no encontrado');
 
     const message = await this.repo.createMessage({
       authorName: dto.authorName,
       content: dto.content,
       iconType: dto.iconType,
-      status:
-        event.moderationMode === 'MANUAL'
-          ? ('PENDING' as MessageStatus)
-          : ('APPROVED' as MessageStatus),
+      status: event.moderationMode === 'MANUAL' ? 'PENDING' : 'APPROVED',
       event: { connect: { id: event.id } },
       tenantId: event.tenantId,
     });
@@ -395,7 +422,11 @@ export class StreamingService {
    */
   async approveMessage(tenantId: string, eventId: string, messageId: string) {
     await this.findOne(tenantId, eventId);
-    const message = await this.repo.approveMessage(eventId, messageId, tenantId);
+    const message = await this.repo.approveMessage(
+      eventId,
+      messageId,
+      tenantId,
+    );
 
     this.gateway.broadcastNewMessage(eventId, {
       eventId,
@@ -421,7 +452,12 @@ export class StreamingService {
    * @param reason - Razón del rechazo (opcional)
    * @returns El mensaje rechazado
    */
-  async rejectMessage(tenantId: string, eventId: string, messageId: string, reason?: string) {
+  async rejectMessage(
+    tenantId: string,
+    eventId: string,
+    messageId: string,
+    reason?: string,
+  ) {
     await this.findOne(tenantId, eventId);
     return this.repo.rejectMessage(eventId, messageId, reason);
   }
@@ -458,13 +494,16 @@ export class StreamingService {
    */
   async sendReaction(slug: string, dto: SendReactionDto, clientIp?: string) {
     const event = await this.repo.findBySlug(slug);
-    if (!event || event.deletedAt) throw new NotFoundException('Evento no encontrado');
+    if (!event || event.deletedAt)
+      throw new NotFoundException('Evento no encontrado');
 
     if (clientIp) {
       const now = Date.now();
       const lastReaction = this.reactionCooldowns.get(clientIp) ?? 0;
       if (now - lastReaction < 2000) {
-        throw new BadRequestException('Espera un momento antes de enviar otra reacción');
+        throw new BadRequestException(
+          'Espera un momento antes de enviar otra reacción',
+        );
       }
       this.reactionCooldowns.set(clientIp, now);
 
@@ -510,7 +549,8 @@ export class StreamingService {
    */
   async validateAccessCode(slug: string, dto: AccessCodeDto) {
     const event = await this.repo.findBySlug(slug);
-    if (!event || event.deletedAt) throw new NotFoundException('Evento no encontrado');
+    if (!event || event.deletedAt)
+      throw new NotFoundException('Evento no encontrado');
 
     if (event.isPublic && !event.accessCode) {
       return { valid: true, eventId: event.id };
@@ -526,7 +566,7 @@ export class StreamingService {
         name: dto.name ?? 'Anónimo',
         email: dto.email,
         consent: dto.consent ?? false,
-        source: 'DIRECT' as any,
+        source: 'DIRECT',
         tenant: { connect: { id: event.tenantId } },
         event: { connect: { id: event.id } },
       });
@@ -571,7 +611,7 @@ export class StreamingService {
    * @returns URL RTMP para configuración de OBS
    */
   private getRtmpUrl(): string {
-    const provider = this.config.get('STREAM_PROVIDER');
+    const provider = this.config.get<string>('STREAM_PROVIDER');
     if (provider === 'mux') {
       return 'rtmps://global-live.mux.com:443/app';
     }

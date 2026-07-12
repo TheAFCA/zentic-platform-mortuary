@@ -31,8 +31,16 @@ export class StreamingRepository {
     return this.prisma.event.findMany({
       where: { tenantId, deletedAt: null },
       include: {
-        deceased: { select: { id: true, firstName: true, lastName: true, photoUrl: true } },
-        room: { select: { id: true, name: true, venue: { select: { id: true, name: true } } } },
+        deceased: {
+          select: { id: true, firstName: true, lastName: true, photoUrl: true },
+        },
+        room: {
+          select: {
+            id: true,
+            name: true,
+            venue: { select: { id: true, name: true } },
+          },
+        },
         client: { select: { id: true, name: true } },
         assignedTo: { select: { id: true, email: true } },
         _count: { select: { messages: true, leads: true } },
@@ -128,7 +136,7 @@ export class StreamingRepository {
   async softDelete(tenantId: string, id: string) {
     return this.prisma.event.update({
       where: { id },
-      data: { deletedAt: new Date(), status: 'CANCELLED' as EventStatus },
+      data: { deletedAt: new Date(), status: 'CANCELLED' },
     });
   }
 
@@ -156,7 +164,9 @@ export class StreamingRepository {
         tenantId,
         roomId,
         deletedAt: null,
-        status: { notIn: ['CANCELLED' as EventStatus, 'FINISHED' as EventStatus] },
+        status: {
+          notIn: ['CANCELLED', 'FINISHED'],
+        },
         id: excludeId ? { not: excludeId } : undefined,
         scheduledAt: { lt: endTime },
       },
@@ -173,13 +183,17 @@ export class StreamingRepository {
    * @param status - Estado opcional para filtrar mensajes
    * @returns Lista de mensajes ordenados por fecha ascendente
    */
-  async findMessagesByEvent(tenantId: string, eventId: string, status?: MessageStatus) {
+  async findMessagesByEvent(
+    tenantId: string,
+    eventId: string,
+    status?: MessageStatus,
+  ) {
     return this.prisma.message.findMany({
       where: {
         tenantId,
         eventId,
         deletedAt: null,
-        ...(status ? { status } : { status: 'APPROVED' as MessageStatus }),
+        ...(status ? { status } : { status: 'APPROVED' }),
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -198,7 +212,7 @@ export class StreamingRepository {
       where: {
         tenantId,
         eventId,
-        status: 'PENDING' as MessageStatus,
+        status: 'PENDING',
         deletedAt: null,
       },
       orderBy: { createdAt: 'asc' },
@@ -226,7 +240,11 @@ export class StreamingRepository {
   async approveMessage(eventId: string, messageId: string, approvedBy: string) {
     return this.prisma.message.update({
       where: { id: messageId, eventId },
-      data: { status: 'APPROVED' as MessageStatus, approvedBy, approvedAt: new Date() },
+      data: {
+        status: 'APPROVED',
+        approvedBy,
+        approvedAt: new Date(),
+      },
     });
   }
 
@@ -241,7 +259,10 @@ export class StreamingRepository {
   async rejectMessage(eventId: string, messageId: string, reason?: string) {
     return this.prisma.message.update({
       where: { id: messageId, eventId },
-      data: { status: 'REJECTED' as MessageStatus, rejectedReason: reason ?? null },
+      data: {
+        status: 'REJECTED',
+        rejectedReason: reason ?? null,
+      },
     });
   }
 
