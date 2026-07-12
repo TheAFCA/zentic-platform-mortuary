@@ -17,7 +17,7 @@ import {
   SendReactionDto,
   AccessCodeDto,
 } from './dto';
-import { EventStatus, MessageStatus } from '@prisma/client';
+import { EventStatus } from '@zentic/shared-types';
 import { Prisma } from '@prisma/client';
 import { Env } from '../../config/env.validation';
 
