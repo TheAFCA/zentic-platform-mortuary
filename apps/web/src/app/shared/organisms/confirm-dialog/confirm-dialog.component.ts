@@ -10,8 +10,8 @@ import { MatIconModule } from '@angular/material/icon';
     .confirm-dialog__backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(15, 23, 42, 0.55);
-      backdrop-filter: blur(4px);
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(6px);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -36,8 +36,8 @@ import { MatIconModule } from '@angular/material/icon';
     }
 
     @keyframes slideUp {
-      from { opacity: 0; transform: translateY(12px); }
-      to { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; transform: translateY(12px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
     }
 
     .confirm-dialog__icon {
@@ -77,7 +77,7 @@ import { MatIconModule } from '@angular/material/icon';
       display: flex;
       justify-content: flex-end;
       gap: 0.75rem;
-      margin-top: 1.1rem;
+      margin-top: 1.25rem;
     }
 
     .confirm-dialog__button {
@@ -88,8 +88,8 @@ import { MatIconModule } from '@angular/material/icon';
       font-size: 0.9rem;
       cursor: pointer;
       transition:
-        transform 160ms ease,
-        box-shadow 160ms ease;
+        transform 150ms ease,
+        box-shadow 150ms ease;
     }
 
     .confirm-dialog__button:hover {
@@ -106,12 +106,13 @@ import { MatIconModule } from '@angular/material/icon';
     }
 
     .confirm-dialog__button--cancel {
-      background: #f3f4f6;
+      background: #f9fafb;
       color: #1f2937;
+      border: 1px solid #e7e9ee;
     }
 
     .confirm-dialog__button--cancel:hover {
-      background: #e5e7eb;
+      background: #f3f4f6;
     }
 
     .confirm-dialog__button--confirm {

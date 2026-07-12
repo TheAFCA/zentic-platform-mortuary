@@ -1,15 +1,55 @@
 :root {
   color-scheme: light;
+
   --brand-primary: #0f5e59;
   --brand-primary-hover: #0b4c48;
+  --brand-primary-light: rgba(15, 94, 89, 0.08);
+  --brand-primary-subtle: rgba(15, 94, 89, 0.04);
+
   --brand-secondary: #16213e;
+  --brand-secondary-light: rgba(22, 33, 62, 0.06);
+
   --error: #dc2626;
+  --error-bg: #fef2f2;
+  --error-text: #991b1b;
+
   --success: #16a34a;
+  --success-bg: #f0fdf4;
+  --success-text: #166534;
+
   --warning: #d97706;
+  --warning-bg: #fffbeb;
+  --warning-text: #92400e;
+
   --ink: #1f2937;
+  --ink-secondary: #4b5563;
   --muted: #6b7280;
+  --muted-light: #9ca3af;
+
   --border: #e7e9ee;
+  --border-light: #f1f3f6;
+  --border-dark: #d1d5db;
+
   --surface: #f7f8fa;
+  --surface-alt: #ffffff;
+
+  --radius-xs: 0.5rem;
+  --radius-sm: 0.65rem;
+  --radius-md: 0.85rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.06), 0 2px 4px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 10px 15px rgba(15, 23, 42, 0.06), 0 4px 6px rgba(15, 23, 42, 0.04);
+  --shadow-xl: 0 20px 48px rgba(17, 24, 39, 0.08);
+  --shadow-2xl: 0 28px 64px rgba(15, 23, 42, 0.14);
+
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
+  --transition-slow: 300ms ease;
 }
 
 html,
@@ -19,11 +59,19 @@ body {
 
 body {
   margin: 0;
-  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family:
+    'Inter',
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   background: var(--surface);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
 }
 
 * {
@@ -70,10 +118,6 @@ select {
 ::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
 }
-
-/* =========================================================================
-   Login Shell — split layout con hero visual al 50 %
-   ========================================================================= */
 
 .login-shell {
   width: 100%;
@@ -461,10 +505,6 @@ select {
   box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.12);
 }
 
-/* =========================================================================
-   Login Shell — Admin variant (Super Admin login)
-   ========================================================================= */
-
 .login-shell--admin {
   grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
 }
@@ -507,10 +547,6 @@ select {
 .panel-heading--admin h2 {
   color: #111827;
 }
-
-/* =========================================================================
-   Responsive
-   ========================================================================= */
 
 @media (max-width: 1024px) {
   .login-shell {

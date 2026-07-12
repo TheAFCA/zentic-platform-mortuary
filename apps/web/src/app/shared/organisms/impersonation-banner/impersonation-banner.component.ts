@@ -15,12 +15,12 @@ import { Component, EventEmitter, Input, OnDestroy, OnInit, Output, signal } fro
       justify-content: center;
       gap: 1rem;
       padding: 0.65rem 1rem;
-      background: linear-gradient(135deg, #b91c1c, #991b1b);
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
       color: #fff;
       font-weight: 600;
       font-size: 0.9rem;
       flex-wrap: wrap;
-      box-shadow: 0 4px 12px rgba(185, 28, 28, 0.3);
+      box-shadow: 0 4px 16px rgba(185, 28, 28, 0.3);
     }
 
     .impersonation-banner__icon {
@@ -35,13 +35,14 @@ import { Component, EventEmitter, Input, OnDestroy, OnInit, Output, signal } fro
 
     .impersonation-banner__exit {
       border: 1px solid rgba(255, 255, 255, 0.6);
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.12);
       color: #fff;
-      border-radius: 0.6rem;
-      padding: 0.3rem 0.9rem;
+      border-radius: 0.65rem;
+      padding: 0.35rem 0.9rem;
       font-weight: 600;
+      font-size: 0.85rem;
       cursor: pointer;
-      transition: background 160ms ease;
+      transition: background 150ms ease;
     }
 
     .impersonation-banner__exit:hover {

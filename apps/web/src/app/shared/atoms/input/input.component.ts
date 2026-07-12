@@ -16,19 +16,18 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR, ReactiveFormsModule } from '@a
       display: block;
       width: 100%;
       min-height: 3.25rem;
-      padding: 0.875rem 1rem;
-      border: 1px solid #d6dbe3;
-      border-radius: 0.95rem;
-      background: rgba(255, 255, 255, 0.98);
-      color: #111827;
-      font-size: 0.96rem;
-      line-height: 1.25rem;
+      padding: 0.75rem 1rem;
+      border: 1px solid #e7e9ee;
+      border-radius: 0.85rem;
+      background: #fff;
+      color: #1f2937;
+      font-size: 0.92rem;
+      line-height: 1.5;
       box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       transition:
-        border-color 160ms ease,
-        box-shadow 160ms ease,
-        transform 160ms ease,
-        background-color 160ms ease;
+        border-color 150ms ease,
+        box-shadow 150ms ease,
+        background-color 150ms ease;
     }
 
     input::placeholder {
@@ -39,11 +38,11 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR, ReactiveFormsModule } from '@a
       border-color: var(--brand-primary, #0f5e59);
       box-shadow: 0 0 0 4px rgba(15, 94, 89, 0.12);
       outline: none;
-      transform: translateY(-1px);
+      background: #fff;
     }
 
     input:disabled {
-      background: #f3f4f6;
+      background: #f9fafb;
       color: #9ca3af;
       cursor: not-allowed;
     }

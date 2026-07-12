@@ -16,11 +16,21 @@ const REFRESH_INTERVAL_MS = 60_000;
     .dashboard {
       display: grid;
       gap: 1.5rem;
+      max-width: 72rem;
     }
 
     .dashboard__header {
       display: grid;
-      gap: 0.3rem;
+      gap: 0.35rem;
+    }
+
+    .dashboard__eyebrow {
+      margin: 0;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #6b7280;
     }
 
     .dashboard__title {
@@ -33,13 +43,14 @@ const REFRESH_INTERVAL_MS = 60_000;
 
     .dashboard__grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
       gap: 1rem;
     }
   `],
   template: `
     <div class="dashboard">
       <div class="dashboard__header">
+        <p class="dashboard__eyebrow">Panel de control</p>
         <h1 class="dashboard__title">Dashboard</h1>
       </div>
       <div class="dashboard__grid">

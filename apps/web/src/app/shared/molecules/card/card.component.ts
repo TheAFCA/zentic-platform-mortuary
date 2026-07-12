@@ -11,7 +11,7 @@ import { CommonModule } from '@angular/common';
     }
 
     .card {
-      border-radius: 1rem;
+      border-radius: 1.25rem;
       background: #fff;
       box-shadow: 0 12px 32px rgba(17, 24, 39, 0.06);
       border: 1px solid #e7e9ee;
@@ -23,8 +23,7 @@ import { CommonModule } from '@angular/common';
     }
 
     .card__header {
-      padding: 1.25rem 1.5rem;
-      border-bottom: 1px solid #eef0f3;
+      padding: 1.25rem 1.5rem 0.75rem;
     }
 
     .card__title {
@@ -36,14 +35,14 @@ import { CommonModule } from '@angular/common';
     }
 
     .card__body {
-      padding: 1.5rem;
+      padding: 1.25rem 1.5rem;
     }
 
     .card__footer {
       padding: 1rem 1.5rem;
-      border-top: 1px solid #eef0f3;
-      background: #f9fafb;
-      border-radius: 0 0 1rem 1rem;
+      border-top: 1px solid #f1f3f6;
+      background: #fafbfc;
+      border-radius: 0 0 1.25rem 1.25rem;
     }
   `],
   template: `

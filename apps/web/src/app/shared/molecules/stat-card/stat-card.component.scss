@@ -5,16 +5,40 @@
 }
 
 .stat-card {
-  @include panel.sa-card;
-  @include panel.sa-card-hover;
+  border-radius: 1.25rem;
+  border: 1px solid panel.$border;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(17, 24, 39, 0.06);
   padding: 1.35rem 1.5rem;
   display: grid;
   gap: 0.6rem;
   cursor: default;
+  position: relative;
+  overflow: hidden;
+  transition:
+    box-shadow 200ms ease,
+    transform 200ms ease;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, panel.$brand-primary, panel.$brand-primary-hover);
+    opacity: 0;
+    transition: opacity 200ms ease;
+  }
 }
 
 .stat-card:hover {
   transform: translateY(-2px);
+  box-shadow: 0 20px 48px rgba(17, 24, 39, 0.1);
+
+  &::before {
+    opacity: 1;
+  }
 }
 
 .stat-card__top {
@@ -63,14 +87,30 @@
   @include panel.sa-icon-chip(#16a34a, #15803d);
 }
 
+.stat-card--success::before {
+  background: linear-gradient(90deg, #16a34a, #15803d);
+}
+
 .stat-card--warning .stat-card__icon {
   @include panel.sa-icon-chip(#d97706, #b45309);
+}
+
+.stat-card--warning::before {
+  background: linear-gradient(90deg, #d97706, #b45309);
 }
 
 .stat-card--danger .stat-card__icon {
   @include panel.sa-icon-chip(#dc2626, #b91c1c);
 }
 
+.stat-card--danger::before {
+  background: linear-gradient(90deg, #dc2626, #b91c1c);
+}
+
 .stat-card--neutral .stat-card__icon {
   @include panel.sa-icon-chip(#475569, #1f2937);
+}
+
+.stat-card--neutral::before {
+  background: linear-gradient(90deg, #475569, #1f2937);
 }
