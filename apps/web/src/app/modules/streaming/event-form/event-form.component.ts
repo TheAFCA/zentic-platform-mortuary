@@ -3,9 +3,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -30,9 +28,7 @@ import { Client, Venue } from '@zentic/shared-types';
     ReactiveFormsModule,
     RouterModule,
     MatButtonModule,
-    MatCardModule,
     MatDatepickerModule,
-    MatDividerModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
@@ -41,188 +37,309 @@ import { Client, Venue } from '@zentic/shared-types';
     MatSnackBarModule,
     MatSlideToggleModule,
   ],
-  template: `
-    <div class="p-6 max-w-3xl mx-auto">
-      <div class="flex items-center gap-3 mb-6">
-        <a mat-icon-button routerLink="/admin/streaming">
-          <mat-icon>arrow_back</mat-icon>
-        </a>
-        <h1 class="text-2xl font-bold text-gray-900">
-          {{ isEdit() ? 'Editar Evento' : 'Nuevo Evento de Streaming' }}
-        </h1>
-      </div>
+  styles: [`
+    :host { display: block; }
 
-      <mat-card>
-        <mat-card-content class="p-6">
+    .form-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      color: #6b7280;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: color 150ms ease;
+    }
+
+    .form-back:hover { color: #1f2937; }
+
+    .form-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #1f2937;
+      margin: 0 0 0.15rem;
+    }
+
+    .form-subtitle {
+      margin: 0 0 1.5rem;
+      color: #6b7280;
+      font-size: 0.92rem;
+    }
+
+    .form-card {
+      border-radius: 1.25rem;
+      background: #fff;
+      border: 1px solid #e7e9ee;
+      box-shadow: 0 12px 32px rgba(17, 24, 39, 0.06);
+      overflow: hidden;
+    }
+
+    .form-card__body { padding: 1.5rem; }
+
+    .form-section {
+      display: grid;
+      gap: 0.25rem;
+    }
+
+    .form-section + .form-section {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #f1f3f6;
+    }
+
+    .form-section__title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: #1f2937;
+      margin: 0 0 1rem;
+    }
+
+    .form-section__title mat-icon {
+      font-size: 1.15rem;
+      width: 1.15rem;
+      height: 1.15rem;
+      color: #0f5e59;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .form-row--single { grid-template-columns: 1fr; }
+
+    .form-row--triple { grid-template-columns: 1fr 1fr 1fr; }
+
+    .form-field { width: 100%; }
+
+    .form-field--full { grid-column: 1 / -1; }
+
+    .form-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #f1f3f6;
+    }
+
+    .form-loading {
+      display: flex;
+      justify-content: center;
+      padding: 3rem 0;
+    }
+
+    .config-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+  `],
+  template: `
+    <div style="max-width:48rem;margin:0 auto;">
+      <a routerLink="/admin/streaming" class="form-back">
+        <mat-icon style="font-size:1.1rem;width:1.1rem;height:1.1rem;">arrow_back</mat-icon>
+        Volver a eventos
+      </a>
+
+      <h1 class="form-title">{{ isEdit() ? 'Editar Evento' : 'Nuevo Evento de Streaming' }}</h1>
+      <p class="form-subtitle">{{ isEdit() ? 'Actualiza los datos del evento programado.' : 'Configura una nueva transmisión en vivo para una ceremonia.' }}</p>
+
+      <div class="form-card">
+        <div class="form-card__body">
           @if (loading()) {
-            <div class="flex justify-center py-8">
-              <mat-spinner diameter="40" />
+            <div class="form-loading">
+              <mat-spinner diameter="32" />
             </div>
           } @else {
-            <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-4">
-              <h3 class="font-semibold text-gray-700 flex items-center gap-2">
-                <mat-icon class="text-lg">info</mat-icon> Información del servicio
-              </h3>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <mat-form-field class="col-span-full">
-                  <mat-label>Nombre del evento</mat-label>
-                  <input matInput formControlName="title" placeholder="Ej: Velatorio de María López" required />
-                  @if (form.get('title')?.invalid && form.get('title')?.touched) {
-                    <mat-error>El nombre es requerido</mat-error>
-                  }
-                </mat-form-field>
-
-                <mat-form-field>
-                  <mat-label>Tipo de ceremonia</mat-label>
-                  <mat-select formControlName="ceremonyType" required>
-                    <mat-option value="VELATORIO">Velatorio</mat-option>
-                    <mat-option value="ENTIERRO">Entierro</mat-option>
-                    <mat-option value="CREMACION">Cremación</mat-option>
-                    <mat-option value="MISA">Misa</mat-option>
-                    <mat-option value="OTRO">Otro</mat-option>
-                  </mat-select>
-                </mat-form-field>
-
-                <mat-form-field>
-                  <mat-label>Duración estimada (minutos)</mat-label>
-                  <input matInput type="number" formControlName="estimatedDuration" placeholder="180" />
-                </mat-form-field>
-
-                <mat-form-field>
-                  <mat-label>Fecha</mat-label>
-                  <input matInput [matDatepicker]="picker" formControlName="scheduledDate" required />
-                  <mat-datepicker-toggle matSuffix [for]="picker" />
-                  <mat-datepicker #picker />
-                </mat-form-field>
-
-                <mat-form-field>
-                  <mat-label>Hora</mat-label>
-                  <input matInput type="time" formControlName="scheduledTime" required />
-                </mat-form-field>
-              </div>
-
-              <mat-form-field class="w-full">
-                <mat-label>Descripción del servicio</mat-label>
-                <textarea matInput formControlName="description" rows="3"></textarea>
-              </mat-form-field>
-
-              <mat-divider />
-              <h3 class="font-semibold text-gray-700 flex items-center gap-2">
-                <mat-icon class="text-lg">person</mat-icon> Datos del difunto
-              </h3>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <mat-form-field>
-                  <mat-label>Nombre</mat-label>
-                  <input matInput formControlName="deceasedFirstName" placeholder="Nombre" />
-                </mat-form-field>
-                <mat-form-field>
-                  <mat-label>Apellido</mat-label>
-                  <input matInput formControlName="deceasedLastName" placeholder="Apellido" />
-                </mat-form-field>
-                <mat-form-field>
-                  <mat-label>Fecha de nacimiento</mat-label>
-                  <input matInput [matDatepicker]="birthPicker" formControlName="deceasedBirthDate" />
-                  <mat-datepicker-toggle matSuffix [for]="birthPicker" />
-                  <mat-datepicker #birthPicker />
-                </mat-form-field>
-                <mat-form-field>
-                  <mat-label>Fecha de fallecimiento</mat-label>
-                  <input matInput [matDatepicker]="deathPicker" formControlName="deceasedDeathDate" />
-                  <mat-datepicker-toggle matSuffix [for]="deathPicker" />
-                  <mat-datepicker #deathPicker />
-                </mat-form-field>
-                <mat-form-field class="col-span-full">
-                  <mat-label>Epitafio o frase</mat-label>
-                  <input matInput formControlName="deceasedEpitaph" placeholder="Ej: Siempre vivirás en nuestros corazones" />
-                </mat-form-field>
-              </div>
-
-              <mat-divider />
-              <h3 class="font-semibold text-gray-700 flex items-center gap-2">
-                <mat-icon class="text-lg">location_on</mat-icon> Ubicación
-              </h3>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <mat-form-field>
-                  <mat-label>Sede</mat-label>
-                  <mat-select formControlName="venueId" (selectionChange)="onVenueChange($event.value)">
-                    <mat-option [value]="null">Seleccionar sede</mat-option>
-                    @for (v of venues(); track v.id) {
-                      <mat-option [value]="v.id">{{ v.name }}</mat-option>
+            <form [formGroup]="form" (ngSubmit)="onSubmit()">
+              <div class="form-section">
+                <h3 class="form-section__title">
+                  <mat-icon>info</mat-icon>
+                  Información del servicio
+                </h3>
+                <div class="form-row">
+                  <mat-form-field class="form-field form-field--full">
+                    <mat-label>Nombre del evento</mat-label>
+                    <input matInput formControlName="title" placeholder="Ej: Velatorio de María López" required />
+                    @if (form.get('title')?.invalid && form.get('title')?.touched) {
+                      <mat-error>El nombre es requerido</mat-error>
                     }
-                  </mat-select>
-                </mat-form-field>
-                <mat-form-field>
-                  <mat-label>Sala / Capilla</mat-label>
-                  <mat-select formControlName="roomId" [disabled]="!selectedVenue()">
-                    <mat-option [value]="null">Seleccionar sala</mat-option>
-                    @for (r of rooms(); track r.id) {
-                      <mat-option [value]="r.id">{{ r.name }}{{ r.capacity ? ' ('+r.capacity+' pers.)' : '' }}</mat-option>
-                    }
-                  </mat-select>
-                </mat-form-field>
-              </div>
-
-              <mat-divider />
-              <h3 class="font-semibold text-gray-700 flex items-center gap-2">
-                <mat-icon class="text-lg">people</mat-icon> Cliente y operador
-              </h3>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <mat-form-field>
-                  <mat-label>Cliente / Familia</mat-label>
-                  <mat-select formControlName="clientId">
-                    <mat-option [value]="null">Sin cliente</mat-option>
-                    @for (c of clients(); track c.id) {
-                      <mat-option [value]="c.id">{{ c.name }}{{ c.phone ? ' — ' + c.phone : '' }}</mat-option>
-                    }
-                  </mat-select>
-                </mat-form-field>
-                <mat-form-field>
-                  <mat-label>Operador asignado</mat-label>
-                  <mat-select formControlName="assignedToId">
-                    <mat-option [value]="null">Sin asignar</mat-option>
-                    @for (op of operators(); track op.id) {
-                      <mat-option [value]="op.id">{{ op.email }} ({{ op.role }})</mat-option>
-                    }
-                  </mat-select>
-                </mat-form-field>
-              </div>
-
-              <mat-divider />
-              <h3 class="font-semibold text-gray-700 flex items-center gap-2">
-                <mat-icon class="text-lg">settings</mat-icon> Configuración del evento
-              </h3>
-              <div class="flex items-center gap-4">
-                <mat-slide-toggle formControlName="isPublic">Evento público</mat-slide-toggle>
-                @if (!form.get('isPublic')?.value) {
-                  <mat-form-field class="flex-1">
-                    <mat-label>Código de acceso</mat-label>
-                    <input matInput formControlName="accessCode" placeholder="Ej: FAMILIA2026" />
                   </mat-form-field>
-                }
+                </div>
+                <div class="form-row">
+                  <mat-form-field class="form-field">
+                    <mat-label>Tipo de ceremonia</mat-label>
+                    <mat-select formControlName="ceremonyType" required>
+                      <mat-option value="VELATORIO">Velatorio</mat-option>
+                      <mat-option value="ENTIERRO">Entierro</mat-option>
+                      <mat-option value="CREMACION">Cremación</mat-option>
+                      <mat-option value="MISA">Misa</mat-option>
+                      <mat-option value="OTRO">Otro</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                  <mat-form-field class="form-field">
+                    <mat-label>Duración estimada (min)</mat-label>
+                    <input matInput type="number" formControlName="estimatedDuration" placeholder="180" />
+                  </mat-form-field>
+                </div>
+                <div class="form-row">
+                  <mat-form-field class="form-field">
+                    <mat-label>Fecha</mat-label>
+                    <input matInput [matDatepicker]="picker" formControlName="scheduledDate" required />
+                    <mat-datepicker-toggle matSuffix [for]="picker" />
+                    <mat-datepicker #picker />
+                  </mat-form-field>
+                  <mat-form-field class="form-field">
+                    <mat-label>Hora</mat-label>
+                    <input matInput type="time" formControlName="scheduledTime" required />
+                  </mat-form-field>
+                </div>
+                <div class="form-row form-row--single">
+                  <mat-form-field class="form-field">
+                    <mat-label>Descripción del servicio (opcional)</mat-label>
+                    <textarea matInput formControlName="description" rows="2"></textarea>
+                  </mat-form-field>
+                </div>
               </div>
 
-              <mat-form-field class="w-full">
-                <mat-label>Moderación de mensajes</mat-label>
-                <mat-select formControlName="moderationMode">
-                  <mat-option value="AUTO">Automática (todos se publican al instante)</mat-option>
-                  <mat-option value="MANUAL">Manual (requiere aprobación del operador)</mat-option>
-                </mat-select>
-              </mat-form-field>
+              <div class="form-section">
+                <h3 class="form-section__title">
+                  <mat-icon>person</mat-icon>
+                  Datos del difunto
+                </h3>
+                <div class="form-row">
+                  <mat-form-field class="form-field">
+                    <mat-label>Nombre</mat-label>
+                    <input matInput formControlName="deceasedFirstName" placeholder="Nombre" />
+                  </mat-form-field>
+                  <mat-form-field class="form-field">
+                    <mat-label>Apellido</mat-label>
+                    <input matInput formControlName="deceasedLastName" placeholder="Apellido" />
+                  </mat-form-field>
+                </div>
+                <div class="form-row">
+                  <mat-form-field class="form-field">
+                    <mat-label>Fecha de nacimiento</mat-label>
+                    <input matInput [matDatepicker]="birthPicker" formControlName="deceasedBirthDate" />
+                    <mat-datepicker-toggle matSuffix [for]="birthPicker" />
+                    <mat-datepicker #birthPicker />
+                  </mat-form-field>
+                  <mat-form-field class="form-field">
+                    <mat-label>Fecha de fallecimiento</mat-label>
+                    <input matInput [matDatepicker]="deathPicker" formControlName="deceasedDeathDate" />
+                    <mat-datepicker-toggle matSuffix [for]="deathPicker" />
+                    <mat-datepicker #deathPicker />
+                  </mat-form-field>
+                </div>
+                <div class="form-row form-row--single">
+                  <mat-form-field class="form-field">
+                    <mat-label>Epitafio o frase (opcional)</mat-label>
+                    <input matInput formControlName="deceasedEpitaph" placeholder="Ej: Siempre vivirás en nuestros corazones" />
+                  </mat-form-field>
+                </div>
+              </div>
 
-              <div class="flex justify-end gap-3 pt-4">
+              <div class="form-section">
+                <h3 class="form-section__title">
+                  <mat-icon>location_on</mat-icon>
+                  Ubicación
+                </h3>
+                <div class="form-row">
+                  <mat-form-field class="form-field">
+                    <mat-label>Sede</mat-label>
+                    <mat-select formControlName="venueId" (selectionChange)="onVenueChange($event.value)">
+                      <mat-option [value]="null">Seleccionar sede</mat-option>
+                      @for (v of venues(); track v.id) {
+                        <mat-option [value]="v.id">{{ v.name }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                  <mat-form-field class="form-field">
+                    <mat-label>Sala / Capilla</mat-label>
+                    <mat-select formControlName="roomId" [disabled]="!selectedVenue()">
+                      <mat-option [value]="null">Seleccionar sala</mat-option>
+                      @for (r of rooms(); track r.id) {
+                        <mat-option [value]="r.id">{{ r.name }}{{ r.capacity ? ' ('+r.capacity+' pers.)' : '' }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h3 class="form-section__title">
+                  <mat-icon>people</mat-icon>
+                  Cliente y operador
+                </h3>
+                <div class="form-row">
+                  <mat-form-field class="form-field">
+                    <mat-label>Cliente / Familia</mat-label>
+                    <mat-select formControlName="clientId">
+                      <mat-option [value]="null">Sin cliente</mat-option>
+                      @for (c of clients(); track c.id) {
+                        <mat-option [value]="c.id">{{ c.name }}{{ c.phone ? ' — ' + c.phone : '' }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                  <mat-form-field class="form-field">
+                    <mat-label>Operador asignado</mat-label>
+                    <mat-select formControlName="assignedToId">
+                      <mat-option [value]="null">Sin asignar</mat-option>
+                      @for (op of operators(); track op.id) {
+                        <mat-option [value]="op.id">{{ op.email }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h3 class="form-section__title">
+                  <mat-icon>settings</mat-icon>
+                  Configuración del evento
+                </h3>
+                <div class="config-row">
+                  <mat-slide-toggle formControlName="isPublic">Evento público</mat-slide-toggle>
+                  @if (!form.get('isPublic')?.value) {
+                    <mat-form-field class="form-field" style="flex:1;min-width:14rem;">
+                      <mat-label>Código de acceso</mat-label>
+                      <input matInput formControlName="accessCode" placeholder="Ej: FAMILIA2026" />
+                    </mat-form-field>
+                  }
+                </div>
+                <div class="form-row form-row--single" style="margin-top:1rem;">
+                  <mat-form-field class="form-field">
+                    <mat-label>Moderación de mensajes</mat-label>
+                    <mat-select formControlName="moderationMode">
+                      <mat-option value="AUTO">Automática — todos se publican al instante</mat-option>
+                      <mat-option value="MANUAL">Manual — requiere aprobación del operador</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+              </div>
+
+              <div class="form-footer">
                 <a mat-stroked-button routerLink="/admin/streaming">Cancelar</a>
                 <button mat-raised-button color="primary" type="submit" [disabled]="submitting() || form.invalid">
                   @if (submitting()) {
-                    <mat-spinner diameter="20" />
-                  } @else {
-                    {{ isEdit() ? 'Guardar cambios' : 'Crear Evento' }}
+                    <mat-spinner diameter="18" />
                   }
+                  {{ isEdit() ? 'Guardar cambios' : 'Crear Evento' }}
                 </button>
               </div>
             </form>
           }
-        </mat-card-content>
-      </mat-card>
+        </div>
+      </div>
     </div>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
