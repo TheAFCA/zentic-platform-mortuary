@@ -1,16 +1,25 @@
-// Tokens y mixins reutilizables para pantallas del panel admin, alineados visualmente con las
-// pantallas de auth (apps/web/src/styles.scss — .login-card/.login-submit/etc).
-
 @use 'sass:color';
 
+// Brand tokens
 $brand-primary: #0f5e59;
 $brand-primary-hover: #0b4c48;
 $ink: #1f2937;
 $muted: #6b7280;
 $border: #e7e9ee;
+$surface: #f7f8fa;
+$error: #dc2626;
+$success: #16a34a;
+$warning: #d97706;
+
+// Radius tokens
+$radius-sm: 0.65rem;
+$radius-md: 0.85rem;
+$radius-lg: 1rem;
+$radius-xl: 1.25rem;
+$radius-2xl: 1.5rem;
 
 @mixin panel-card {
-  border-radius: 1.25rem;
+  border-radius: $radius-xl;
   border: 1px solid $border;
   background: #fff;
   box-shadow: 0 12px 32px rgba(17, 24, 39, 0.06);
@@ -31,7 +40,7 @@ $border: #e7e9ee;
   justify-content: center;
   gap: 0.5rem;
   border: 0;
-  border-radius: 0.85rem;
+  border-radius: $radius-md;
   padding: 0 1.25rem;
   min-height: 2.75rem;
   font-weight: 600;
@@ -47,6 +56,13 @@ $border: #e7e9ee;
     box-shadow: 0 16px 30px rgba(15, 94, 89, 0.26);
   }
 
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 4px rgba(15, 94, 89, 0.16),
+      0 12px 24px rgba(15, 94, 89, 0.2);
+  }
+
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
@@ -60,12 +76,13 @@ $border: #e7e9ee;
   justify-content: center;
   gap: 0.5rem;
   border: 1px solid $border;
-  border-radius: 0.85rem;
+  border-radius: $radius-md;
   padding: 0 1.25rem;
   min-height: 2.75rem;
   font-weight: 600;
   background: #fff;
   color: $ink;
+  cursor: pointer;
   transition:
     border-color 200ms ease,
     background-color 200ms ease;
@@ -73,6 +90,11 @@ $border: #e7e9ee;
   &:hover:not(:disabled) {
     border-color: color.adjust($border, $lightness: -12%);
     background: #f9fafb;
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(15, 94, 89, 0.12);
   }
 }
 
@@ -88,12 +110,68 @@ $border: #e7e9ee;
   color: $fg;
 }
 
+@mixin page-header {
+  display: grid;
+  gap: 0.3rem;
+
+  .page-header__eyebrow {
+    @include eyebrow;
+  }
+
+  .page-header__title {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: $ink;
+  }
+
+  .page-header__subtitle {
+    margin: 0;
+    color: $muted;
+  }
+}
+
+@mixin page-section {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 72rem;
+}
+
+@mixin status-message {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: $radius-md;
+  font-size: 0.85rem;
+
+  &--success {
+    background: #ecfdf5;
+    color: #166534;
+  }
+
+  &--error {
+    background: #fef2f2;
+    color: #b91c1c;
+  }
+}
+
+@mixin form-field {
+  display: grid;
+  gap: 0.35rem;
+
+  label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: $muted;
+  }
+
+  select {
+    @include sa-pill-input;
+  }
+}
+
 // =============================================================================
-// Módulo 04 — Super Admin: tratamiento visual "hero" inspirado en la pantalla
-// de login (apps/web/src/styles.scss .login-shell/.login-card--admin), pensado
-// para elevar el panel de plataforma por encima del look plano de panel-card.
-// Aditivo — no modifica los mixins de arriba, así que admin/users y
-// admin/settings (Módulo 05) quedan intactos.
+// Super Admin: hero treatment
 // =============================================================================
 
 $sa-dark: #0f172a;
@@ -103,7 +181,7 @@ $sa-dark-deep: #111827;
 @mixin sa-hero {
   position: relative;
   overflow: hidden;
-  border-radius: 1.5rem;
+  border-radius: $radius-2xl;
   padding: 1.9rem 2rem;
   background:
     radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.08), transparent 45%),
@@ -126,7 +204,7 @@ $sa-dark-deep: #111827;
 }
 
 @mixin sa-card {
-  border-radius: 1.5rem;
+  border-radius: $radius-2xl;
   border: 1px solid $border;
   background: #fff;
   box-shadow: 0 16px 40px rgba(17, 24, 39, 0.06);
@@ -143,7 +221,7 @@ $sa-dark-deep: #111827;
 
 @mixin sa-pill-input {
   border: 1px solid $border;
-  border-radius: 0.85rem;
+  border-radius: $radius-md;
   padding: 0.6rem 0.9rem;
   font: inherit;
   background: #fff;
@@ -155,5 +233,9 @@ $sa-dark-deep: #111827;
     outline: none;
     border-color: rgba(15, 94, 89, 0.4);
     box-shadow: 0 0 0 4px rgba(15, 94, 89, 0.1);
+  }
+
+  &::placeholder {
+    color: #9ca3af;
   }
 }

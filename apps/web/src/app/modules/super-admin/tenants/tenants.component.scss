@@ -144,6 +144,11 @@
 .btn-ghost--danger {
   color: #b91c1c;
   border-color: #fecaca;
+
+  &:hover:not(:disabled) {
+    background: #fef2f2;
+    border-color: #fca5a5;
+  }
 }
 
 .tenants-table__actions {

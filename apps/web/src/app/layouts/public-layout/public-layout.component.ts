@@ -5,10 +5,15 @@ import { RouterOutlet } from '@angular/router';
   selector: 'app-public-layout',
   standalone: true,
   imports: [RouterOutlet],
+  styles: [`
+    :host {
+      display: block;
+      min-height: 100vh;
+      background: #f9fafb;
+    }
+  `],
   template: `
-    <div class="min-h-screen bg-gray-50">
-      <router-outlet />
-    </div>
+    <router-outlet />
   `,
 })
 export class PublicLayoutComponent {}

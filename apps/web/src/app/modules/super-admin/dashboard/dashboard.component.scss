@@ -106,19 +106,19 @@
   padding: 0;
   display: grid;
   gap: 0.25rem;
-}
 
-.dashboard-page__log-list li {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #f1f3f6;
-  font-size: 0.9rem;
-}
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f1f3f6;
+    font-size: 0.9rem;
 
-.dashboard-page__log-list li:last-child {
-  border-bottom: none;
+    &:last-child {
+      border-bottom: none;
+    }
+  }
 }
 
 .dashboard-page__log-dot {
@@ -127,17 +127,17 @@
   height: 0.6rem;
   border-radius: 999px;
   background: panel.$brand-primary;
-}
 
-.dashboard-page__log-dot[data-action*='SUSPENDED'],
-.dashboard-page__log-dot[data-action*='FAILED'],
-.dashboard-page__log-dot[data-action*='DEACTIVATED'],
-.dashboard-page__log-dot[data-action*='LOCKED'] {
-  background: #dc2626;
-}
+  &[data-action*='SUSPENDED'],
+  &[data-action*='FAILED'],
+  &[data-action*='DEACTIVATED'],
+  &[data-action*='LOCKED'] {
+    background: #dc2626;
+  }
 
-.dashboard-page__log-dot[data-action*='IMPERSONATION'] {
-  background: #d97706;
+  &[data-action*='IMPERSONATION'] {
+    background: #d97706;
+  }
 }
 
 .dashboard-page__log-body {

@@ -12,7 +12,74 @@ const REFRESH_INTERVAL_MS = 60_000;
   selector: 'app-dashboard',
   standalone: true,
   imports: [CommonModule, StatCardComponent],
-  templateUrl: './dashboard.component.html',
+  styles: [`
+    .dashboard {
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    .dashboard__header {
+      display: grid;
+      gap: 0.3rem;
+    }
+
+    .dashboard__title {
+      margin: 0;
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #1f2937;
+    }
+
+    .dashboard__grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+      gap: 1rem;
+    }
+  `],
+  template: `
+    <div class="dashboard">
+      <div class="dashboard__header">
+        <h1 class="dashboard__title">Dashboard</h1>
+      </div>
+      <div class="dashboard__grid">
+        <app-stat-card
+          label="Eventos activos hoy"
+          [value]="loading() ? '—' : (metrics()?.activeEventsToday ?? 0)"
+          icon="live_tv"
+        />
+        <app-stat-card
+          label="Obituarios publicados"
+          subtitle="este mes"
+          [value]="loading() ? '—' : (metrics()?.obituariesPublishedThisMonth ?? 0)"
+          icon="article"
+        />
+        <app-stat-card
+          label="Leads este mes"
+          [subtitle]="loading() ? '' : leadsDeltaSubtitle()"
+          [value]="loading() ? '—' : (metrics()?.leadsThisMonth ?? 0)"
+          icon="person_add"
+        />
+        <app-stat-card
+          label="Clientes totales"
+          [value]="loading() ? '—' : (metrics()?.totalClients ?? 0)"
+          icon="people"
+        />
+        <app-stat-card
+          label="Mensajes pendientes"
+          subtitle="de moderación"
+          [value]="loading() ? '—' : (metrics()?.pendingMessages ?? 0)"
+          icon="mark_chat_unread"
+          [accent]="(metrics()?.pendingMessages ?? 0) > 0 ? 'warning' : 'primary'"
+        />
+        <app-stat-card
+          label="Viewers en vivo"
+          [value]="loading() ? '—' : (metrics()?.liveViewers ?? 0)"
+          icon="visibility"
+        />
+      </div>
+    </div>
+  `,
 })
 export class DashboardComponent implements OnInit {
   private readonly dashboardApi = inject(AdminDashboardApiService);

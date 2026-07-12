@@ -5,46 +5,58 @@ import { Component, EventEmitter, Input, OnDestroy, OnInit, Output, signal } fro
   selector: 'app-impersonation-banner',
   standalone: true,
   imports: [CommonModule],
-  styles: [
-    `
-      .impersonation-banner {
-        position: sticky;
-        top: 0;
-        z-index: 900;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 1rem;
-        padding: 0.65rem 1rem;
-        background: #b91c1c;
-        color: #fff;
-        font-weight: 600;
-        font-size: 0.9rem;
-      }
+  styles: [`
+    .impersonation-banner {
+      position: sticky;
+      top: 0;
+      z-index: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      padding: 0.65rem 1rem;
+      background: linear-gradient(135deg, #b91c1c, #991b1b);
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.9rem;
+      flex-wrap: wrap;
+      box-shadow: 0 4px 12px rgba(185, 28, 28, 0.3);
+    }
 
-      .impersonation-banner__timer {
-        font-variant-numeric: tabular-nums;
-        opacity: 0.85;
-      }
+    .impersonation-banner__icon {
+      flex: 0 0 auto;
+    }
 
-      .impersonation-banner__exit {
-        border: 1px solid rgba(255, 255, 255, 0.6);
-        background: transparent;
-        color: #fff;
-        border-radius: 0.6rem;
-        padding: 0.3rem 0.9rem;
-        font-weight: 600;
-        cursor: pointer;
-      }
+    .impersonation-banner__timer {
+      font-variant-numeric: tabular-nums;
+      opacity: 0.85;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
 
-      .impersonation-banner__exit:hover {
-        background: rgba(255, 255, 255, 0.15);
-      }
-    `,
-  ],
+    .impersonation-banner__exit {
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border-radius: 0.6rem;
+      padding: 0.3rem 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 160ms ease;
+    }
+
+    .impersonation-banner__exit:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .impersonation-banner__exit:focus-visible {
+      outline: 2px solid #fff;
+      outline-offset: 2px;
+    }
+  `],
   template: `
     <div class="impersonation-banner" role="alert" data-testid="impersonation-banner">
-      <span>⚠️ Estás en modo impersonación como admin de {{ tenantName }}</span>
+      <span class="impersonation-banner__icon">&#9888;&#65039;</span>
+      <span>Modo impersonación como admin de <strong>{{ tenantName }}</strong></span>
       <span class="impersonation-banner__timer">{{ remainingLabel() }}</span>
       <button type="button" class="impersonation-banner__exit" (click)="exit.emit()">Salir</button>
     </div>

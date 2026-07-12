@@ -14,7 +14,7 @@
 
 .data-table thead th {
   text-align: left;
-  padding: 0.75rem 1.5rem;
+  padding: 0.85rem 1.5rem;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -41,6 +41,7 @@
   border-bottom: 1px solid #f1f3f6;
   font-size: 0.92rem;
   color: panel.$ink;
+  vertical-align: middle;
 }
 
 .data-table__actions {
@@ -53,4 +54,5 @@
   color: panel.$muted;
   padding: 2.5rem 1.5rem;
   background: #fafbfc;
+  font-style: italic;
 }

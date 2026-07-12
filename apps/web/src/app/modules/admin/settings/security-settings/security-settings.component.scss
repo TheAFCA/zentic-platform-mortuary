@@ -1,3 +1,5 @@
+@use '../../../../shared/styles/panel' as panel;
+
 :host {
   display: block;
 }
@@ -43,7 +45,7 @@
 .settings-error,
 .settings-success {
   margin: 0;
-  color: #6b7280;
+  color: panel.$muted;
 }
 
 .settings-card {
@@ -84,10 +86,10 @@
   gap: 0.35rem;
   padding-left: 1.1rem;
   font-size: 0.88rem;
-}
 
-.password-rules li::marker {
-  color: var(--brand-primary);
+  li::marker {
+    color: var(--brand-primary);
+  }
 }
 
 .settings-error,
