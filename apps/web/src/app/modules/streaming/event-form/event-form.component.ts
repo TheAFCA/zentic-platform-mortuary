@@ -37,112 +37,128 @@ import { Client, Venue } from '@zentic/shared-types';
     MatSnackBarModule,
     MatSlideToggleModule,
   ],
-  styles: [`
-    :host { display: block; }
+  styles: [
+    `
+      :host {
+        display: block;
+      }
 
-    .form-back {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 1.5rem;
-      color: #6b7280;
-      font-size: 0.9rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: color 150ms ease;
-    }
+      .form-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        color: #6b7280;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: color 150ms ease;
+      }
 
-    .form-back:hover { color: #1f2937; }
+      .form-back:hover {
+        color: #1f2937;
+      }
 
-    .form-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      color: #1f2937;
-      margin: 0 0 0.15rem;
-    }
+      .form-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: #1f2937;
+        margin: 0 0 0.15rem;
+      }
 
-    .form-subtitle {
-      margin: 0 0 1.5rem;
-      color: #6b7280;
-      font-size: 0.92rem;
-    }
+      .form-subtitle {
+        margin: 0 0 1.5rem;
+        color: #6b7280;
+        font-size: 0.92rem;
+      }
 
-    .form-card {
-      border-radius: 1.25rem;
-      background: #fff;
-      border: 1px solid #e7e9ee;
-      box-shadow: 0 12px 32px rgba(17, 24, 39, 0.06);
-      overflow: hidden;
-    }
+      .form-card {
+        border-radius: 1.25rem;
+        background: #fff;
+        border: 1px solid #e7e9ee;
+        box-shadow: 0 12px 32px rgba(17, 24, 39, 0.06);
+        overflow: hidden;
+      }
 
-    .form-card__body { padding: 1.5rem; }
+      .form-card__body {
+        padding: 1.5rem;
+      }
 
-    .form-section {
-      display: grid;
-      gap: 0.25rem;
-    }
+      .form-section {
+        display: grid;
+        gap: 0.25rem;
+      }
 
-    .form-section + .form-section {
-      margin-top: 1.5rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid #f1f3f6;
-    }
+      .form-section + .form-section {
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #f1f3f6;
+      }
 
-    .form-section__title {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.92rem;
-      font-weight: 600;
-      color: #1f2937;
-      margin: 0 0 1rem;
-    }
+      .form-section__title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin: 0 0 1rem;
+      }
 
-    .form-section__title mat-icon {
-      font-size: 1.15rem;
-      width: 1.15rem;
-      height: 1.15rem;
-      color: #0f5e59;
-    }
+      .form-section__title mat-icon {
+        font-size: 1.15rem;
+        width: 1.15rem;
+        height: 1.15rem;
+        color: #0f5e59;
+      }
 
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-    }
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+      }
 
-    .form-row--single { grid-template-columns: 1fr; }
+      .form-row--single {
+        grid-template-columns: 1fr;
+      }
 
-    .form-row--triple { grid-template-columns: 1fr 1fr 1fr; }
+      .form-row--triple {
+        grid-template-columns: 1fr 1fr 1fr;
+      }
 
-    .form-field { width: 100%; }
+      .form-field {
+        width: 100%;
+      }
 
-    .form-field--full { grid-column: 1 / -1; }
+      .form-field--full {
+        grid-column: 1 / -1;
+      }
 
-    .form-footer {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 0.75rem;
-      margin-top: 1.5rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid #f1f3f6;
-    }
+      .form-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #f1f3f6;
+      }
 
-    .form-loading {
-      display: flex;
-      justify-content: center;
-      padding: 3rem 0;
-    }
+      .form-loading {
+        display: flex;
+        justify-content: center;
+        padding: 3rem 0;
+      }
 
-    .config-row {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
-  `],
+      .config-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+    `,
+  ],
   template: `
     <div style="max-width:48rem;margin:0 auto;">
       <a routerLink="/admin/streaming" class="form-back">
@@ -151,7 +167,13 @@ import { Client, Venue } from '@zentic/shared-types';
       </a>
 
       <h1 class="form-title">{{ isEdit() ? 'Editar Evento' : 'Nuevo Evento de Streaming' }}</h1>
-      <p class="form-subtitle">{{ isEdit() ? 'Actualiza los datos del evento programado.' : 'Configura una nueva transmisión en vivo para una ceremonia.' }}</p>
+      <p class="form-subtitle">
+        {{
+          isEdit()
+            ? 'Actualiza los datos del evento programado.'
+            : 'Configura una nueva transmisión en vivo para una ceremonia.'
+        }}
+      </p>
 
       <div class="form-card">
         <div class="form-card__body">
@@ -169,7 +191,12 @@ import { Client, Venue } from '@zentic/shared-types';
                 <div class="form-row">
                   <mat-form-field class="form-field form-field--full">
                     <mat-label>Nombre del evento</mat-label>
-                    <input matInput formControlName="title" placeholder="Ej: Velatorio de María López" required />
+                    <input
+                      matInput
+                      formControlName="title"
+                      placeholder="Ej: Velatorio de María López"
+                      required
+                    />
                     @if (form.get('title')?.invalid && form.get('title')?.touched) {
                       <mat-error>El nombre es requerido</mat-error>
                     }
@@ -188,13 +215,23 @@ import { Client, Venue } from '@zentic/shared-types';
                   </mat-form-field>
                   <mat-form-field class="form-field">
                     <mat-label>Duración estimada (min)</mat-label>
-                    <input matInput type="number" formControlName="estimatedDuration" placeholder="180" />
+                    <input
+                      matInput
+                      type="number"
+                      formControlName="estimatedDuration"
+                      placeholder="180"
+                    />
                   </mat-form-field>
                 </div>
                 <div class="form-row">
                   <mat-form-field class="form-field">
                     <mat-label>Fecha</mat-label>
-                    <input matInput [matDatepicker]="picker" formControlName="scheduledDate" required />
+                    <input
+                      matInput
+                      [matDatepicker]="picker"
+                      formControlName="scheduledDate"
+                      required
+                    />
                     <mat-datepicker-toggle matSuffix [for]="picker" />
                     <mat-datepicker #picker />
                   </mat-form-field>
@@ -229,13 +266,21 @@ import { Client, Venue } from '@zentic/shared-types';
                 <div class="form-row">
                   <mat-form-field class="form-field">
                     <mat-label>Fecha de nacimiento</mat-label>
-                    <input matInput [matDatepicker]="birthPicker" formControlName="deceasedBirthDate" />
+                    <input
+                      matInput
+                      [matDatepicker]="birthPicker"
+                      formControlName="deceasedBirthDate"
+                    />
                     <mat-datepicker-toggle matSuffix [for]="birthPicker" />
                     <mat-datepicker #birthPicker />
                   </mat-form-field>
                   <mat-form-field class="form-field">
                     <mat-label>Fecha de fallecimiento</mat-label>
-                    <input matInput [matDatepicker]="deathPicker" formControlName="deceasedDeathDate" />
+                    <input
+                      matInput
+                      [matDatepicker]="deathPicker"
+                      formControlName="deceasedDeathDate"
+                    />
                     <mat-datepicker-toggle matSuffix [for]="deathPicker" />
                     <mat-datepicker #deathPicker />
                   </mat-form-field>
@@ -243,7 +288,11 @@ import { Client, Venue } from '@zentic/shared-types';
                 <div class="form-row form-row--single">
                   <mat-form-field class="form-field">
                     <mat-label>Epitafio o frase (opcional)</mat-label>
-                    <input matInput formControlName="deceasedEpitaph" placeholder="Ej: Siempre vivirás en nuestros corazones" />
+                    <input
+                      matInput
+                      formControlName="deceasedEpitaph"
+                      placeholder="Ej: Siempre vivirás en nuestros corazones"
+                    />
                   </mat-form-field>
                 </div>
               </div>
@@ -256,7 +305,10 @@ import { Client, Venue } from '@zentic/shared-types';
                 <div class="form-row">
                   <mat-form-field class="form-field">
                     <mat-label>Sede</mat-label>
-                    <mat-select formControlName="venueId" (selectionChange)="onVenueChange($event.value)">
+                    <mat-select
+                      formControlName="venueId"
+                      (selectionChange)="onVenueChange($event.value)"
+                    >
                       <mat-option [value]="null">Seleccionar sede</mat-option>
                       @for (v of venues(); track v.id) {
                         <mat-option [value]="v.id">{{ v.name }}</mat-option>
@@ -268,7 +320,10 @@ import { Client, Venue } from '@zentic/shared-types';
                     <mat-select formControlName="roomId" [disabled]="!selectedVenue()">
                       <mat-option [value]="null">Seleccionar sala</mat-option>
                       @for (r of rooms(); track r.id) {
-                        <mat-option [value]="r.id">{{ r.name }}{{ r.capacity ? ' ('+r.capacity+' pers.)' : '' }}</mat-option>
+                        <mat-option [value]="r.id"
+                          >{{ r.name
+                          }}{{ r.capacity ? ' (' + r.capacity + ' pers.)' : '' }}</mat-option
+                        >
                       }
                     </mat-select>
                   </mat-form-field>
@@ -286,7 +341,9 @@ import { Client, Venue } from '@zentic/shared-types';
                     <mat-select formControlName="clientId">
                       <mat-option [value]="null">Sin cliente</mat-option>
                       @for (c of clients(); track c.id) {
-                        <mat-option [value]="c.id">{{ c.name }}{{ c.phone ? ' — ' + c.phone : '' }}</mat-option>
+                        <mat-option [value]="c.id"
+                          >{{ c.name }}{{ c.phone ? ' — ' + c.phone : '' }}</mat-option
+                        >
                       }
                     </mat-select>
                   </mat-form-field>
@@ -320,8 +377,12 @@ import { Client, Venue } from '@zentic/shared-types';
                   <mat-form-field class="form-field">
                     <mat-label>Moderación de mensajes</mat-label>
                     <mat-select formControlName="moderationMode">
-                      <mat-option value="AUTO">Automática — todos se publican al instante</mat-option>
-                      <mat-option value="MANUAL">Manual — requiere aprobación del operador</mat-option>
+                      <mat-option value="AUTO"
+                        >Automática — todos se publican al instante</mat-option
+                      >
+                      <mat-option value="MANUAL"
+                        >Manual — requiere aprobación del operador</mat-option
+                      >
                     </mat-select>
                   </mat-form-field>
                 </div>
@@ -329,7 +390,12 @@ import { Client, Venue } from '@zentic/shared-types';
 
               <div class="form-footer">
                 <a mat-stroked-button routerLink="/admin/streaming">Cancelar</a>
-                <button mat-raised-button color="primary" type="submit" [disabled]="submitting() || form.invalid">
+                <button
+                  mat-raised-button
+                  color="primary"
+                  type="submit"
+                  [disabled]="submitting() || form.invalid"
+                >
                   @if (submitting()) {
                     <mat-spinner diameter="18" />
                   }
@@ -502,10 +568,12 @@ export class EventFormComponent {
     request.subscribe({
       next: () => {
         this.submitting.set(false);
-        this.snackBar.open(editId ? 'Evento actualizado' : 'Evento creado exitosamente', 'Cerrar', { duration: 3000 });
-        this.router.navigate(['/admin/streaming']);
+        this.snackBar.open(editId ? 'Evento actualizado' : 'Evento creado exitosamente', 'Cerrar', {
+          duration: 3000,
+        });
+        void this.router.navigate(['/admin/streaming']);
       },
-      error: (err) => {
+      error: (err: { message?: string }) => {
         this.submitting.set(false);
         this.snackBar.open(err.message ?? 'Error al guardar', 'Cerrar', { duration: 3000 });
       },

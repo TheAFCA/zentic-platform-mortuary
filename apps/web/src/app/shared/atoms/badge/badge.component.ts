@@ -17,7 +17,8 @@ export class BadgeComponent {
   @Input() color: BadgeColor = 'gray';
 
   get badgeClasses(): string {
-    const base = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-wide';
+    const base =
+      'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-wide';
     const colors: Record<BadgeColor, string> = {
       green: 'bg-green-50 text-green-700 border border-green-200',
       yellow: 'bg-yellow-50 text-yellow-700 border border-yellow-200',

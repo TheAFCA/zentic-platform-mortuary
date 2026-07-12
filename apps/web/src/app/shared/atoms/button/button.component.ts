@@ -10,104 +10,106 @@ export type ButtonSize = 'sm' | 'md' | 'lg';
   selector: 'app-button',
   standalone: true,
   imports: [CommonModule, MatButtonModule, MatProgressSpinnerModule],
-  styles: [`
-    :host {
-      display: block;
-    }
+  styles: [
+    `
+      :host {
+        display: block;
+      }
 
-    button {
-      width: 100%;
-      min-height: 3.25rem;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      border: 0;
-      border-radius: 0.85rem;
-      padding: 0.75rem 1rem;
-      font-weight: 600;
-      font-size: 0.92rem;
-      color: #fff;
-      background: linear-gradient(
-        135deg,
-        var(--brand-primary, #0f5e59),
-        var(--brand-primary-hover, #0b4c48)
-      );
-      box-shadow: 0 12px 24px rgba(15, 94, 89, 0.2);
-      cursor: pointer;
-      transition:
-        transform 150ms ease,
-        box-shadow 150ms ease,
-        opacity 150ms ease;
-      letter-spacing: 0.01em;
-    }
+      button {
+        width: 100%;
+        min-height: 3.25rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        border: 0;
+        border-radius: 0.85rem;
+        padding: 0.75rem 1rem;
+        font-weight: 600;
+        font-size: 0.92rem;
+        color: #fff;
+        background: linear-gradient(
+          135deg,
+          var(--brand-primary, #0f5e59),
+          var(--brand-primary-hover, #0b4c48)
+        );
+        box-shadow: 0 12px 24px rgba(15, 94, 89, 0.2);
+        cursor: pointer;
+        transition:
+          transform 150ms ease,
+          box-shadow 150ms ease,
+          opacity 150ms ease;
+        letter-spacing: 0.01em;
+      }
 
-    button:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 16px 30px rgba(15, 94, 89, 0.26);
-    }
+      button:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 16px 30px rgba(15, 94, 89, 0.26);
+      }
 
-    button:focus-visible {
-      outline: none;
-      box-shadow:
-        0 0 0 4px rgba(15, 94, 89, 0.16),
-        0 12px 24px rgba(15, 94, 89, 0.2);
-    }
+      button:focus-visible {
+        outline: none;
+        box-shadow:
+          0 0 0 4px rgba(15, 94, 89, 0.16),
+          0 12px 24px rgba(15, 94, 89, 0.2);
+      }
 
-    button:active:not(:disabled) {
-      transform: translateY(0);
-      box-shadow: 0 8px 16px rgba(15, 94, 89, 0.2);
-    }
+      button:active:not(:disabled) {
+        transform: translateY(0);
+        box-shadow: 0 8px 16px rgba(15, 94, 89, 0.2);
+      }
 
-    button:disabled {
-      cursor: not-allowed;
-      opacity: 0.6;
-    }
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
 
-    button[data-size='sm'] {
-      min-height: 2.25rem;
-      padding: 0.4rem 0.75rem;
-      border-radius: 0.65rem;
-      font-size: 0.85rem;
-      gap: 0.4rem;
-    }
+      button[data-size='sm'] {
+        min-height: 2.25rem;
+        padding: 0.4rem 0.75rem;
+        border-radius: 0.65rem;
+        font-size: 0.85rem;
+        gap: 0.4rem;
+      }
 
-    button[data-size='md'] {
-      min-height: 2.75rem;
-      padding: 0.6rem 1rem;
-      font-size: 0.92rem;
-    }
+      button[data-size='md'] {
+        min-height: 2.75rem;
+        padding: 0.6rem 1rem;
+        font-size: 0.92rem;
+      }
 
-    button[data-size='lg'] {
-      min-height: 3.25rem;
-      padding: 0.75rem 1.25rem;
-      font-size: 1rem;
-    }
+      button[data-size='lg'] {
+        min-height: 3.25rem;
+        padding: 0.75rem 1.25rem;
+        font-size: 1rem;
+      }
 
-    button[data-variant='secondary'] {
-      background: linear-gradient(135deg, #334155, #1f2937);
-    }
+      button[data-variant='secondary'] {
+        background: linear-gradient(135deg, #334155, #1f2937);
+      }
 
-    button[data-variant='danger'] {
-      background: linear-gradient(135deg, #dc2626, #b91c1c);
-    }
+      button[data-variant='danger'] {
+        background: linear-gradient(135deg, #dc2626, #b91c1c);
+      }
 
-    button[data-variant='ghost'] {
-      color: #374151;
-      background: #fff;
-      border: 1px solid #e7e9ee;
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-    }
+      button[data-variant='ghost'] {
+        color: #374151;
+        background: #fff;
+        border: 1px solid #e7e9ee;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      }
 
-    button[data-variant='ghost']:hover:not(:disabled) {
-      background: #f9fafb;
-      border-color: #d1d5db;
-    }
+      button[data-variant='ghost']:hover:not(:disabled) {
+        background: #f9fafb;
+        border-color: #d1d5db;
+      }
 
-    mat-spinner {
-      --mat-progress-spinner-active-indicator-color: currentColor;
-    }
-  `],
+      mat-spinner {
+        --mat-progress-spinner-active-indicator-color: currentColor;
+      }
+    `,
+  ],
   template: `
     <button
       [type]="type"

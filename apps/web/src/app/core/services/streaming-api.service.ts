@@ -234,17 +234,12 @@ export class StreamingApiService {
 
   /** Elimina un mensaje (soft-delete) */
   deleteMessage(eventId: string, messageId: string) {
-    return this.http.delete<void>(
-      `${environment.apiUrl}/events/${eventId}/messages/${messageId}`,
-    );
+    return this.http.delete<void>(`${environment.apiUrl}/events/${eventId}/messages/${messageId}`);
   }
 
   /** Envía una reacción rápida durante un evento en vivo */
   sendReaction(slug: string, dto: SendReactionInput) {
-    return this.http.post<{ sent: boolean }>(
-      `${environment.apiUrl}/events/${slug}/reactions`,
-      dto,
-    );
+    return this.http.post<{ sent: boolean }>(`${environment.apiUrl}/events/${slug}/reactions`, dto);
   }
 
   /** Valida el código de acceso de un evento privado */

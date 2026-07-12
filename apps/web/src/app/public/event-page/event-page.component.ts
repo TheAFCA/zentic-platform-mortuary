@@ -11,11 +11,12 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
+import { StreamingApiService, PublicEvent } from '../../core/services/streaming-api.service';
 import {
-  StreamingApiService,
-  PublicEvent,
-} from '../../core/services/streaming-api.service';
-import { StreamingSocketService } from '../../core/services/streaming-socket.service';
+  StreamingSocketService,
+  SocketMessage,
+} from '../../core/services/streaming-socket.service';
+import { EventStatus } from '@zentic/shared-types';
 
 /** Iconos de reacción rápida disponibles */
 const REACTION_ICONS = [
@@ -95,18 +96,10 @@ const REACTION_ICONS = [
                 Ingresa el código de acceso para ver el evento
               </p>
 
-              <form
-                [formGroup]="accessForm"
-                (ngSubmit)="submitAccessCode()"
-                class="space-y-4"
-              >
+              <form [formGroup]="accessForm" (ngSubmit)="submitAccessCode()" class="space-y-4">
                 <mat-form-field class="w-full">
                   <mat-label>Tu nombre</mat-label>
-                  <input
-                    matInput
-                    formControlName="name"
-                    placeholder="Nombre completo"
-                  />
+                  <input matInput formControlName="name" placeholder="Nombre completo" />
                 </mat-form-field>
 
                 <mat-form-field class="w-full">
@@ -121,16 +114,8 @@ const REACTION_ICONS = [
 
                 <mat-form-field class="w-full">
                   <mat-label>Código de acceso</mat-label>
-                  <input
-                    matInput
-                    formControlName="code"
-                    placeholder="Ej: FAMILIA2026"
-                    required
-                  />
-                  @if (
-                    accessForm.get('code')?.invalid &&
-                    accessForm.get('code')?.touched
-                  ) {
+                  <input matInput formControlName="code" placeholder="Ej: FAMILIA2026" required />
+                  @if (accessForm.get('code')?.invalid && accessForm.get('code')?.touched) {
                     <mat-error>El código es requerido</mat-error>
                   }
                 </mat-form-field>
@@ -168,20 +153,12 @@ const REACTION_ICONS = [
         >
           <!-- Header -->
           <header class="bg-white shadow-sm">
-            <div
-              class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between"
-            >
+            <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
               <div class="flex items-center gap-3">
                 @if (event.tenant.brandConfig?.logoUrl) {
-                  <img
-                    [src]="event.tenant.brandConfig?.logoUrl"
-                    class="h-8"
-                    alt="Logo"
-                  />
+                  <img [src]="event.tenant.brandConfig?.logoUrl" class="h-8" alt="Logo" />
                 } @else {
-                  <span class="font-semibold text-gray-800">{{
-                    event.tenant.name
-                  }}</span>
+                  <span class="font-semibold text-gray-800">{{ event.tenant.name }}</span>
                 }
               </div>
               <div class="flex items-center gap-2">
@@ -192,18 +169,10 @@ const REACTION_ICONS = [
                 >
                   <mat-icon>chat</mat-icon>
                 </button>
-                <button
-                  mat-icon-button
-                  (click)="shareEmail()"
-                  matTooltip="Compartir por email"
-                >
+                <button mat-icon-button (click)="shareEmail()" matTooltip="Compartir por email">
                   <mat-icon>email</mat-icon>
                 </button>
-                <button
-                  mat-icon-button
-                  (click)="copyLink()"
-                  matTooltip="Copiar enlace"
-                >
+                <button mat-icon-button (click)="copyLink()" matTooltip="Copiar enlace">
                   <mat-icon>link</mat-icon>
                 </button>
               </div>
@@ -212,16 +181,12 @@ const REACTION_ICONS = [
 
           <main class="max-w-4xl mx-auto px-4 py-6">
             <!-- Video player -->
-            <div
-              class="aspect-video bg-black rounded-lg overflow-hidden mb-6 relative"
-            >
+            <div class="aspect-video bg-black rounded-lg overflow-hidden mb-6 relative">
               @if (event.status === 'LIVE') {
                 <div
                   class="absolute top-3 left-3 z-10 flex items-center gap-2 bg-red-600 text-white px-2 py-1 rounded text-sm"
                 >
-                  <span
-                    class="w-2 h-2 bg-white rounded-full animate-pulse"
-                  ></span>
+                  <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
                   EN VIVO
                 </div>
               }
@@ -229,25 +194,19 @@ const REACTION_ICONS = [
                 <video
                   controls
                   class="w-full h-full"
-                  [src]="
-                    event.status === 'FINISHED'
-                      ? event.recordingUrl
-                      : event.slug
-                  "
+                  [src]="event.status === 'FINISHED' ? event.recordingUrl : event.slug"
                   poster="{{ event.deceased?.photoUrl ?? '' }}"
                 >
                   Tu navegador no soporta video.
                 </video>
               } @else {
-                <div
-                  class="w-full h-full flex items-center justify-center text-white"
-                >
+                <div class="w-full h-full flex items-center justify-center text-white">
                   <div class="text-center">
                     <p class="text-2xl font-bold mb-2">🕊️</p>
                     <p>El evento comenzará pronto</p>
                     @if (event.scheduledAt) {
                       <p class="text-gray-400 text-sm mt-1">
-                        {{ event.scheduledAt | date : 'dd/MM/yyyy HH:mm' }}
+                        {{ event.scheduledAt | date: 'dd/MM/yyyy HH:mm' }}
                       </p>
                     }
                   </div>
@@ -285,18 +244,18 @@ const REACTION_ICONS = [
                   @if (deceased.birthDate || deceased.deathDate) {
                     <p class="text-gray-600 mt-1">
                       @if (deceased.birthDate) {
-                        {{ deceased.birthDate | date : 'dd/MM/yyyy' }}
+                        {{ deceased.birthDate | date: 'dd/MM/yyyy' }}
                       }
-                      @if (deceased.birthDate && deceased.deathDate) { - }
+                      @if (deceased.birthDate && deceased.deathDate) {
+                        -
+                      }
                       @if (deceased.deathDate) {
-                        {{ deceased.deathDate | date : 'dd/MM/yyyy' }}
+                        {{ deceased.deathDate | date: 'dd/MM/yyyy' }}
                       }
                     </p>
                   }
                   @if (deceased.epitaph) {
-                    <p class="text-gray-500 italic mt-2">
-                      "{{ deceased.epitaph }}"
-                    </p>
+                    <p class="text-gray-500 italic mt-2">"{{ deceased.epitaph }}"</p>
                   }
                 </div>
               </div>
@@ -305,9 +264,7 @@ const REACTION_ICONS = [
             <!-- Reactions -->
             @if (event.status === 'LIVE') {
               <div class="bg-white rounded-lg p-4 mb-6">
-                <p class="text-sm font-medium text-gray-600 mb-3">
-                  Envía tu reacción
-                </p>
+                <p class="text-sm font-medium text-gray-600 mb-3">Envía tu reacción</p>
                 <div class="flex gap-2">
                   @for (reaction of reactions; track reaction.type) {
                     <button
@@ -321,36 +278,23 @@ const REACTION_ICONS = [
                   }
                 </div>
                 @if (reactionCooldown()) {
-                  <p class="text-xs text-gray-400 mt-1">
-                    Espera un momento...
-                  </p>
+                  <p class="text-xs text-gray-400 mt-1">Espera un momento...</p>
                 }
               </div>
             }
 
             <!-- Messages -->
             <div class="bg-white rounded-lg p-6">
-              <h3 class="font-semibold text-gray-900 mb-4">
-                Mensajes y Homenajes
-              </h3>
+              <h3 class="font-semibold text-gray-900 mb-4">Mensajes y Homenajes</h3>
 
-              <form
-                [formGroup]="messageForm"
-                (ngSubmit)="submitMessage()"
-                class="flex gap-2 mb-6"
-              >
+              <form [formGroup]="messageForm" (ngSubmit)="submitMessage()" class="flex gap-2 mb-6">
                 <mat-form-field class="flex-1" appearance="outline">
                   <mat-label>Tu nombre</mat-label>
                   <input matInput formControlName="authorName" required />
                 </mat-form-field>
                 <mat-form-field class="flex-[2]" appearance="outline">
                   <mat-label>Escribe tu mensaje...</mat-label>
-                  <input
-                    matInput
-                    formControlName="content"
-                    required
-                    maxlength="500"
-                  />
+                  <input matInput formControlName="content" required maxlength="500" />
                 </mat-form-field>
                 <button
                   mat-raised-button
@@ -364,19 +308,15 @@ const REACTION_ICONS = [
 
               <div class="space-y-3 max-h-96 overflow-y-auto">
                 @for (msg of messages(); track msg.id) {
-                  <div
-                    class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg"
-                  >
-                    <span class="text-xl">{{
-                      iconMap[msg.iconType ?? ''] ?? '💬'
-                    }}</span>
+                  <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                    <span class="text-xl">{{ iconMap[msg.iconType ?? ''] ?? '💬' }}</span>
                     <div>
                       <p class="font-medium text-sm text-gray-900">
                         {{ msg.authorName }}
                       </p>
                       <p class="text-gray-700 text-sm">{{ msg.content }}</p>
                       <p class="text-xs text-gray-400 mt-0.5">
-                        {{ msg.createdAt | date : 'dd/MM HH:mm' }}
+                        {{ msg.createdAt | date: 'dd/MM HH:mm' }}
                       </p>
                     </div>
                   </div>
@@ -418,7 +358,7 @@ export class EventPageComponent {
   /** Mensaje de error en la validación del código */
   readonly accessError = signal('');
   /** Lista de mensajes de homenaje */
-  readonly messages = signal<any[]>([]);
+  readonly messages = signal<SocketMessage[]>([]);
   /** Contador de espectadores en vivo */
   readonly viewerCount = signal(0);
   /** Indica si se está enviando un mensaje */
@@ -470,7 +410,7 @@ export class EventPageComponent {
     });
 
     this.socket.streamStatus$.subscribe((status) => {
-      this.evt.update((e) => (e ? { ...e, status: status as any } : e));
+      this.evt.update((e) => (e ? { ...e, status: status as EventStatus } : e));
     });
   }
 
@@ -483,12 +423,12 @@ export class EventPageComponent {
         this.loading.set(false);
         this.eventId = ev.id;
 
-        if (ev.isPublic || ev.status === 'FINISHED') {
+        if (ev.isPublic || ev.status === EventStatus.FINISHED) {
           this.accessGranted.set(true);
           this.connectSocket();
         }
       },
-      error: (err) => {
+      error: (err: { message?: string }) => {
         this.error.set(err.message ?? 'Evento no encontrado');
         this.loading.set(false);
       },
@@ -515,7 +455,7 @@ export class EventPageComponent {
           this.eventId = res.eventId;
           this.connectSocket();
         },
-        error: (err) => {
+        error: (err: { message?: string }) => {
           this.accessError.set(err.message ?? 'Código incorrecto');
           this.accessLoading.set(false);
         },
@@ -568,22 +508,16 @@ export class EventPageComponent {
   /** Comparte el enlace del evento por WhatsApp */
   shareWhatsApp(): void {
     const ev = this.evt();
-    const name = ev?.deceased
-      ? `${ev.deceased.firstName} ${ev.deceased.lastName}`
-      : 'la ceremonia';
+    const name = ev?.deceased ? `${ev.deceased.firstName} ${ev.deceased.lastName}` : 'la ceremonia';
     const url = window.location.href;
-    const text = encodeURIComponent(
-      `Te invitamos a la ceremonia de ${name}: ${url}`,
-    );
+    const text = encodeURIComponent(`Te invitamos a la ceremonia de ${name}: ${url}`);
     window.open(`https://wa.me/?text=${text}`, '_blank');
   }
 
   /** Comparte el enlace del evento por email */
   shareEmail(): void {
     const ev = this.evt();
-    const name = ev?.deceased
-      ? `${ev.deceased.firstName} ${ev.deceased.lastName}`
-      : 'la ceremonia';
+    const name = ev?.deceased ? `${ev.deceased.firstName} ${ev.deceased.lastName}` : 'la ceremonia';
     const url = window.location.href;
     const subject = encodeURIComponent(`Invitación a ceremonia de ${name}`);
     const body = encodeURIComponent(
@@ -594,7 +528,7 @@ export class EventPageComponent {
 
   /** Copia el enlace del evento al portapapeles */
   copyLink(): void {
-    navigator.clipboard.writeText(window.location.href).then(() => {
+    void navigator.clipboard.writeText(window.location.href).then(() => {
       this.snackBar.open('Enlace copiado', 'Cerrar', { duration: 2000 });
     });
   }
