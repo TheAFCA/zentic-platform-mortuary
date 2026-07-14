@@ -1,0 +1,106 @@
+<div class="obituary-page" *ngIf="!loading(); else loadingState">
+  <ng-container *ngIf="obituary() as obituary; else notAvailableState">
+    <div class="obituary-page__locked" *ngIf="!obituary.accessGranted; else unlockedState">
+      <h1>Contenido protegido</h1>
+      <p>Este obituario requiere un código de acceso para verse.</p>
+
+      <form
+        class="obituary-page__access-form"
+        [formGroup]="accessForm"
+        (ngSubmit)="submitAccessCode()"
+      >
+        <p class="obituary-page__access-error" *ngIf="accessCodeError()" data-testid="access-code-error">
+          {{ accessCodeError() }}
+        </p>
+        <input
+          type="text"
+          placeholder="Código de acceso"
+          formControlName="accessCode"
+          data-testid="access-code-input"
+        />
+        <button type="submit" [disabled]="unlocking()" data-testid="access-code-submit">
+          Ver obituario
+        </button>
+      </form>
+    </div>
+
+    <ng-template #unlockedState>
+      <ng-container *ngIf="obituary.deceased as deceased">
+        <header class="obituary-page__hero">
+          <app-initials-avatar
+            *ngIf="!deceased.photoUrl"
+            [firstName]="deceased.firstName"
+            [lastName]="deceased.lastName"
+            [sizePx]="140"
+          />
+          <img
+            *ngIf="deceased.photoUrl"
+            [src]="deceased.photoUrl"
+            class="obituary-page__photo"
+            alt=""
+          />
+
+          <h1 class="obituary-page__name">{{ deceased.firstName }} {{ deceased.lastName }}</h1>
+
+          <p class="obituary-page__dates">
+            <span *ngIf="deceased.birthDate">⭐ {{ deceased.birthDate | date: 'longDate' }}</span>
+            <span *ngIf="deceased.deathDate">✝ {{ deceased.deathDate | date: 'longDate' }}</span>
+          </p>
+
+          <p class="obituary-page__epitaph" *ngIf="deceased.epitaph">"{{ deceased.epitaph }}"</p>
+
+          <a
+            *ngIf="obituary.streamingAction && obituary.event"
+            class="obituary-page__stream-link"
+            [routerLink]="['/e', obituary.event.slug]"
+            data-testid="streaming-link"
+          >
+            {{ obituary.streamingAction === 'LIVE' ? 'Ver transmisión en vivo' : 'Ver grabación' }}
+          </a>
+        </header>
+
+        <section
+          class="obituary-page__biography"
+          *ngIf="deceased.biography"
+          [innerHTML]="deceased.biography"
+        ></section>
+
+        <app-share-buttons
+          [shareMessage]="shareMessage"
+          [pageUrl]="currentUrl"
+          [deceasedFullName]="fullName(obituary)"
+        />
+
+        <section class="obituary-page__condolences">
+          <h2>Mensajes de condolencia</h2>
+
+          <div class="obituary-page__message" *ngFor="let message of obituary.approvedMessages">
+            <strong>{{ message.authorName }}</strong>
+            <p>{{ message.content }}</p>
+          </div>
+          <p class="obituary-page__empty" *ngIf="obituary.approvedMessages.length === 0">
+            Sé el primero en dejar un mensaje de condolencia.
+          </p>
+
+          <app-condolence-form
+            [slug]="obituary.slug"
+            [requiresAccessCode]="!obituary.isPublic"
+            [prefilledAccessCode]="unlockedAccessCode()"
+            (sent)="onMessageSent()"
+          />
+        </section>
+      </ng-container>
+    </ng-template>
+  </ng-container>
+
+  <ng-template #notAvailableState>
+    <div class="obituary-page__not-available" data-testid="obituary-not-available">
+      <h1>Este contenido no está disponible</h1>
+      <p>El obituario que buscas no existe o ya no está publicado.</p>
+    </div>
+  </ng-template>
+</div>
+
+<ng-template #loadingState>
+  <p class="obituary-page__loading">Cargando...</p>
+</ng-template>
