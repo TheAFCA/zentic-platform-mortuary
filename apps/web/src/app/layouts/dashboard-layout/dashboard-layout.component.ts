@@ -55,6 +55,12 @@ export class DashboardLayoutComponent {
     },
     { path: '/admin/clientes', label: 'Clientes', icon: 'people', permission: 'clients:read' },
     { path: '/admin/leads', label: 'Leads', icon: 'campaign', permission: 'leads:read' },
+    {
+      path: '/admin/obituaries',
+      label: 'Obituarios',
+      icon: 'auto_stories',
+      permission: 'obituary:read',
+    },
     { path: '/admin/sedes', label: 'Sedes', icon: 'domain', permission: 'venues:read' },
     { path: '/admin/users', label: 'Usuarios', icon: 'group', permission: 'users:read' },
     {

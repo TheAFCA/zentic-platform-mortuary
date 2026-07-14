@@ -1,0 +1,100 @@
+<form class="obituary-form" [formGroup]="form" (ngSubmit)="submit()">
+  <p class="obituary-form__error" *ngIf="errorMessage" data-testid="obituary-form-error">{{ errorMessage }}</p>
+
+  <div class="obituary-form__photo">
+    <app-initials-avatar
+      *ngIf="!photoPreviewUrl()"
+      [firstName]="form.controls.firstName.value"
+      [lastName]="form.controls.lastName.value"
+      [sizePx]="96"
+    />
+    <img *ngIf="photoPreviewUrl()" [src]="photoPreviewUrl()" class="obituary-form__photo-preview" alt="" />
+    <app-file-dropzone
+      label="Foto del difunto"
+      hint="PNG, JPG o WebP — se optimiza automáticamente"
+      [maxSizeBytes]="5 * 1024 * 1024"
+      (fileSelected)="onPhotoSelected($event)"
+    />
+  </div>
+
+  <div class="obituary-form__grid">
+    <mat-form-field appearance="outline">
+      <mat-label>Nombres</mat-label>
+      <input matInput formControlName="firstName" data-testid="obituary-firstname-input" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Apellidos</mat-label>
+      <input matInput formControlName="lastName" data-testid="obituary-lastname-input" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha de nacimiento</mat-label>
+      <input matInput type="date" formControlName="birthDate" data-testid="obituary-birthdate-input" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha de fallecimiento</mat-label>
+      <input matInput type="date" formControlName="deathDate" data-testid="obituary-deathdate-input" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Ciudad de nacimiento</mat-label>
+      <input matInput formControlName="birthCity" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Ciudad de fallecimiento</mat-label>
+      <input matInput formControlName="deathCity" />
+    </mat-form-field>
+  </div>
+
+  <p class="obituary-form__date-error" *ngIf="dateError()" data-testid="obituary-date-error">
+    {{ dateError() }}
+  </p>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Epitafio</mat-label>
+    <input matInput formControlName="epitaph" maxlength="150" data-testid="obituary-epitaph-input" />
+    <mat-hint align="end">{{ form.controls.epitaph.value.length }}/150</mat-hint>
+  </mat-form-field>
+
+  <div class="obituary-form__biography">
+    <label class="obituary-form__label">Biografía</label>
+    <quill-editor
+      formControlName="biography"
+      [modules]="quillModules"
+      [maxLength]="2000"
+      placeholder="Comparte la historia de vida del difunto..."
+    />
+    <p class="obituary-form__hint">{{ form.controls.biography.value.length }}/2000</p>
+  </div>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Evento vinculado (opcional)</mat-label>
+    <mat-select formControlName="eventId" data-testid="obituary-event-select">
+      <mat-option [value]="''">Sin evento</mat-option>
+      <mat-option *ngFor="let event of eventOptions" [value]="event.id">
+        {{ event.scheduledAt | date: 'medium' }} — {{ event.slug }} ({{ event.status }})
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <div class="obituary-form__visibility">
+    <label class="obituary-form__checkbox">
+      <input type="checkbox" formControlName="isPublic" />
+      Visible públicamente sin código de acceso
+    </label>
+    <mat-form-field appearance="outline" *ngIf="!form.controls.isPublic.value">
+      <mat-label>Código de acceso</mat-label>
+      <input matInput formControlName="accessCode" />
+    </mat-form-field>
+  </div>
+
+  <div class="obituary-form__actions">
+    <button type="button" class="btn-ghost" (click)="cancel.emit()">Cancelar</button>
+    <button type="submit" class="btn-primary" data-testid="obituary-form-submit">
+      {{ isEditing ? 'Guardar cambios' : 'Guardar como borrador' }}
+    </button>
+  </div>
+</form>

@@ -1,0 +1,141 @@
+<div class="obituary-detail" *ngIf="!loading(); else loadingState">
+  <ng-container *ngIf="obituary() as obituary">
+    <header class="obituary-detail__header">
+      <button type="button" class="btn-ghost btn-ghost--sm" (click)="goBack()">
+        <mat-icon>arrow_back</mat-icon>
+        <span>Volver</span>
+      </button>
+      <app-badge [color]="statusBadgeColor(obituary.status)">{{ obituary.status }}</app-badge>
+    </header>
+
+    <p class="obituary-detail__error" *ngIf="actionError()">{{ actionError() }}</p>
+
+    <section class="panel-card" *ngIf="!editing()">
+      <div class="panel-card__body obituary-detail__profile">
+        <app-initials-avatar
+          *ngIf="!obituary.deceased.photoUrl"
+          [firstName]="obituary.deceased.firstName"
+          [lastName]="obituary.deceased.lastName"
+          [sizePx]="120"
+        />
+        <img
+          *ngIf="obituary.deceased.photoUrl"
+          [src]="obituary.deceased.photoUrl"
+          class="obituary-detail__photo"
+          alt=""
+        />
+
+        <div class="obituary-detail__info">
+          <h1 class="obituary-detail__name">
+            {{ obituary.deceased.firstName }} {{ obituary.deceased.lastName }}
+          </h1>
+          <p class="obituary-detail__dates">
+            <span *ngIf="obituary.deceased.birthDate">
+              ⭐ {{ obituary.deceased.birthDate | date: 'longDate' }}
+            </span>
+            <span *ngIf="obituary.deceased.deathDate">
+              ✝ {{ obituary.deceased.deathDate | date: 'longDate' }}
+            </span>
+          </p>
+          <p class="obituary-detail__epitaph" *ngIf="obituary.deceased.epitaph">
+            "{{ obituary.deceased.epitaph }}"
+          </p>
+          <div class="obituary-detail__biography" *ngIf="obituary.deceased.biography" [innerHTML]="obituary.deceased.biography"></div>
+        </div>
+      </div>
+
+      <div class="panel-card__body obituary-detail__actions">
+        <button *appHasPermission="'obituary:update'" type="button" class="btn-ghost" (click)="openEdit()">
+          <mat-icon>edit</mat-icon>
+          <span>Editar</span>
+        </button>
+
+        <ng-container *ngIf="obituary.status !== 'PUBLISHED'">
+          <button
+            *appHasPermission="'obituary:publish'"
+            type="button"
+            class="btn-primary"
+            (click)="publish()"
+          >
+            <mat-icon>public</mat-icon>
+            <span>Publicar</span>
+          </button>
+        </ng-container>
+
+        <ng-container *ngIf="obituary.status === 'PUBLISHED'">
+          <button
+            *appHasPermission="'obituary:publish'"
+            type="button"
+            class="btn-ghost"
+            (click)="requestUnpublish()"
+          >
+            <mat-icon>public_off</mat-icon>
+            <span>Despublicar</span>
+          </button>
+        </ng-container>
+
+        <button
+          *appHasPermission="'messages:export'"
+          type="button"
+          class="btn-ghost"
+          (click)="downloadBookOfTributes()"
+        >
+          <mat-icon>menu_book</mat-icon>
+          <span>Generar libro de homenajes</span>
+        </button>
+      </div>
+
+      <p class="obituary-detail__error" *ngIf="bookError()">{{ bookError() }}</p>
+
+      <div class="panel-card__body obituary-detail__share" *ngIf="obituary.status === 'PUBLISHED'">
+        <label class="obituary-detail__share-label">Enlace público</label>
+        <div class="obituary-detail__share-row">
+          <input class="obituary-detail__share-input" type="text" readonly [value]="publicUrl" />
+          <button type="button" class="btn-ghost btn-ghost--sm" (click)="copyPublicUrl()">Copiar</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel-card" *ngIf="editing()">
+      <div class="panel-card__header">
+        <h2>Editar obituario</h2>
+      </div>
+      <div class="panel-card__body">
+        <app-obituary-form
+          [initialValue]="editingFormValue()"
+          [initialPhotoUrl]="obituary.deceased.photoUrl"
+          [eventOptions]="eventOptions()"
+          [errorMessage]="formError()"
+          (save)="onSave($event)"
+          (cancel)="closeEdit()"
+        />
+      </div>
+    </section>
+
+    <section class="panel-card">
+      <div class="panel-card__header">
+        <h2>Mensajes de condolencias</h2>
+      </div>
+      <div class="panel-card__body">
+        <app-messages-moderation
+          [messages]="messages()"
+          (approve)="approveMessage($event)"
+          (reject)="rejectMessage($event)"
+        />
+      </div>
+    </section>
+  </ng-container>
+</div>
+
+<ng-template #loadingState>
+  <p class="obituary-detail__loading">Cargando obituario...</p>
+</ng-template>
+
+<app-confirm-dialog
+  [open]="confirmUnpublish()"
+  title="Despublicar obituario"
+  message="El obituario dejará de ser visible públicamente. Los mensajes y datos se conservan."
+  confirmLabel="Despublicar"
+  (confirm)="confirmUnpublishAction()"
+  (cancel)="cancelUnpublish()"
+/>

@@ -1,0 +1,71 @@
+<div class="obituaries-page">
+  <header class="obituaries-page__header">
+    <p class="obituaries-page__eyebrow">Obituarios</p>
+    <h1 class="obituaries-page__title">Obituarios</h1>
+    <p class="obituaries-page__subtitle">Espacios de remembranza digital para cada difunto</p>
+  </header>
+
+  <section class="panel-card" *ngIf="showForm()">
+    <div class="panel-card__header">
+      <h2>Nuevo obituario</h2>
+    </div>
+    <div class="panel-card__body">
+      <app-obituary-form
+        [eventOptions]="eventOptions()"
+        [errorMessage]="formError()"
+        (save)="onSave($event)"
+        (cancel)="closeForm()"
+      />
+    </div>
+  </section>
+
+  <section class="panel-card">
+    <div class="panel-card__header panel-card__header--split">
+      <div>
+        <h2>Obituarios</h2>
+        <p class="panel-card__count">{{ total() }} obituario(s)</p>
+      </div>
+      <div class="obituaries-page__actions">
+        <input
+          type="search"
+          class="obituaries-page__search"
+          placeholder="Buscar por nombre del difunto"
+          [ngModel]="search()"
+          (ngModelChange)="onSearchChange($event)"
+          [ngModelOptions]="{ standalone: true }"
+        />
+        <select
+          class="obituaries-page__filter"
+          [ngModel]="statusFilter()"
+          (ngModelChange)="onStatusFilterChange($event)"
+          [ngModelOptions]="{ standalone: true }"
+        >
+          <option value="">Todos los estados</option>
+          <option *ngFor="let status of statuses" [value]="status">{{ status }}</option>
+        </select>
+        <button
+          *appHasPermission="'obituary:create'"
+          type="button"
+          class="btn-primary"
+          (click)="openCreate()"
+        >
+          <mat-icon>add</mat-icon>
+          <span>Nuevo obituario</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="panel-card__body panel-card__body--flush">
+      <app-data-table [columns]="columns" [rows]="obituaries()" emptyMessage="No hay obituarios registrados">
+        <ng-template #rowActions let-obituary>
+          <div class="obituaries-table__actions">
+            <app-badge [color]="statusBadgeColor(obituary.status)">{{ obituary.status }}</app-badge>
+            <button type="button" class="btn-ghost btn-ghost--sm" (click)="openDetail(obituary)">
+              Ver detalle
+            </button>
+          </div>
+        </ng-template>
+      </app-data-table>
+    </div>
+  </section>
+</div>

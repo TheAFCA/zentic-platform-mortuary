@@ -1,0 +1,31 @@
+<div class="messages-moderation">
+  <p class="messages-moderation__empty" *ngIf="messages.length === 0">
+    Aún no hay mensajes de condolencias.
+  </p>
+
+  <div class="messages-moderation__item" *ngFor="let message of messages" data-testid="moderation-item">
+    <div class="messages-moderation__item-header">
+      <strong>{{ message.authorName }}</strong>
+      <app-badge [color]="statusBadgeColor(message.status)">{{ message.status }}</app-badge>
+    </div>
+    <p class="messages-moderation__content">{{ message.content }}</p>
+    <div class="messages-moderation__actions" *ngIf="message.status === MessageStatus.PENDING">
+      <button
+        type="button"
+        class="btn-primary btn-primary--sm"
+        data-testid="moderation-approve"
+        (click)="approve.emit(message.id)"
+      >
+        Aprobar
+      </button>
+      <button
+        type="button"
+        class="btn-ghost btn-ghost--sm"
+        data-testid="moderation-reject"
+        (click)="reject.emit(message.id)"
+      >
+        Rechazar
+      </button>
+    </div>
+  </div>
+</div>
