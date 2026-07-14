@@ -52,6 +52,13 @@ export const ADMIN_ROUTES: Routes = [
           import('./downloads/downloads.component').then((m) => m.DownloadsComponent),
       },
       {
+        path: 'mi-cuenta',
+        loadComponent: () =>
+          import('./settings/security-settings/security-settings.component').then(
+            (m) => m.SecuritySettingsComponent,
+          ),
+      },
+      {
         path: 'settings',
         loadChildren: () => import('./settings/settings.routes').then((m) => m.SETTINGS_ROUTES),
       },

@@ -1,5 +1,55 @@
 :root {
   color-scheme: light;
+
+  --brand-primary: #0f5e59;
+  --brand-primary-hover: #0b4c48;
+  --brand-primary-light: rgba(15, 94, 89, 0.08);
+  --brand-primary-subtle: rgba(15, 94, 89, 0.04);
+
+  --brand-secondary: #16213e;
+  --brand-secondary-light: rgba(22, 33, 62, 0.06);
+
+  --error: #dc2626;
+  --error-bg: #fef2f2;
+  --error-text: #991b1b;
+
+  --success: #16a34a;
+  --success-bg: #f0fdf4;
+  --success-text: #166534;
+
+  --warning: #d97706;
+  --warning-bg: #fffbeb;
+  --warning-text: #92400e;
+
+  --ink: #1f2937;
+  --ink-secondary: #4b5563;
+  --muted: #6b7280;
+  --muted-light: #9ca3af;
+
+  --border: #e7e9ee;
+  --border-light: #f1f3f6;
+  --border-dark: #d1d5db;
+
+  --surface: #f7f8fa;
+  --surface-alt: #ffffff;
+
+  --radius-xs: 0.5rem;
+  --radius-sm: 0.65rem;
+  --radius-md: 0.85rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.06), 0 2px 4px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 10px 15px rgba(15, 23, 42, 0.06), 0 4px 6px rgba(15, 23, 42, 0.04);
+  --shadow-xl: 0 20px 48px rgba(17, 24, 39, 0.08);
+  --shadow-2xl: 0 28px 64px rgba(15, 23, 42, 0.14);
+
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
+  --transition-slow: 300ms ease;
 }
 
 html,
@@ -9,13 +59,29 @@ body {
 
 body {
   margin: 0;
-  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #f7f8fa;
-  color: #1f2937;
+  font-family:
+    'Inter',
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  background: var(--surface);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
 }
 
 * {
   box-sizing: border-box;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 a {
@@ -30,12 +96,35 @@ select {
   font: inherit;
 }
 
+::selection {
+  background: rgba(15, 94, 89, 0.18);
+  color: #111827;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
 .login-shell {
   width: 100%;
   height: 100%;
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  background: #f7f8fa;
+  background: var(--surface);
 }
 
 .login-shell__visual {
@@ -247,19 +336,19 @@ select {
   font-size: clamp(2rem, 3vw, 2.45rem);
   line-height: 1.08;
   letter-spacing: -0.04em;
-  color: #1f2937;
+  color: var(--ink);
 }
 
 .panel-heading p {
   margin: 0;
-  color: #6b7280;
+  color: var(--muted);
   font-size: 1rem;
 }
 
 .login-card {
   padding: 1.4rem;
   border-radius: 1.5rem;
-  border: 1px solid #e7e9ee;
+  border: 1px solid var(--border);
   box-shadow: 0 20px 55px rgba(17, 24, 39, 0.08);
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(24px);
@@ -282,14 +371,14 @@ select {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  color: #6b7280;
+  color: var(--muted);
 }
 
 .login-card__tenant h3 {
   margin-top: 0.2rem;
   font-size: 1.05rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--ink);
 }
 
 .login-form {
@@ -332,7 +421,7 @@ select {
   border-radius: 1rem;
   border: 1px solid rgba(220, 38, 38, 0.18);
   background: rgba(220, 38, 38, 0.06);
-  color: var(--error, #dc2626);
+  color: var(--error);
   font-size: 0.92rem;
 }
 
@@ -342,9 +431,6 @@ select {
   border-radius: 1rem;
   transition: transform 200ms ease, box-shadow 200ms ease, background-color 200ms ease,
     border-color 200ms ease;
-}
-
-.login-submit {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -372,7 +458,7 @@ select {
 .login-help {
   margin: 1rem 0 0;
   text-align: center;
-  color: #6b7280;
+  color: var(--muted);
   font-size: 0.95rem;
 }
 
@@ -385,7 +471,7 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  color: #6b7280;
+  color: var(--muted);
   font-size: 0.88rem;
 }
 
@@ -402,7 +488,7 @@ select {
 }
 
 .login-meta__item strong {
-  color: #1f2937;
+  color: var(--ink);
   font-weight: 600;
 }
 
@@ -415,7 +501,7 @@ select {
   width: 0.7rem;
   height: 0.7rem;
   border-radius: 999px;
-  background: #16a34a;
+  background: var(--success);
   box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.12);
 }
 
@@ -502,10 +588,12 @@ select {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .benefit-card,
-  .login-submit,
-  .login-form__meta a,
-  .login-help a {
-    transition: none;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

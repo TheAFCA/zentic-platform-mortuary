@@ -16,7 +16,7 @@
       </div>
     </div>
 
-    <nav class="dashboard-layout__nav" *ngIf="router.url.startsWith('/super-admin')">
+    <nav class="dashboard-layout__nav" *ngIf="isSuperAdmin">
       <p class="dashboard-layout__nav-eyebrow">Plataforma</p>
       <a
         *ngFor="let item of superAdminNavItems"
@@ -29,25 +29,72 @@
       </a>
     </nav>
 
-    <nav class="dashboard-layout__nav" *ngIf="!router.url.startsWith('/super-admin')">
-      <p class="dashboard-layout__nav-eyebrow">Panel</p>
-      <ng-container *ngFor="let item of tenantAdminNavItems">
-        <a
-          *appHasPermission="item.permission ?? []"
-          class="dashboard-layout__nav-link"
-          routerLinkActive="dashboard-layout__nav-link--active"
-          [routerLink]="item.path"
+    <nav class="dashboard-layout__nav" *ngIf="!isSuperAdmin">
+      <ng-container *ngFor="let section of tenantAdminNavSections">
+        <button
+          type="button"
+          class="dashboard-layout__nav-eyebrow"
+          (click)="toggleSection(section.title)"
         >
-          <mat-icon>{{ item.icon }}</mat-icon>
-          <span>{{ item.label }}</span>
-        </a>
+          <span>{{ section.title }}</span>
+          <mat-icon class="dashboard-layout__nav-chevron">
+            {{ expandedSections()[section.title] ? 'expand_less' : 'expand_more' }}
+          </mat-icon>
+        </button>
+        <div *ngIf="expandedSections()[section.title]" class="dashboard-layout__nav-items">
+          <ng-container *ngFor="let item of section.items">
+            <a
+              *appHasPermission="item.permission ?? []"
+              class="dashboard-layout__nav-link"
+              routerLinkActive="dashboard-layout__nav-link--active"
+              [routerLink]="item.path"
+            >
+              <mat-icon>{{ item.icon }}</mat-icon>
+              <span>{{ item.label }}</span>
+            </a>
+          </ng-container>
+        </div>
       </ng-container>
     </nav>
+
+    <div class="dashboard-layout__nav-footer">
+      <button type="button" class="dashboard-layout__logout-btn" (click)="logout()">
+        <mat-icon>logout</mat-icon>
+        <span>Cerrar sesión</span>
+      </button>
+    </div>
   </mat-sidenav>
 
   <mat-sidenav-content>
     <mat-toolbar class="dashboard-layout__toolbar">
-      <!-- TODO: HeaderComponent — implement in Module 05 -->
+      <div class="dashboard-layout__toolbar-left">
+        <button
+          type="button"
+          mat-icon-button
+          class="dashboard-layout__menu-toggle"
+          aria-label="Toggle navigation"
+        >
+          <mat-icon>menu</mat-icon>
+        </button>
+        <span class="dashboard-layout__toolbar-title">Homena</span>
+      </div>
+      <div class="dashboard-layout__toolbar-right">
+        <span class="dashboard-layout__user-email">{{ userEmail }}</span>
+        <button
+          type="button"
+          mat-icon-button
+          [matMenuTriggerFor]="menu"
+          aria-label="User menu"
+        >
+          <mat-icon>account_circle</mat-icon>
+        </button>
+        <mat-menu #menu="matMenu">
+          <button mat-menu-item (click)="logout()">
+            <mat-icon>logout</mat-icon>
+            <span>Cerrar sesión</span>
+          </button>
+        </mat-menu>
+      </div>
     </mat-toolbar>
     <main class="dashboard-layout__main">
       <router-outlet />

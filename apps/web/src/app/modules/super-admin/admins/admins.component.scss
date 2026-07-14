@@ -81,11 +81,11 @@
 .admins-page__create-row {
   display: flex;
   gap: 0.75rem;
-}
 
-.admins-page__create-row input {
-  flex: 1;
-  @include panel.sa-pill-input;
+  input {
+    flex: 1;
+    @include panel.sa-pill-input;
+  }
 }
 
 .panel-card {

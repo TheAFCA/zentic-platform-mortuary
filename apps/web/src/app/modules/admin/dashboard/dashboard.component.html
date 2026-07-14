@@ -1,6 +1,9 @@
-<div>
-  <h1 class="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="dashboard">
+  <div class="dashboard__header">
+    <p class="dashboard__eyebrow">Panel de control</p>
+    <h1 class="dashboard__title">Dashboard</h1>
+  </div>
+  <div class="dashboard__grid">
     <app-stat-card
       label="Eventos activos hoy"
       [value]="loading() ? '—' : (metrics()?.activeEventsToday ?? 0)"
