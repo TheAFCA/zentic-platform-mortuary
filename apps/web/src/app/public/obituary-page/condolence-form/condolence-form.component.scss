@@ -1,0 +1,67 @@
+.condolence-form {
+  display: grid;
+  gap: 0.85rem;
+  max-width: 32rem;
+  margin: 0 auto;
+}
+
+.condolence-form__title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.condolence-form__error {
+  margin: 0;
+  padding: 0.65rem 0.9rem;
+  border-radius: 0.75rem;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.85rem;
+}
+
+.condolence-form__field {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1f2937;
+
+  input,
+  textarea {
+    font: inherit;
+    font-weight: 400;
+    border: 1px solid #e7e9ee;
+    border-radius: 0.75rem;
+    padding: 0.6rem 0.8rem;
+
+    &:focus {
+      outline: none;
+      border-color: rgba(15, 94, 89, 0.4);
+      box-shadow: 0 0 0 4px rgba(15, 94, 89, 0.1);
+    }
+  }
+}
+
+.condolence-form__submit {
+  justify-self: start;
+  border: 0;
+  border-radius: 0.85rem;
+  padding: 0.65rem 1.4rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #0f5e59, #0b4c48);
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.condolence-form__success {
+  text-align: center;
+  color: #0f5e59;
+  font-weight: 600;
+}

@@ -280,6 +280,8 @@ model Deceased {
   lastName  String
   birthDate DateTime?
   deathDate DateTime?
+  birthCity String?
+  deathCity String?
   biography String?   @db.Text
   epitaph   String?   @db.VarChar(150)
   photoUrl  String?
@@ -291,6 +293,7 @@ model Deceased {
   obituary Obituary?
 
   @@index([tenantId])
+  @@index([tenantId, deathDate])
 }
 
 // =============================================================================
@@ -372,8 +375,9 @@ model Obituary {
   deceased    Deceased       @relation(fields: [deceasedId], references: [id])
   eventId     String?
   slug        String         @unique
-  content     String         @db.Text
+  content     String?        @db.Text // deprecated, no usar — ver Deceased.biography
   status      ObituaryStatus @default(DRAFT)
+  isPublic    Boolean        @default(true)
   accessCode  String?
   publishedAt DateTime?
   createdAt   DateTime       @default(now())
@@ -394,7 +398,10 @@ model ObituaryMessage {
   obituary   Obituary      @relation(fields: [obituaryId], references: [id])
   authorName String
   content    String        @db.Text
+  iconType   String?
   status     MessageStatus @default(PENDING)
+  approvedBy String?
+  approvedAt DateTime?
   createdAt  DateTime      @default(now())
   deletedAt  DateTime?
 

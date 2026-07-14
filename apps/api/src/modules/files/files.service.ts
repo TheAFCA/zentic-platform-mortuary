@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
-import { mkdir, unlink, writeFile } from 'fs/promises';
+import { mkdir, readFile, unlink, writeFile } from 'fs/promises';
 import { join, normalize } from 'path';
 
 const UPLOADS_ROOT = join(process.cwd(), 'uploads');
@@ -10,6 +10,7 @@ const MIME_EXTENSIONS: Record<string, string> = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
   'image/svg+xml': 'svg',
+  'image/webp': 'webp',
 };
 
 export interface UploadableFile {
@@ -75,6 +76,27 @@ export class FilesService {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
         throw error;
       }
+    }
+  }
+
+  /**
+   * Lee el archivo en disco a partir de la URL pública devuelta por upload().
+   * TODO(post-HU5): al migrar a R2/S3 esto pasa a ser un fetch HTTP a la URL firmada.
+   */
+  async readLocalFile(fileUrl: string): Promise<Buffer | null> {
+    const marker = '/uploads/';
+    const index = fileUrl.indexOf(marker);
+    if (index === -1) return null;
+
+    const relativePath = fileUrl.slice(index + marker.length);
+    const filePath = normalize(join(UPLOADS_ROOT, relativePath));
+    if (!filePath.startsWith(UPLOADS_ROOT)) return null;
+
+    try {
+      return await readFile(filePath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      throw error;
     }
   }
 }

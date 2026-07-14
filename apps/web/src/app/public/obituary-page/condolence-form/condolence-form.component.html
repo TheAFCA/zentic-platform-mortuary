@@ -1,0 +1,46 @@
+<form
+  class="condolence-form"
+  [formGroup]="form"
+  (ngSubmit)="submit()"
+  *ngIf="!success(); else successState"
+>
+  <h3 class="condolence-form__title">Deja un mensaje de condolencia</h3>
+  <p class="condolence-form__error" *ngIf="errorMessage()" data-testid="condolence-form-error">
+    {{ errorMessage() }}
+  </p>
+
+  <label class="condolence-form__field">
+    Tu nombre
+    <input type="text" formControlName="authorName" data-testid="condolence-author-input" />
+  </label>
+
+  <label class="condolence-form__field">
+    Tu mensaje
+    <textarea
+      rows="3"
+      maxlength="500"
+      formControlName="content"
+      data-testid="condolence-content-input"
+    ></textarea>
+  </label>
+
+  <label class="condolence-form__field" *ngIf="requiresAccessCode && !prefilledAccessCode">
+    Código de acceso
+    <input type="text" formControlName="accessCode" data-testid="condolence-access-code-input" />
+  </label>
+
+  <button
+    type="submit"
+    class="condolence-form__submit"
+    [disabled]="submitting()"
+    data-testid="condolence-form-submit"
+  >
+    Enviar mensaje
+  </button>
+</form>
+
+<ng-template #successState>
+  <p class="condolence-form__success" data-testid="condolence-form-success">
+    Tu mensaje fue enviado y será revisado antes de publicarse.
+  </p>
+</ng-template>

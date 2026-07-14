@@ -1,0 +1,136 @@
+@use '../../../shared/styles/panel' as panel;
+
+.obituary-detail {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 60rem;
+}
+
+.obituary-detail__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.obituary-detail__error {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
+
+.obituary-detail__loading {
+  color: panel.$muted;
+}
+
+.panel-card {
+  @include panel.panel-card;
+}
+
+.panel-card__header {
+  padding: 1.35rem 1.5rem 0.75rem;
+}
+
+.panel-card__header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: panel.$ink;
+}
+
+.panel-card__body {
+  padding: 1rem 1.5rem;
+}
+
+.obituary-detail__profile {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.obituary-detail__photo {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: 0 0 auto;
+}
+
+.obituary-detail__info {
+  display: grid;
+  gap: 0.5rem;
+  flex: 1 1 20rem;
+}
+
+.obituary-detail__name {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: panel.$ink;
+}
+
+.obituary-detail__dates {
+  margin: 0;
+  display: flex;
+  gap: 1rem;
+  color: panel.$muted;
+  font-size: 0.9rem;
+}
+
+.obituary-detail__epitaph {
+  margin: 0;
+  font-style: italic;
+  color: panel.$ink;
+}
+
+.obituary-detail__biography {
+  color: panel.$ink;
+  line-height: 1.6;
+}
+
+.obituary-detail__actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  border-top: 1px solid panel.$border;
+}
+
+.obituary-detail__share {
+  border-top: 1px solid panel.$border;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.obituary-detail__share-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: panel.$muted;
+}
+
+.obituary-detail__share-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.obituary-detail__share-input {
+  @include panel.sa-pill-input;
+  flex: 1;
+  color: panel.$muted;
+}
+
+.btn-primary {
+  @include panel.primary-button;
+}
+
+.btn-ghost {
+  @include panel.ghost-button;
+}
+
+.btn-ghost--sm {
+  min-height: 2.25rem;
+  padding: 0 0.9rem;
+  font-size: 0.85rem;
+}

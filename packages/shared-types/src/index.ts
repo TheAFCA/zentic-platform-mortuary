@@ -610,6 +610,75 @@ export interface Client {
   updatedAt: string;
 }
 
+// ---------- Obituarios (Módulo 07) -------------------------------------------
+
+export interface Deceased {
+  id: string;
+  tenantId: string;
+  firstName: string;
+  lastName: string;
+  birthDate: string | null;
+  deathDate: string | null;
+  birthCity: string | null;
+  deathCity: string | null;
+  biography: string | null;
+  epitaph: string | null;
+  photoUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Obituary {
+  id: string;
+  tenantId: string;
+  deceasedId: string;
+  eventId: string | null;
+  slug: string;
+  status: ObituaryStatus;
+  isPublic: boolean;
+  accessCode: string | null;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deceased: Deceased;
+}
+
+export interface ObituaryMessage {
+  id: string;
+  obituaryId: string;
+  authorName: string;
+  content: string;
+  iconType: string | null;
+  status: MessageStatus;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  createdAt: string;
+}
+
+/** Evento de streaming vinculado, forma reducida para la vista pública del obituario. */
+export interface PublicObituaryEvent {
+  slug: string;
+  status: EventStatus;
+}
+
+/**
+ * Respuesta de GET /obituaries/:slug/public — sin datos internos del tenant.
+ * Cuando el obituario tiene isPublic=false y no se envió (o fue incorrecto) el accessCode,
+ * accessGranted es false y el resto de campos de contenido vienen vacíos/null — el frontend
+ * debe mostrar un formulario para ingresar el código en vez del contenido.
+ */
+export interface PublicObituary {
+  slug: string;
+  status: ObituaryStatus;
+  isPublic: boolean;
+  publishedAt: string | null;
+  accessGranted: boolean;
+  deceased: Deceased | null;
+  event: PublicObituaryEvent | null;
+  streamingAction: 'LIVE' | 'RECORDING' | null;
+  approvedMessages: ObituaryMessage[];
+}
+
 // ---------- Sedes / Salas (Módulo 05) -----------------------------------------
 
 export interface Room {

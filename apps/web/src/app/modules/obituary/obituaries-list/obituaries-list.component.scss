@@ -1,0 +1,104 @@
+@use '../../../shared/styles/panel' as panel;
+
+.obituaries-page {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 72rem;
+}
+
+.obituaries-page__header {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.obituaries-page__eyebrow {
+  @include panel.eyebrow;
+}
+
+.obituaries-page__title {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: panel.$ink;
+}
+
+.obituaries-page__subtitle {
+  margin: 0;
+  color: panel.$muted;
+}
+
+.obituaries-page__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.obituaries-page__search {
+  @include panel.sa-pill-input;
+  min-width: 16rem;
+}
+
+.obituaries-page__filter {
+  @include panel.sa-pill-input;
+}
+
+.panel-card {
+  @include panel.panel-card;
+}
+
+.panel-card__header {
+  padding: 1.35rem 1.5rem 0.75rem;
+}
+
+.panel-card__header--split {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.panel-card__header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: panel.$ink;
+}
+
+.panel-card__count {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  color: panel.$muted;
+}
+
+.panel-card__body {
+  padding: 0.75rem 1.5rem 1.5rem;
+}
+
+.panel-card__body--flush {
+  padding: 0.5rem 0 0.25rem;
+}
+
+.btn-primary {
+  @include panel.primary-button;
+}
+
+.btn-ghost {
+  @include panel.ghost-button;
+}
+
+.btn-ghost--sm {
+  min-height: 2.25rem;
+  padding: 0 0.9rem;
+  font-size: 0.85rem;
+}
+
+.obituaries-table__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
