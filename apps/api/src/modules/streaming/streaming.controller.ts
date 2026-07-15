@@ -10,6 +10,7 @@ import {
   Ip,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { StreamingService } from './streaming.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
@@ -69,6 +70,13 @@ export class StreamingController {
   @RequirePermission('streaming:read')
   findOne(@TenantId() tenantId: string, @Param('id') id: string) {
     return this.streamingService.findOne(tenantId, id);
+  }
+
+  /** Obtiene las credenciales RTMP para configurar el emisor. */
+  @Get(':id/credentials')
+  @RequirePermission('streaming:manage')
+  getCredentials(@TenantId() tenantId: string, @Param('id') id: string) {
+    return this.streamingService.getCredentials(tenantId, id);
   }
 
   /**
@@ -159,6 +167,7 @@ export class StreamingController {
    */
   @Post(':slug/messages')
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   sendMessage(@Param('slug') slug: string, @Body() dto: SendMessageDto) {
     return this.streamingService.sendMessage(slug, dto);
   }
@@ -171,6 +180,7 @@ export class StreamingController {
    */
   @Post(':slug/reactions')
   @Public()
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   sendReaction(
     @Param('slug') slug: string,
     @Body() dto: SendReactionDto,
@@ -187,6 +197,7 @@ export class StreamingController {
    */
   @Post(':slug/access')
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   validateAccessCode(@Param('slug') slug: string, @Body() dto: AccessCodeDto) {
     return this.streamingService.validateAccessCode(slug, dto);
   }

@@ -10,11 +10,17 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import { WsException } from '@nestjs/websockets';
 import {
+  JwtPayload,
   WsNewMessage,
   WsViewerCount,
   WsStreamStatus,
+  UserRole,
 } from '@zentic/shared-types';
+import { PrismaService } from '../../prisma/prisma.service';
 
 /**
  * Gateway WebSocket para el módulo de Streaming.
@@ -51,12 +57,20 @@ export class NotificationsGateway
   /** socketId -> eventId, para saber a qué evento pertenecía un socket al desconectarse. */
   private readonly socketToEvent = new Map<string, string>();
 
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {}
+
   afterInit(_server: Server) {
     this.logger.log('WebSocket gateway initialized');
   }
 
-  handleConnection(client: Socket) {
+  async handleConnection(client: Socket) {
     this.logger.log(`Client connected: ${client.id}`);
+    const user = await this.authenticateClient(client);
+    if (user) this.socketData(client).user = user;
   }
 
   handleDisconnect(client: Socket) {
@@ -119,6 +133,27 @@ export class NotificationsGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { eventId: string },
   ) {
+    const user =
+      this.socketData(client).user ?? (await this.authenticateClient(client));
+    if (!user || !this.canModerate(user)) {
+      throw new WsException('No autorizado para moderar este evento');
+    }
+
+    const event = await this.prisma.event.findFirst({
+      where: { id: data.eventId, deletedAt: null },
+      select: { tenantId: true },
+    });
+    const effectiveTenantId = user.impersonatedTenantId ?? user.tenantId;
+    if (
+      !event ||
+      (user.role !== UserRole.SUPER_ADMIN &&
+        event.tenantId !== effectiveTenantId) ||
+      (user.impersonatedTenantId && event.tenantId !== effectiveTenantId)
+    ) {
+      throw new WsException('No autorizado para moderar este evento');
+    }
+
+    this.socketData(client).user = user;
     await client.join(`event:${data.eventId}:admin`);
     this.removeViewer(data.eventId, client.id);
     this.logger.log(`Admin ${client.id} joined admin room: ${data.eventId}`);
@@ -213,5 +248,73 @@ export class NotificationsGateway
    */
   broadcastReaction(eventId: string, payload: WsNewMessage) {
     this.server.to(`event:${eventId}`).emit('new-reaction', payload);
+  }
+
+  private canModerate(user: JwtPayload): boolean {
+    return (
+      user.role === UserRole.SUPER_ADMIN ||
+      user.role === UserRole.TENANT_ADMIN ||
+      user.permissions.includes('streaming:moderate')
+    );
+  }
+
+  private socketData(client: Socket): { user?: JwtPayload } {
+    return client.data as { user?: JwtPayload };
+  }
+
+  private async authenticateClient(client: Socket): Promise<JwtPayload | null> {
+    const token = this.extractAccessToken(client);
+    if (!token) return null;
+
+    try {
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
+        secret: this.config.getOrThrow('JWT_SECRET'),
+      });
+      const user = await this.prisma.user.findFirst({
+        where: { id: payload.sub, deletedAt: null },
+        select: {
+          email: true,
+          role: true,
+          tenantId: true,
+          lockedUntil: true,
+          permissions: { select: { permission: true } },
+        },
+      });
+      if (!user || (user.lockedUntil && user.lockedUntil > new Date())) {
+        return null;
+      }
+
+      return {
+        ...payload,
+        email: user.email,
+        role: user.role as UserRole,
+        tenantId: user.tenantId,
+        permissions: user.permissions.map(
+          ({ permission }) => permission as JwtPayload['permissions'][number],
+        ),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private extractAccessToken(client: Socket): string | null {
+    const authToken = (client.handshake.auth as { token?: unknown } | undefined)
+      ?.token;
+    if (typeof authToken === 'string' && authToken.trim()) {
+      return authToken.trim();
+    }
+
+    const cookieHeader = client.handshake.headers.cookie;
+    if (!cookieHeader) return null;
+    for (const pair of cookieHeader.split(';')) {
+      const separator = pair.indexOf('=');
+      if (separator < 0) continue;
+      const key = pair.slice(0, separator).trim();
+      if (key === 'access_token') {
+        return decodeURIComponent(pair.slice(separator + 1).trim());
+      }
+    }
+    return null;
   }
 }

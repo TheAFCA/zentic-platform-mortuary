@@ -370,7 +370,7 @@ export class EventPageComponent {
   readonly reactions = REACTION_ICONS;
 
   /** Mapa de iconos por tipo */
-  readonly iconMap: Record<string, string> = {
+  readonly iconMap: Partial<Record<string, string>> = {
     HEART: '❤️',
     CANDLE: '🕯️',
     FLOWER: '🌸',
@@ -423,7 +423,7 @@ export class EventPageComponent {
         this.loading.set(false);
         this.eventId = ev.id;
 
-        if (ev.isPublic || ev.status === EventStatus.FINISHED) {
+        if (ev.isPublic) {
           this.accessGranted.set(true);
           this.connectSocket();
         }

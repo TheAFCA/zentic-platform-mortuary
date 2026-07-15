@@ -18,9 +18,8 @@ export interface StreamingEvent {
   finishedAt: string | null;
   estimatedDuration: number | null;
   isPublic: boolean;
-  accessCode: string | null;
-  streamKey: string | null;
-  rtmpUrl: string | null;
+  streamKey?: string | null;
+  rtmpUrl?: string | null;
   recordingUrl: string | null;
   viewerCount: number;
   moderationMode: string;
@@ -150,6 +149,11 @@ export interface AccessCodeInput {
   consent?: boolean;
 }
 
+export interface StreamCredentials {
+  streamKey: string | null;
+  rtmpUrl: string | null;
+}
+
 /**
  * Servicio HTTP para el módulo de Streaming.
  *
@@ -169,6 +173,11 @@ export class StreamingApiService {
   /** Obtiene el detalle completo de un evento por ID */
   findOne(id: string) {
     return this.http.get<StreamingEvent>(`${environment.apiUrl}/events/${id}`);
+  }
+
+  /** Obtiene credenciales RTMP; requiere el permiso streaming:manage. */
+  getCredentials(id: string) {
+    return this.http.get<StreamCredentials>(`${environment.apiUrl}/events/${id}/credentials`);
   }
 
   /** Obtiene datos públicos de un evento por slug (sin auth) */

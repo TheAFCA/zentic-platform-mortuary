@@ -257,7 +257,12 @@ describe('StreamingService', () => {
 
       const result = await service.findAll(tenantId);
 
-      expect(result).toEqual(events);
+      expect(result).toEqual([
+        expect.objectContaining({ id: eventId, title: baseEvent.title }),
+      ]);
+      expect(result[0]).not.toHaveProperty('streamKey');
+      expect(result[0]).not.toHaveProperty('rtmpUrl');
+      expect(result[0]).not.toHaveProperty('accessCode');
       expect(mockRepo.findManyByTenant).toHaveBeenCalledWith(tenantId);
     });
   });
@@ -268,8 +273,22 @@ describe('StreamingService', () => {
 
       const result = await service.findOne(tenantId, eventId);
 
-      expect(result).toEqual(mockEventFindById);
+      expect(result).toEqual(
+        expect.objectContaining({ id: eventId, title: baseEvent.title }),
+      );
+      expect(result).not.toHaveProperty('streamKey');
+      expect(result).not.toHaveProperty('rtmpUrl');
+      expect(result).not.toHaveProperty('accessCode');
       expect(mockRepo.findById).toHaveBeenCalledWith(tenantId, eventId);
+    });
+
+    it('should expose credentials only through getCredentials', async () => {
+      mockRepo.findById.mockResolvedValue(mockEventFindById as any);
+
+      await expect(service.getCredentials(tenantId, eventId)).resolves.toEqual({
+        streamKey: baseEvent.streamKey,
+        rtmpUrl: baseEvent.rtmpUrl,
+      });
     });
 
     it('should throw NotFoundException when event not found', async () => {
@@ -347,6 +366,19 @@ describe('StreamingService', () => {
       const result = await service.findPublic('finished-event');
 
       expect(result.recordingUrl).toBe(recordingUrl);
+    });
+
+    it('should not expose a finished recording for a private event', async () => {
+      mockRepo.findBySlug.mockResolvedValue({
+        ...mockEventFindBySlug,
+        isPublic: false,
+        status: 'FINISHED',
+        recordingUrl: 'https://example.com/private-recording.mp4',
+      } as any);
+
+      const result = await service.findPublic('private-finished-event');
+
+      expect(result.recordingUrl).toBeNull();
     });
   });
 
@@ -621,6 +653,21 @@ describe('StreamingService', () => {
       );
       expect(mockRepo.softDelete).not.toHaveBeenCalled();
     });
+
+    it.each(['LIVE', 'PAUSED'] as const)(
+      'should reject cancelling an event in %s state',
+      async (status) => {
+        mockRepo.findById.mockResolvedValue({
+          ...mockEventFindById,
+          status,
+        } as any);
+
+        await expect(service.remove(tenantId, eventId)).rejects.toThrow(
+          ConflictException,
+        );
+        expect(mockRepo.softDelete).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe('startStream', () => {
@@ -640,7 +687,10 @@ describe('StreamingService', () => {
         tenantId,
         status: EventStatus.LIVE,
       });
-      expect(result).toEqual(updatedEvent);
+      expect(result).toEqual(
+        expect.objectContaining({ id: eventId, status: 'LIVE' }),
+      );
+      expect(result).not.toHaveProperty('streamKey');
     });
 
     it('should throw BadRequestException when event is not SCHEDULED', async () => {
@@ -737,7 +787,10 @@ describe('StreamingService', () => {
         tenantId,
         status: EventStatus.FINISHED,
       });
-      expect(result).toEqual(updatedEvent);
+      expect(result).toEqual(
+        expect.objectContaining({ id: eventId, status: 'FINISHED' }),
+      );
+      expect(result).not.toHaveProperty('streamKey');
     });
 
     it('should stop a PAUSED stream', async () => {

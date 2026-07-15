@@ -31,7 +31,6 @@ describe('StreamingApiService', () => {
     finishedAt: null,
     estimatedDuration: 60,
     isPublic: true,
-    accessCode: null,
     streamKey: null,
     rtmpUrl: null,
     recordingUrl: null,
@@ -143,6 +142,23 @@ describe('StreamingApiService', () => {
 
       const req = httpMock.expectOne(`${baseUrl}/events/nonexistent`);
       req.flush('Not found', { status: 404, statusText: 'Not Found' });
+    });
+  });
+
+  describe('getCredentials', () => {
+    it('should request credentials from the protected endpoint', () => {
+      const credentials = {
+        streamKey: 'stream-secret',
+        rtmpUrl: 'rtmps://example.com/live',
+      };
+
+      service.getCredentials('event-1').subscribe((result) => {
+        expect(result).toEqual(credentials);
+      });
+
+      const req = httpMock.expectOne(`${baseUrl}/events/event-1/credentials`);
+      expect(req.request.method).toBe('GET');
+      req.flush(credentials);
     });
   });
 

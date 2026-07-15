@@ -14,6 +14,7 @@ describe('StreamingController', () => {
   const mockService = {
     findAll: jest.fn(),
     findOne: jest.fn(),
+    getCredentials: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
@@ -73,6 +74,21 @@ describe('StreamingController', () => {
 
       expect(service.findOne).toHaveBeenCalledTimes(1);
       expect(service.findOne).toHaveBeenCalledWith(tenantId, id);
+      expect(result).toBe(expected);
+    });
+  });
+
+  describe('getCredentials', () => {
+    it('should request credentials for the tenant event', async () => {
+      const expected = { streamKey: 'secret', rtmpUrl: 'rtmps://example' };
+      service.getCredentials.mockResolvedValue(expected);
+
+      const result = await controller.getCredentials('tenant-1', 'event-1');
+
+      expect(service.getCredentials).toHaveBeenCalledWith(
+        'tenant-1',
+        'event-1',
+      );
       expect(result).toBe(expected);
     });
   });

@@ -46,6 +46,7 @@ describe('StreamingSocketService', () => {
 
       expect(io).toHaveBeenCalledWith('http://localhost:3000/events', {
         transports: ['websocket', 'polling'],
+        withCredentials: true,
       });
     });
 

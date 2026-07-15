@@ -90,6 +90,7 @@ export class StreamingSocketService implements OnDestroy {
 
     this.socket = io(`${environment.wsUrl}/events`, {
       transports: ['websocket', 'polling'],
+      withCredentials: true,
     });
 
     this.socket.on('connect', () => {

@@ -70,7 +70,8 @@ export class StreamingService {
    * @returns Lista completa de eventos con relaciones
    */
   async findAll(tenantId: string) {
-    return this.repo.findManyByTenant(tenantId);
+    const events = await this.repo.findManyByTenant(tenantId);
+    return events.map((event) => this.withoutStreamingSecrets(event));
   }
 
   /**
@@ -82,6 +83,20 @@ export class StreamingService {
    * @returns Evento con todas las relaciones (deceased, room, venue)
    */
   async findOne(tenantId: string, id: string) {
+    const event = await this.findOneEntity(tenantId, id);
+    return this.withoutStreamingSecrets(event);
+  }
+
+  /** Obtiene las credenciales RTMP únicamente para operadores autorizados. */
+  async getCredentials(tenantId: string, id: string) {
+    const event = await this.findOneEntity(tenantId, id);
+    return {
+      streamKey: event.streamKey,
+      rtmpUrl: event.rtmpUrl,
+    };
+  }
+
+  private async findOneEntity(tenantId: string, id: string) {
     const event = await this.repo.findById(tenantId, id);
     if (!event) throw new NotFoundException('Evento no encontrado');
     return event;
@@ -110,7 +125,10 @@ export class StreamingService {
       scheduledAt: event.scheduledAt,
       startedAt: event.startedAt,
       finishedAt: event.finishedAt,
-      recordingUrl: event.status === 'FINISHED' ? event.recordingUrl : null,
+      recordingUrl:
+        event.isPublic && event.status === 'FINISHED'
+          ? event.recordingUrl
+          : null,
       isPublic: event.isPublic,
       viewerCount: event.viewerCount,
       deceased: event.deceased,
@@ -213,12 +231,13 @@ export class StreamingService {
     const { streamKey, rtmpUrl, providerStreamId } =
       await this.provider.createLiveStream();
 
-    return this.repo.update(tenantId, event.id, {
+    const provisioned = await this.repo.update(tenantId, event.id, {
       streamKey,
       rtmpUrl,
       provider: this.provider.name,
       providerStreamId,
     });
+    return this.withoutStreamingSecrets(provisioned);
   }
 
   /**
@@ -233,7 +252,7 @@ export class StreamingService {
    * @returns El evento actualizado
    */
   async update(tenantId: string, id: string, dto: UpdateEventDto) {
-    const event = await this.findOne(tenantId, id);
+    const event = await this.findOneEntity(tenantId, id);
     if (event.status === 'LIVE' || event.status === 'FINISHED') {
       throw new BadRequestException(
         'No se puede modificar un evento en curso o finalizado',
@@ -277,7 +296,8 @@ export class StreamingService {
       updateData.deceased = { connect: { id: dto.deceasedId } };
     }
 
-    return this.repo.update(tenantId, id, updateData);
+    const updated = await this.repo.update(tenantId, id, updateData);
+    return this.withoutStreamingSecrets(updated);
   }
 
   /**
@@ -290,8 +310,14 @@ export class StreamingService {
    * @returns El evento cancelado
    */
   async remove(tenantId: string, id: string) {
-    await this.findOne(tenantId, id);
-    return this.repo.softDelete(tenantId, id);
+    const event = await this.findOneEntity(tenantId, id);
+    if (event.status === 'LIVE' || event.status === 'PAUSED') {
+      throw new ConflictException(
+        'No se puede cancelar un evento con una transmisión activa',
+      );
+    }
+    const removed = await this.repo.softDelete(tenantId, id);
+    return this.withoutStreamingSecrets(removed);
   }
 
   // ── Stream lifecycle ────────────────────────────────────────────────
@@ -307,7 +333,7 @@ export class StreamingService {
    * @returns El evento actualizado a LIVE
    */
   async startStream(tenantId: string, id: string) {
-    const event = await this.findOne(tenantId, id);
+    const event = await this.findOneEntity(tenantId, id);
 
     if (event.status !== 'SCHEDULED') {
       throw new BadRequestException(
@@ -340,7 +366,7 @@ export class StreamingService {
     await this.notifyLeadsStreamStarted(event.slug, event.title, id);
 
     this.logger.log(`Stream started: ${id}`);
-    return updated;
+    return this.withoutStreamingSecrets(updated);
   }
 
   /**
@@ -390,7 +416,7 @@ export class StreamingService {
    * @returns El evento actualizado a FINISHED
    */
   async stopStream(tenantId: string, id: string) {
-    const event = await this.findOne(tenantId, id);
+    const event = await this.findOneEntity(tenantId, id);
 
     if (event.status !== 'LIVE' && event.status !== 'PAUSED') {
       throw new BadRequestException(
@@ -414,7 +440,7 @@ export class StreamingService {
     });
 
     this.logger.log(`Stream finished: ${id}`);
-    return updated;
+    return this.withoutStreamingSecrets(updated);
   }
 
   // ── Messages ────────────────────────────────────────────────────────
@@ -427,7 +453,7 @@ export class StreamingService {
    * @returns Lista de mensajes aprobados
    */
   async getMessages(tenantId: string, eventId: string) {
-    await this.findOne(tenantId, eventId);
+    await this.findOneEntity(tenantId, eventId);
     return this.repo.findMessagesByEvent(tenantId, eventId);
   }
 
@@ -439,7 +465,7 @@ export class StreamingService {
    * @returns Lista de mensajes en estado PENDING
    */
   async getPendingMessages(tenantId: string, eventId: string) {
-    await this.findOne(tenantId, eventId);
+    await this.findOneEntity(tenantId, eventId);
     return this.repo.findMessagesPendingModeration(tenantId, eventId);
   }
 
@@ -504,7 +530,7 @@ export class StreamingService {
     messageId: string,
     approvedByUserId: string,
   ) {
-    await this.findOne(tenantId, eventId);
+    await this.findOneEntity(tenantId, eventId);
     const message = await this.repo.approveMessage(
       eventId,
       messageId,
@@ -541,7 +567,7 @@ export class StreamingService {
     messageId: string,
     reason?: string,
   ) {
-    await this.findOne(tenantId, eventId);
+    await this.findOneEntity(tenantId, eventId);
     return this.repo.rejectMessage(eventId, messageId, reason);
   }
 
@@ -556,7 +582,7 @@ export class StreamingService {
    * @returns El mensaje marcado como eliminado
    */
   async deleteMessage(tenantId: string, eventId: string, messageId: string) {
-    await this.findOne(tenantId, eventId);
+    await this.findOneEntity(tenantId, eventId);
     return this.repo.softDeleteMessage(eventId, messageId);
   }
 
@@ -750,5 +776,19 @@ export class StreamingService {
    */
   private hashAccessCode(code: string): string {
     return createHash('sha256').update(code).digest('hex');
+  }
+
+  /** Retira credenciales y hashes antes de devolver un evento por endpoints generales. */
+  private withoutStreamingSecrets<T extends Record<string, unknown>>(
+    event: T,
+  ): Omit<T, 'streamKey' | 'rtmpUrl' | 'accessCode' | 'providerStreamId'> {
+    const {
+      streamKey: _streamKey,
+      rtmpUrl: _rtmpUrl,
+      accessCode: _accessCode,
+      providerStreamId: _providerStreamId,
+      ...safeEvent
+    } = event;
+    return safeEvent;
   }
 }

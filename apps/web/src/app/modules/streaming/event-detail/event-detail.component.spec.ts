@@ -7,6 +7,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { DomSanitizer } from '@angular/platform-browser';
 import { of, Subject, throwError } from 'rxjs';
 import { EventStatus } from '@zentic/shared-types';
+import { AuthStateService } from '../../../core/services/auth-state.service';
 
 const mockDeceased = {
   id: 'dec-1',
@@ -34,7 +35,6 @@ const mockEvent = {
   finishedAt: null,
   estimatedDuration: 120,
   isPublic: true,
-  accessCode: null,
   viewerCount: 0,
   moderationMode: 'AUTO',
   createdAt: '2026-07-10T10:00:00Z',
@@ -68,6 +68,7 @@ interface SetupReturn {
   component: EventDetailComponent;
   api: {
     findOne: ReturnType<typeof vi.fn>;
+    getCredentials: ReturnType<typeof vi.fn>;
     startStream: ReturnType<typeof vi.fn>;
     stopStream: ReturnType<typeof vi.fn>;
     getMessages: ReturnType<typeof vi.fn>;
@@ -94,6 +95,7 @@ interface SetupReturn {
 function setup(overrides?: {
   apiOverrides?: Partial<{
     findOne: ReturnType<typeof vi.fn>;
+    getCredentials: ReturnType<typeof vi.fn>;
     startStream: ReturnType<typeof vi.fn>;
     stopStream: ReturnType<typeof vi.fn>;
     getMessages: ReturnType<typeof vi.fn>;
@@ -120,6 +122,9 @@ function setup(overrides?: {
 
   const apiDefaults: SetupReturn['api'] = {
     findOne: vi.fn().mockReturnValue(of(mockEvent)),
+    getCredentials: vi
+      .fn()
+      .mockReturnValue(of({ streamKey: 'zentic_abc123', rtmpUrl: 'rtmps://test.com/live' })),
     startStream: vi.fn().mockReturnValue(of(mockEvent)),
     stopStream: vi.fn().mockReturnValue(of(mockEvent)),
     getMessages: vi.fn().mockReturnValue(of(mockMessages)),
@@ -140,6 +145,10 @@ function setup(overrides?: {
       { provide: ActivatedRoute, useValue: route },
       { provide: StreamingApiService, useValue: api },
       { provide: StreamingSocketService, useValue: mockSocket },
+      {
+        provide: AuthStateService,
+        useValue: { hasPermission: vi.fn().mockReturnValue(true) },
+      },
       { provide: DomSanitizer, useValue: sanitizer },
     ],
   });
@@ -173,6 +182,7 @@ describe('EventDetailComponent', () => {
     expect(api.findOne).toHaveBeenCalledWith('evt-1');
     expect(component.event()?.id).toBe('evt-1');
     expect(component.loading()).toBe(false);
+    expect(api.getCredentials).toHaveBeenCalledWith('evt-1');
   });
 
   it('should show error state when event load fails', () => {

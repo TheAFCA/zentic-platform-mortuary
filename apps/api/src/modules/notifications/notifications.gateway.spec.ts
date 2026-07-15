@@ -1,20 +1,44 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import { UserRole } from '@zentic/shared-types';
+import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsGateway } from './notifications.gateway';
 
 describe('NotificationsGateway', () => {
   let gateway: NotificationsGateway;
   let emit: jest.Mock;
   let to: jest.Mock;
+  let prisma: {
+    event: { findFirst: jest.Mock };
+    user: { findFirst: jest.Mock };
+  };
 
   const makeSocket = (id: string) => ({
     id,
     join: jest.fn().mockResolvedValue(undefined),
     leave: jest.fn().mockResolvedValue(undefined),
+    data: {},
+    handshake: { auth: {}, headers: {} },
   });
 
   beforeEach(async () => {
+    prisma = {
+      event: {
+        findFirst: jest.fn().mockResolvedValue({ tenantId: 'tenant-1' }),
+      },
+      user: { findFirst: jest.fn() },
+    };
     const module: TestingModule = await Test.createTestingModule({
-      providers: [NotificationsGateway],
+      providers: [
+        NotificationsGateway,
+        { provide: JwtService, useValue: { verifyAsync: jest.fn() } },
+        {
+          provide: ConfigService,
+          useValue: { getOrThrow: jest.fn().mockReturnValue('jwt-secret') },
+        },
+        { provide: PrismaService, useValue: prisma },
+      ],
     }).compile();
 
     gateway = module.get(NotificationsGateway);
@@ -97,6 +121,15 @@ describe('NotificationsGateway', () => {
 
     it('excludes an operator joining admin mode from the viewer count', async () => {
       const client = makeSocket('socket-1');
+      client.data = {
+        user: {
+          sub: 'user-1',
+          email: 'operator@example.com',
+          role: UserRole.OPERATOR,
+          tenantId: 'tenant-1',
+          permissions: ['streaming:moderate'],
+        },
+      };
       await gateway.handleJoinEvent(client as any, { eventId: 'event-1' });
 
       await gateway.handleJoinAdmin(client as any, { eventId: 'event-1' });
@@ -107,6 +140,32 @@ describe('NotificationsGateway', () => {
         tenantId: '',
         count: 0,
       });
+    });
+
+    it('rejects an anonymous client joining an admin room', async () => {
+      await expect(
+        gateway.handleJoinAdmin(makeSocket('anonymous') as any, {
+          eventId: 'event-1',
+        }),
+      ).rejects.toThrow('No autorizado');
+    });
+
+    it('rejects a moderator from a different tenant', async () => {
+      const client = makeSocket('socket-2');
+      client.data = {
+        user: {
+          sub: 'user-2',
+          email: 'operator@example.com',
+          role: UserRole.OPERATOR,
+          tenantId: 'tenant-2',
+          permissions: ['streaming:moderate'],
+        },
+      };
+
+      await expect(
+        gateway.handleJoinAdmin(client as any, { eventId: 'event-1' }),
+      ).rejects.toThrow('No autorizado');
+      expect(client.join).not.toHaveBeenCalled();
     });
   });
 

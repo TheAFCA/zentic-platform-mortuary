@@ -14,6 +14,7 @@ import {
 } from '../../../core/services/streaming-api.service';
 import { StreamingSocketService } from '../../../core/services/streaming-socket.service';
 import { EventStatus } from '@zentic/shared-types';
+import { AuthStateService } from '../../../core/services/auth-state.service';
 
 @Component({
   selector: 'app-event-detail',
@@ -801,6 +802,7 @@ export class EventDetailComponent {
   private readonly api = inject(StreamingApiService);
   private readonly socket = inject(StreamingSocketService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly authState = inject(AuthStateService);
 
   readonly loading = signal(true);
   readonly error = signal('');
@@ -826,7 +828,7 @@ export class EventDetailComponent {
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   });
 
-  readonly iconMap: Record<string, string> = {
+  readonly iconMap: Partial<Record<string, string>> = {
     HEART: '❤️',
     CANDLE: '🕯️',
     FLOWER: '🌸',
@@ -877,13 +879,9 @@ export class EventDetailComponent {
     }
   }
 
-  get canManage(): () => boolean {
-    return () => true;
-  }
+  readonly canManage = computed(() => this.authState.hasPermission('streaming:manage'));
 
-  get canModerate(): () => boolean {
-    return () => true;
-  }
+  readonly canModerate = computed(() => this.authState.hasPermission('streaming:moderate'));
 
   statusLabel(status: string): string {
     return this.statusLabels[status] ?? status;
@@ -997,6 +995,10 @@ export class EventDetailComponent {
         this.loading.set(false);
         this.loadMessages();
 
+        if (ev.status === EventStatus.SCHEDULED && this.canManage()) {
+          this.loadCredentials();
+        }
+
         if (ev.status === EventStatus.LIVE || ev.status === EventStatus.PAUSED) {
           this.socket.connect(this.eventId, true);
         }
@@ -1004,6 +1006,19 @@ export class EventDetailComponent {
       error: (err: { message?: string }) => {
         this.error.set(err.message ?? 'Error al cargar evento');
         this.loading.set(false);
+      },
+    });
+  }
+
+  private loadCredentials(): void {
+    this.api.getCredentials(this.eventId).subscribe({
+      next: (credentials) => {
+        this.event.update((event) => (event ? { ...event, ...credentials } : event));
+      },
+      error: () => {
+        this.snackBar.open('No fue posible cargar las credenciales', 'Cerrar', {
+          duration: 3000,
+        });
       },
     });
   }

@@ -18,24 +18,27 @@ El módulo no debe considerarse listo para producción hasta completar las fases
 
 ## Definición de prioridades
 
-| Prioridad | Significado |
-| --- | --- |
-| P0 | Bloquea producción; riesgo crítico de seguridad o privacidad |
-| P1 | Riesgo alto o funcionalidad principal defectuosa |
-| P2 | Mejora necesaria de resiliencia, escalabilidad o experiencia |
-| P3 | Optimización o deuda técnica no bloqueante |
+| Prioridad | Significado                                                  |
+| --------- | ------------------------------------------------------------ |
+| P0        | Bloquea producción; riesgo crítico de seguridad o privacidad |
+| P1        | Riesgo alto o funcionalidad principal defectuosa             |
+| P2        | Mejora necesaria de resiliencia, escalabilidad o experiencia |
+| P3        | Optimización o deuda técnica no bloqueante                   |
 
 ## Fase 0: contención inmediata
 
 Estas tareas bloquean cualquier salida a producción.
 
-| ID | Tarea | Prioridad | Criterio de aceptación |
-| --- | --- | --- | --- |
-| SEC-01 | Deshabilitar `join-admin` para clientes no autenticados | P0 | Un socket anónimo no puede entrar a una sala administrativa |
-| SEC-02 | Ocultar `streamKey`, `accessCode`, `providerStreamId` y `rtmpUrl` de las respuestas generales | P0 | Un usuario con `streaming:read` no recibe credenciales ni hashes |
-| SEC-03 | Impedir la cancelación de eventos `LIVE` o `PAUSED` | P0 | La API responde con 409 y mantiene activo el stream |
-| SEC-04 | Añadir rate limiting a códigos de acceso, mensajes y reacciones | P0 | La API responde con 429 al superar los límites configurados |
-| SEC-05 | Eliminar el bypass de acceso para eventos privados finalizados | P0 | Una grabación privada sigue requiriendo autorización |
+- [x] **SEC-01 (P0):** Deshabilitar `join-admin` para clientes no autenticados.
+  - Criterio cumplido: un socket anónimo no puede entrar a una sala administrativa.
+- [x] **SEC-02 (P0):** Ocultar `streamKey`, `accessCode`, `providerStreamId` y `rtmpUrl` de las respuestas generales.
+  - Criterio cumplido: un usuario con `streaming:read` no recibe credenciales ni hashes.
+- [x] **SEC-03 (P0):** Impedir la cancelación de eventos `LIVE` o `PAUSED`.
+  - Criterio cumplido: la API responde con 409 y mantiene activo el stream.
+- [x] **SEC-04 (P0):** Añadir rate limiting a códigos de acceso, mensajes y reacciones.
+  - Criterio cumplido: la API responde con 429 al superar los límites configurados.
+- [x] **SEC-05 (P0):** Eliminar el bypass de acceso para eventos privados finalizados.
+  - Criterio cumplido: una grabación privada sigue requiriendo autorización.
 
 ## Fase 1: seguridad y acceso privado
 
@@ -53,8 +56,8 @@ Estas tareas bloquean cualquier salida a producción.
 
 ### Seguridad WebSocket
 
-- [ ] **WS-01:** Autenticar sockets administrativos mediante JWT durante el handshake.
-- [ ] **WS-02:** Validar tenant y permiso `streaming:moderate` antes de ejecutar `join-admin`.
+- [x] **WS-01:** Autenticar sockets administrativos mediante JWT durante el handshake.
+- [x] **WS-02:** Validar tenant y permiso `streaming:moderate` antes de ejecutar `join-admin`.
 - [ ] **WS-03:** Validar la existencia del evento y la autorización del espectador antes de ejecutar `join-event`.
 - [ ] **WS-04:** Validar payloads WebSocket mediante DTOs o pipes.
 - [ ] **WS-05:** Restringir CORS WebSocket a los orígenes configurados.
@@ -64,23 +67,23 @@ Estas tareas bloquean cualquier salida a producción.
 ### Credenciales de emisión
 
 - [ ] **SEC-13:** Crear DTOs de respuesta explícitos para lista, detalle, administración y vistas públicas.
-- [ ] **SEC-14:** Crear un endpoint separado para obtener credenciales RTMP.
-- [ ] **SEC-15:** Proteger el endpoint de credenciales con `streaming:manage`.
+- [x] **SEC-14:** Crear un endpoint separado para obtener credenciales RTMP.
+- [x] **SEC-15:** Proteger el endpoint de credenciales con `streaming:manage`.
 - [ ] **SEC-16:** Registrar quién consultó, copió o regeneró una stream key.
 - [ ] **SEC-17:** Enmascarar la stream key y revelarla solo mediante una acción explícita.
 - [ ] **SEC-18:** Permitir la rotación de la stream key.
 
 ## Fase 2: aislamiento multi-tenant
 
-| ID | Corrección | Criterio de aceptación |
-| --- | --- | --- |
-| TEN-01 | Corregir la validación invertida de `deceasedId` | Solo se pueden usar difuntos del tenant autenticado |
-| TEN-02 | Validar `roomId`, `clientId` y `assignedToId` al crear | Un ID de otro tenant produce 404 o 400 |
-| TEN-03 | Repetir las validaciones al actualizar | No se pueden cambiar relaciones hacia otro tenant |
-| TEN-04 | Incluir `tenantId` en todas las escrituras del repositorio | Actualización, eliminación y moderación quedan delimitadas por tenant |
-| TEN-05 | Revisar mensajes, leads, obituarios y webhooks relacionados | Ninguna relación puede cruzar tenants |
-| TEN-06 | Añadir índices y restricciones compuestas cuando sean viables | La base de datos refuerza el aislamiento |
-| TEN-07 | Añadir pruebas negativas con al menos dos tenants | Todos los intentos cruzados son rechazados |
+| ID     | Corrección                                                    | Criterio de aceptación                                                |
+| ------ | ------------------------------------------------------------- | --------------------------------------------------------------------- |
+| TEN-01 | Corregir la validación invertida de `deceasedId`              | Solo se pueden usar difuntos del tenant autenticado                   |
+| TEN-02 | Validar `roomId`, `clientId` y `assignedToId` al crear        | Un ID de otro tenant produce 404 o 400                                |
+| TEN-03 | Repetir las validaciones al actualizar                        | No se pueden cambiar relaciones hacia otro tenant                     |
+| TEN-04 | Incluir `tenantId` en todas las escrituras del repositorio    | Actualización, eliminación y moderación quedan delimitadas por tenant |
+| TEN-05 | Revisar mensajes, leads, obituarios y webhooks relacionados   | Ninguna relación puede cruzar tenants                                 |
+| TEN-06 | Añadir índices y restricciones compuestas cuando sean viables | La base de datos refuerza el aislamiento                              |
+| TEN-07 | Añadir pruebas negativas con al menos dos tenants             | Todos los intentos cruzados son rechazados                            |
 
 La escritura final debe incluir la frontera de tenant; no es suficiente consultar el recurso y posteriormente actualizarlo solo por `id`.
 
@@ -208,14 +211,14 @@ existingEnd > newStart
 
 - [ ] **WEB-01:** Usar `takeUntilDestroyed()` en todas las suscripciones.
 - [ ] **WEB-02:** Desconectar el socket al destruir la página pública y el detalle.
-- [ ] **WEB-03:** Sustituir `canManage()` y `canModerate()` constantes por permisos reales.
-- [ ] **WEB-04:** Ocultar credenciales y acciones cuando el usuario no tenga permisos.
+- [x] **WEB-03:** Sustituir `canManage()` y `canModerate()` constantes por permisos reales.
+- [x] **WEB-04:** Ocultar credenciales y acciones cuando el usuario no tenga permisos.
 - [ ] **WEB-05:** Cargar mensajes aprobados existentes al abrir la página pública.
 - [ ] **WEB-06:** Evitar duplicados entre carga inicial y eventos WebSocket.
 - [ ] **WEB-07:** Implementar reconexión con recuperación del último evento recibido.
 - [ ] **WEB-08:** Mostrar correctamente los errores entregados por el backend.
 - [ ] **WEB-09:** Añadir estados accesibles de carga y feedback del reproductor.
-- [ ] **WEB-10:** Corregir la advertencia Angular `NG8102`.
+- [x] **WEB-10:** Corregir la advertencia Angular `NG8102`.
 
 ## Fase 11: pruebas obligatorias
 
@@ -275,9 +278,9 @@ La salida a producción queda bloqueada hasta que se cumplan estas condiciones:
 
 ## Seguimiento
 
-| Campo | Valor |
-| --- | --- |
-| Estado | Propuesto |
-| Responsable | Por asignar |
-| Fecha objetivo | Por definir |
-| Última actualización | 2026-07-15 |
+| Campo                | Valor       |
+| -------------------- | ----------- |
+| Estado               | Propuesto   |
+| Responsable          | Por asignar |
+| Fecha objetivo       | Por definir |
+| Última actualización | 2026-07-15  |
