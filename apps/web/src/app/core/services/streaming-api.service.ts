@@ -51,7 +51,7 @@ export interface StreamingEvent {
  * Datos públicos del evento expuestos a la página del viewer sin autenticación.
  */
 export interface PublicEvent {
-  id: string;
+  id: string | null;
   title: string;
   slug: string;
   status: EventStatus;
@@ -213,6 +213,11 @@ export class StreamingApiService {
   /** Obtiene los mensajes aprobados de un evento */
   getMessages(id: string) {
     return this.http.get<Message[]>(`${environment.apiUrl}/events/${id}/messages`);
+  }
+
+  /** Obtiene mensajes aprobados visibles para el espectador actual. */
+  getPublicMessages(slug: string) {
+    return this.http.get<Message[]>(`${environment.apiUrl}/events/${slug}/public/messages`);
   }
 
   /** Obtiene los mensajes pendientes de moderación */

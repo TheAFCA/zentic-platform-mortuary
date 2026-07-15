@@ -402,7 +402,9 @@ export class EventPageComponent {
     if (this.slug) this.loadPublicEvent();
 
     this.socket.newMessage$.subscribe((msg) => {
-      this.messages.update((prev) => [...prev, msg]);
+      this.messages.update((prev) =>
+        prev.some((current) => current.id === msg.id) ? prev : [...prev, msg],
+      );
     });
 
     this.socket.viewerCount$.subscribe((count) => {
@@ -416,21 +418,25 @@ export class EventPageComponent {
 
   /** Carga los datos públicos del evento desde la API */
   loadPublicEvent(): void {
+    const previouslyGranted = this.accessGranted();
     this.loading.set(true);
     this.api.findPublic(this.slug).subscribe({
       next: (ev) => {
         this.evt.set(ev);
         this.loading.set(false);
-        this.eventId = ev.id;
+        this.eventId = ev.id ?? '';
 
-        if (ev.isPublic) {
+        if ((ev.isPublic || previouslyGranted) && ev.id) {
           this.accessGranted.set(true);
+          this.accessLoading.set(false);
+          this.loadMessages();
           this.connectSocket();
         }
       },
       error: (err: { message?: string }) => {
         this.error.set(err.message ?? 'Evento no encontrado');
         this.loading.set(false);
+        this.accessLoading.set(false);
       },
     });
   }
@@ -451,9 +457,8 @@ export class EventPageComponent {
       .subscribe({
         next: (res) => {
           this.accessGranted.set(true);
-          this.accessLoading.set(false);
           this.eventId = res.eventId;
-          this.connectSocket();
+          this.loadPublicEvent();
         },
         error: (err: { message?: string }) => {
           this.accessError.set(err.message ?? 'Código incorrecto');
@@ -536,5 +541,24 @@ export class EventPageComponent {
   /** Conecta al Socket.IO para recibir actualizaciones en tiempo real */
   private connectSocket(): void {
     this.socket.connect(this.eventId);
+  }
+
+  private loadMessages(): void {
+    this.api.getPublicMessages(this.slug).subscribe({
+      next: (messages) => {
+        this.messages.set(
+          messages.map(({ id, authorName, content, iconType, createdAt }) => ({
+            id,
+            authorName,
+            content,
+            iconType,
+            createdAt,
+          })),
+        );
+      },
+      error: () => {
+        this.messages.set([]);
+      },
+    });
   }
 }

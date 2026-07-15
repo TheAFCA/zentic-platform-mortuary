@@ -24,6 +24,7 @@ import {
   SendReactionDto,
   AccessCodeDto,
 } from './dto';
+import { StreamAccessService } from './stream-access.service';
 
 describe('StreamingService', () => {
   let service: StreamingService;
@@ -36,6 +37,7 @@ describe('StreamingService', () => {
   let mockMuxProvider: jest.Mocked<MuxStreamProvider>;
   let mockCloudflareProvider: jest.Mocked<CloudflareStreamProvider>;
   let mockEmailService: jest.Mocked<EmailService>;
+  let mockStreamAccess: jest.Mocked<StreamAccessService>;
   let randomBytesSpy: jest.SpyInstance;
 
   const tenantId = 'tenant-1';
@@ -230,6 +232,12 @@ describe('StreamingService', () => {
       sendStreamStartedEmail: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<EmailService>;
 
+    mockStreamAccess = {
+      canAccess: jest.fn().mockResolvedValue(false),
+      issueToken: jest.fn().mockResolvedValue('stream-access-token'),
+      cookieOptions: jest.fn(),
+    } as unknown as jest.Mocked<StreamAccessService>;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StreamingService,
@@ -240,6 +248,7 @@ describe('StreamingService', () => {
         { provide: MuxStreamProvider, useValue: mockMuxProvider },
         { provide: CloudflareStreamProvider, useValue: mockCloudflareProvider },
         { provide: EmailService, useValue: mockEmailService },
+        { provide: StreamAccessService, useValue: mockStreamAccess },
       ],
     }).compile();
 
@@ -378,7 +387,34 @@ describe('StreamingService', () => {
 
       const result = await service.findPublic('private-finished-event');
 
+      expect(result.id).toBeNull();
+      expect(result.deceased).toBeNull();
       expect(result.recordingUrl).toBeNull();
+    });
+
+    it('should expose private event details with a token scoped to the event', async () => {
+      mockRepo.findBySlug.mockResolvedValue({
+        ...mockEventFindBySlug,
+        isPublic: false,
+        status: 'FINISHED',
+        recordingUrl: 'https://example.com/private-recording.mp4',
+      } as any);
+      mockStreamAccess.canAccess.mockResolvedValue(true);
+
+      const result = await service.findPublic(
+        'private-finished-event',
+        'viewer-token',
+      );
+
+      expect(mockStreamAccess.canAccess).toHaveBeenCalledWith(
+        'viewer-token',
+        eventId,
+      );
+      expect(result.id).toBe(eventId);
+      expect(result.deceased).toEqual(mockEventFindBySlug.deceased);
+      expect(result.recordingUrl).toBe(
+        'https://example.com/private-recording.mp4',
+      );
     });
   });
 
@@ -979,6 +1015,45 @@ describe('StreamingService', () => {
       ).rejects.toThrow(NotFoundException);
       expect(mockRepo.createMessage).not.toHaveBeenCalled();
     });
+
+    it('should reject a message for a private event without scoped access', async () => {
+      mockRepo.findBySlug.mockResolvedValue({
+        ...mockEventFindBySlug,
+        isPublic: false,
+      } as any);
+
+      await expect(
+        service.sendMessage('private-slug', sendMessageDto),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockRepo.createMessage).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getPublicMessages', () => {
+    it('should return approved messages for a public event', async () => {
+      mockRepo.findBySlug.mockResolvedValue(mockEventFindBySlug as any);
+      mockRepo.findMessagesByEvent.mockResolvedValue([mockMessage] as any);
+
+      const result = await service.getPublicMessages('test-slug');
+
+      expect(mockRepo.findMessagesByEvent).toHaveBeenCalledWith(
+        tenantId,
+        eventId,
+      );
+      expect(result).toEqual([mockMessage]);
+    });
+
+    it('should reject messages for a private event without scoped access', async () => {
+      mockRepo.findBySlug.mockResolvedValue({
+        ...mockEventFindBySlug,
+        isPublic: false,
+      } as any);
+
+      await expect(service.getPublicMessages('private-slug')).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(mockRepo.findMessagesByEvent).not.toHaveBeenCalled();
+    });
   });
 
   describe('approveMessage', () => {
@@ -1146,6 +1221,18 @@ describe('StreamingService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
+    it('should reject a reaction for a private event without scoped access', async () => {
+      mockRepo.findBySlug.mockResolvedValue({
+        ...mockEventFindBySlug,
+        isPublic: false,
+      } as any);
+
+      await expect(
+        service.sendReaction('private-slug', sendReactionDto),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockGateway.server.to).not.toHaveBeenCalled();
+    });
+
     it('should map reaction type to correct icon', async () => {
       const reactions = [
         { type: 'candle', icon: '🕯️' },
@@ -1187,7 +1274,11 @@ describe('StreamingService', () => {
         accessCodeDto,
       );
 
-      expect(result).toEqual({ valid: true, eventId });
+      expect(result).toEqual({
+        valid: true,
+        eventId,
+        accessToken: 'stream-access-token',
+      });
     });
 
     it('should return valid for correct access code', async () => {
@@ -1196,7 +1287,11 @@ describe('StreamingService', () => {
         accessCodeDto,
       );
 
-      expect(result).toEqual({ valid: true, eventId });
+      expect(result).toEqual({
+        valid: true,
+        eventId,
+        accessToken: 'stream-access-token',
+      });
     });
 
     it('should throw ForbiddenException for incorrect access code', async () => {
@@ -1224,7 +1319,11 @@ describe('StreamingService', () => {
         tenant: { connect: { id: tenantId } },
         event: { connect: { id: eventId } },
       });
-      expect(result).toEqual({ valid: true, eventId });
+      expect(result).toEqual({
+        valid: true,
+        eventId,
+        accessToken: 'stream-access-token',
+      });
     });
 
     it('should create lead with anonymous name when email provided without name', async () => {

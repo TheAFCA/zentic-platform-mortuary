@@ -45,6 +45,12 @@ const envSchema = z.object({
   CLOUDFLARE_ACCOUNT_ID: z.string().optional(),
   CLOUDFLARE_STREAM_API_TOKEN: z.string().optional(),
   CLOUDFLARE_STREAM_WEBHOOK_SECRET: z.string().optional(),
+  STREAM_ACCESS_SECRET: z.string().min(32),
+  STREAM_ACCESS_TOKEN_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(7200),
 
   // Storage
   STORAGE_PROVIDER: z.enum(['r2', 's3']).default('r2'),

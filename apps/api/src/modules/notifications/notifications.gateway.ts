@@ -7,12 +7,12 @@ import {
   OnGatewayInit,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  WsException,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { WsException } from '@nestjs/websockets';
 import {
   JwtPayload,
   WsNewMessage,
@@ -21,6 +21,8 @@ import {
   UserRole,
 } from '@zentic/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EventRoomDto } from './dto/event-room.dto';
+import { STREAM_ACCESS_COOKIE } from '../streaming/stream-access.service';
 
 /**
  * Gateway WebSocket para el módulo de Streaming.
@@ -42,7 +44,10 @@ import { PrismaService } from '../../prisma/prisma.service';
  */
 @WebSocketGateway({
   namespace: '/events',
-  cors: { origin: '*', credentials: true },
+  cors: {
+    origin: process.env.FRONTEND_URL ?? 'http://localhost:4200',
+    credentials: true,
+  },
 })
 export class NotificationsGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
@@ -94,8 +99,23 @@ export class NotificationsGateway
   @SubscribeMessage('join-event')
   async handleJoinEvent(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { eventId: string },
+    @MessageBody(new ValidationPipe({ whitelist: true, transform: true }))
+    data: EventRoomDto,
   ) {
+    const event = await this.prisma.event.findFirst({
+      where: { id: data.eventId, deletedAt: null },
+      select: { tenantId: true, isPublic: true },
+    });
+    if (!event || !(await this.canViewEvent(client, event, data.eventId))) {
+      throw new WsException('No autorizado para acceder a este evento');
+    }
+
+    const previousEventId = this.socketToEvent.get(client.id);
+    if (previousEventId && previousEventId !== data.eventId) {
+      await client.leave(`event:${previousEventId}`);
+      this.removeViewer(previousEventId, client.id);
+      this.broadcastCurrentViewerCount(previousEventId);
+    }
     await client.join(`event:${data.eventId}`);
     this.socketToEvent.set(client.id, data.eventId);
     this.addViewer(data.eventId, client.id);
@@ -112,7 +132,8 @@ export class NotificationsGateway
   @SubscribeMessage('leave-event')
   async handleLeaveEvent(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { eventId: string },
+    @MessageBody(new ValidationPipe({ whitelist: true, transform: true }))
+    data: EventRoomDto,
   ) {
     await client.leave(`event:${data.eventId}`);
     this.socketToEvent.delete(client.id);
@@ -131,7 +152,8 @@ export class NotificationsGateway
   @SubscribeMessage('join-admin')
   async handleJoinAdmin(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { eventId: string },
+    @MessageBody(new ValidationPipe({ whitelist: true, transform: true }))
+    data: EventRoomDto,
   ) {
     const user =
       this.socketData(client).user ?? (await this.authenticateClient(client));
@@ -169,7 +191,8 @@ export class NotificationsGateway
   @SubscribeMessage('leave-admin')
   async handleLeaveAdmin(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { eventId: string },
+    @MessageBody(new ValidationPipe({ whitelist: true, transform: true }))
+    data: EventRoomDto,
   ) {
     await client.leave(`event:${data.eventId}:admin`);
   }
@@ -258,6 +281,50 @@ export class NotificationsGateway
     );
   }
 
+  private async canViewEvent(
+    client: Socket,
+    event: { tenantId: string; isPublic: boolean },
+    eventId: string,
+  ): Promise<boolean> {
+    if (event.isPublic) return true;
+
+    const user =
+      this.socketData(client).user ?? (await this.authenticateClient(client));
+    if (user) {
+      this.socketData(client).user = user;
+      const effectiveTenantId = user.impersonatedTenantId ?? user.tenantId;
+      const hasTenantAccess =
+        user.role === UserRole.SUPER_ADMIN
+          ? !user.impersonatedTenantId || effectiveTenantId === event.tenantId
+          : effectiveTenantId === event.tenantId;
+      const hasPermission =
+        user.role === UserRole.SUPER_ADMIN ||
+        user.role === UserRole.TENANT_ADMIN ||
+        user.permissions.some((permission) =>
+          ['streaming:read', 'streaming:manage', 'streaming:moderate'].includes(
+            permission,
+          ),
+        );
+      if (hasTenantAccess && hasPermission) return true;
+    }
+
+    const token = this.extractCookie(client, STREAM_ACCESS_COOKIE);
+    if (!token) return false;
+    try {
+      const payload = await this.jwtService.verifyAsync<{
+        type: string;
+        eventId: string;
+      }>(token, {
+        secret: this.config.getOrThrow('STREAM_ACCESS_SECRET'),
+        audience: 'stream-viewer',
+        issuer: 'zentic',
+      });
+      return payload.type === 'stream-access' && payload.eventId === eventId;
+    } catch {
+      return false;
+    }
+  }
+
   private socketData(client: Socket): { user?: JwtPayload } {
     return client.data as { user?: JwtPayload };
   }
@@ -305,13 +372,17 @@ export class NotificationsGateway
       return authToken.trim();
     }
 
+    return this.extractCookie(client, 'access_token');
+  }
+
+  private extractCookie(client: Socket, name: string): string | null {
     const cookieHeader = client.handshake.headers.cookie;
     if (!cookieHeader) return null;
     for (const pair of cookieHeader.split(';')) {
       const separator = pair.indexOf('=');
       if (separator < 0) continue;
       const key = pair.slice(0, separator).trim();
-      if (key === 'access_token') {
+      if (key === name) {
         return decodeURIComponent(pair.slice(separator + 1).trim());
       }
     }

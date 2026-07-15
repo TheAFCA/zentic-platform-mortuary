@@ -44,13 +44,15 @@ Estas tareas bloquean cualquier salida a producción.
 
 ### Autorización de espectadores
 
-- [ ] **SEC-06:** Diseñar un token de acceso temporal limitado a un evento.
-- [ ] **SEC-07:** Hacer que `POST /events/:slug/access` entregue un token firmado con `eventId`, alcance y expiración.
-- [ ] **SEC-08:** Transportar el token mediante una cookie `HttpOnly`, `Secure` y `SameSite`, o mediante un bearer token efímero documentado.
+- [x] **SEC-06:** Diseñar un token de acceso temporal limitado a un evento.
+- [x] **SEC-07:** Hacer que `POST /events/:slug/access` entregue un token firmado con `eventId`, alcance y expiración.
+- [x] **SEC-08:** Transportar el token mediante una cookie `HttpOnly`, `Secure` y `SameSite`, o mediante un bearer token efímero documentado.
 - [ ] **SEC-09:** Validar el token al consultar eventos privados, consultar o enviar mensajes, enviar reacciones, reproducir contenido y conectarse por WebSocket.
-- [ ] **SEC-10:** Separar la metadata pública mínima de los datos protegidos del difunto.
-- [ ] **SEC-11:** Evitar que `findPublic()` entregue directamente una `recordingUrl` privada.
+- [x] **SEC-10:** Separar la metadata pública mínima de los datos protegidos del difunto.
+- [x] **SEC-11:** Evitar que `findPublic()` entregue directamente una `recordingUrl` privada.
 - [ ] **SEC-12:** Generar playback URLs firmadas y de corta duración para contenido privado.
+
+Avance de `SEC-09`: la validación ya cubre detalle privado, mensajes, reacciones y WebSocket. Permanece pendiente el playback firmado (`SEC-12`).
 
 **Criterio de salida:** conocer el slug o el `eventId` no permite acceder a información, video, grabaciones o eventos WebSocket privados.
 
@@ -58,11 +60,11 @@ Estas tareas bloquean cualquier salida a producción.
 
 - [x] **WS-01:** Autenticar sockets administrativos mediante JWT durante el handshake.
 - [x] **WS-02:** Validar tenant y permiso `streaming:moderate` antes de ejecutar `join-admin`.
-- [ ] **WS-03:** Validar la existencia del evento y la autorización del espectador antes de ejecutar `join-event`.
-- [ ] **WS-04:** Validar payloads WebSocket mediante DTOs o pipes.
-- [ ] **WS-05:** Restringir CORS WebSocket a los orígenes configurados.
-- [ ] **WS-06:** Limitar la cantidad de salas que puede solicitar un socket.
-- [ ] **WS-07:** Entregar errores de autorización sin revelar la existencia de eventos privados.
+- [x] **WS-03:** Validar la existencia del evento y la autorización del espectador antes de ejecutar `join-event`.
+- [x] **WS-04:** Validar payloads WebSocket mediante DTOs o pipes.
+- [x] **WS-05:** Restringir CORS WebSocket a los orígenes configurados.
+- [x] **WS-06:** Limitar la cantidad de salas que puede solicitar un socket.
+- [x] **WS-07:** Entregar errores de autorización sin revelar la existencia de eventos privados.
 
 ### Credenciales de emisión
 
@@ -213,8 +215,8 @@ existingEnd > newStart
 - [ ] **WEB-02:** Desconectar el socket al destruir la página pública y el detalle.
 - [x] **WEB-03:** Sustituir `canManage()` y `canModerate()` constantes por permisos reales.
 - [x] **WEB-04:** Ocultar credenciales y acciones cuando el usuario no tenga permisos.
-- [ ] **WEB-05:** Cargar mensajes aprobados existentes al abrir la página pública.
-- [ ] **WEB-06:** Evitar duplicados entre carga inicial y eventos WebSocket.
+- [x] **WEB-05:** Cargar mensajes aprobados existentes al abrir la página pública.
+- [x] **WEB-06:** Evitar duplicados entre carga inicial y eventos WebSocket.
 - [ ] **WEB-07:** Implementar reconexión con recuperación del último evento recibido.
 - [ ] **WEB-08:** Mostrar correctamente los errores entregados por el backend.
 - [ ] **WEB-09:** Añadir estados accesibles de carga y feedback del reproductor.
@@ -224,8 +226,8 @@ existingEnd > newStart
 
 ### Backend
 
-- [ ] Acceso privado con token válido, inválido y expirado.
-- [ ] Acceso WebSocket anónimo, autorizado y administrativo.
+- [x] Acceso privado con token válido, inválido y expirado.
+- [x] Acceso WebSocket anónimo, autorizado y administrativo.
 - [ ] Intentos de crear relaciones entre dos tenants.
 - [ ] Ausencia de credenciales en cada tipo de respuesta.
 - [ ] Inicio y finalización concurrentes.

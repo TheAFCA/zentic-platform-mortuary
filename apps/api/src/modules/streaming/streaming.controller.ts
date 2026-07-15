@@ -8,7 +8,10 @@ import {
   Body,
   UseGuards,
   Ip,
+  Req,
+  Res,
 } from '@nestjs/common';
+import { Request, Response } from 'express';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { StreamingService } from './streaming.service';
@@ -27,6 +30,10 @@ import {
   SendReactionDto,
   AccessCodeDto,
 } from './dto';
+import {
+  STREAM_ACCESS_COOKIE,
+  StreamAccessService,
+} from './stream-access.service';
 
 /**
  * Controlador REST del módulo de Streaming.
@@ -46,7 +53,10 @@ import {
 @Controller('events')
 @UseGuards(JwtAuthGuard, TenantGuard, PermissionGuard)
 export class StreamingController {
-  constructor(private readonly streamingService: StreamingService) {}
+  constructor(
+    private readonly streamingService: StreamingService,
+    private readonly streamAccess: StreamAccessService,
+  ) {}
 
   // ── CRUD ────────────────────────────────────────────────────────────
 
@@ -155,8 +165,15 @@ export class StreamingController {
    */
   @Get(':slug/public')
   @Public()
-  findPublic(@Param('slug') slug: string) {
-    return this.streamingService.findPublic(slug);
+  findPublic(@Param('slug') slug: string, @Req() req: Request) {
+    return this.streamingService.findPublic(slug, this.accessToken(req));
+  }
+
+  /** Obtiene los mensajes aprobados visibles para un espectador autorizado. */
+  @Get(':slug/public/messages')
+  @Public()
+  getPublicMessages(@Param('slug') slug: string, @Req() req: Request) {
+    return this.streamingService.getPublicMessages(slug, this.accessToken(req));
   }
 
   /**
@@ -168,8 +185,12 @@ export class StreamingController {
   @Post(':slug/messages')
   @Public()
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  sendMessage(@Param('slug') slug: string, @Body() dto: SendMessageDto) {
-    return this.streamingService.sendMessage(slug, dto);
+  sendMessage(
+    @Param('slug') slug: string,
+    @Body() dto: SendMessageDto,
+    @Req() req: Request,
+  ) {
+    return this.streamingService.sendMessage(slug, dto, this.accessToken(req));
   }
 
   /**
@@ -185,8 +206,14 @@ export class StreamingController {
     @Param('slug') slug: string,
     @Body() dto: SendReactionDto,
     @Ip() ip: string,
+    @Req() req: Request,
   ) {
-    return this.streamingService.sendReaction(slug, dto, ip);
+    return this.streamingService.sendReaction(
+      slug,
+      dto,
+      ip,
+      this.accessToken(req),
+    );
   }
 
   /**
@@ -198,8 +225,19 @@ export class StreamingController {
   @Post(':slug/access')
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  validateAccessCode(@Param('slug') slug: string, @Body() dto: AccessCodeDto) {
-    return this.streamingService.validateAccessCode(slug, dto);
+  async validateAccessCode(
+    @Param('slug') slug: string,
+    @Body() dto: AccessCodeDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { accessToken, ...result } =
+      await this.streamingService.validateAccessCode(slug, dto);
+    res.cookie(
+      STREAM_ACCESS_COOKIE,
+      accessToken,
+      this.streamAccess.cookieOptions(),
+    );
+    return result;
   }
 
   // ── Messages (authenticated) ────────────────────────────────────────
@@ -284,5 +322,9 @@ export class StreamingController {
     @Param('messageId') messageId: string,
   ) {
     return this.streamingService.deleteMessage(tenantId, id, messageId);
+  }
+
+  private accessToken(req: Request): string | undefined {
+    return req.cookies?.[STREAM_ACCESS_COOKIE] as string | undefined;
   }
 }

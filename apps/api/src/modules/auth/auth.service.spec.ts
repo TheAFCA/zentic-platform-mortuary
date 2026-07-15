@@ -350,6 +350,14 @@ describe('AuthService', () => {
 
     expect(authRepository.revokeSession).toHaveBeenCalledWith('session-1');
     expect(res.clearCookie).toHaveBeenCalledTimes(2);
+    expect(res.clearCookie).toHaveBeenCalledWith(
+      'access_token',
+      expect.objectContaining({ path: '/' }),
+    );
+    expect(res.clearCookie).toHaveBeenCalledWith(
+      'refresh_token',
+      expect.objectContaining({ path: '/api' }),
+    );
   });
 
   it('refreshes tokens for the current session', async () => {

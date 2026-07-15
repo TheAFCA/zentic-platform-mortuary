@@ -9,6 +9,7 @@ describe('NotificationsGateway', () => {
   let gateway: NotificationsGateway;
   let emit: jest.Mock;
   let to: jest.Mock;
+  let jwtService: { verifyAsync: jest.Mock };
   let prisma: {
     event: { findFirst: jest.Mock };
     user: { findFirst: jest.Mock };
@@ -23,16 +24,19 @@ describe('NotificationsGateway', () => {
   });
 
   beforeEach(async () => {
+    jwtService = { verifyAsync: jest.fn() };
     prisma = {
       event: {
-        findFirst: jest.fn().mockResolvedValue({ tenantId: 'tenant-1' }),
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ tenantId: 'tenant-1', isPublic: true }),
       },
       user: { findFirst: jest.fn() },
     };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationsGateway,
-        { provide: JwtService, useValue: { verifyAsync: jest.fn() } },
+        { provide: JwtService, useValue: jwtService },
         {
           provide: ConfigService,
           useValue: { getOrThrow: jest.fn().mockReturnValue('jwt-secret') },
@@ -82,6 +86,45 @@ describe('NotificationsGateway', () => {
         tenantId: '',
         count: 2,
       });
+    });
+
+    it('rejects an anonymous viewer from a private event', async () => {
+      prisma.event.findFirst.mockResolvedValue({
+        tenantId: 'tenant-1',
+        isPublic: false,
+      });
+      const client = makeSocket('anonymous');
+
+      await expect(
+        gateway.handleJoinEvent(client as any, { eventId: 'event-1' }),
+      ).rejects.toThrow('No autorizado');
+      expect(client.join).not.toHaveBeenCalled();
+    });
+
+    it('allows a private viewer with a token scoped to the event', async () => {
+      prisma.event.findFirst.mockResolvedValue({
+        tenantId: 'tenant-1',
+        isPublic: false,
+      });
+      jwtService.verifyAsync.mockResolvedValue({
+        type: 'stream-access',
+        eventId: 'event-1',
+      });
+      const client = makeSocket('viewer');
+      client.handshake.headers = {
+        cookie: 'stream_event_access=viewer-token',
+      };
+
+      await gateway.handleJoinEvent(client as any, { eventId: 'event-1' });
+
+      expect(jwtService.verifyAsync).toHaveBeenCalledWith(
+        'viewer-token',
+        expect.objectContaining({
+          audience: 'stream-viewer',
+          issuer: 'zentic',
+        }),
+      );
+      expect(client.join).toHaveBeenCalledWith('event:event-1');
     });
 
     it('decrements the count when a viewer leaves', async () => {

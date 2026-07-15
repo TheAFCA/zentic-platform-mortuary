@@ -334,6 +334,18 @@ describe('StreamingApiService', () => {
     });
   });
 
+  describe('getPublicMessages', () => {
+    it('should perform a GET against the public messages endpoint', () => {
+      service.getPublicMessages('test-event').subscribe((messages) => {
+        expect(messages).toEqual([mockMessage]);
+      });
+
+      const req = httpMock.expectOne(`${baseUrl}/events/test-event/public/messages`);
+      expect(req.request.method).toBe('GET');
+      req.flush([mockMessage]);
+    });
+  });
+
   describe('approveMessage', () => {
     it('should perform a PATCH against /events/{eventId}/messages/{messageId}/approve', () => {
       service.approveMessage('event-1', 'msg-1').subscribe((message) => {

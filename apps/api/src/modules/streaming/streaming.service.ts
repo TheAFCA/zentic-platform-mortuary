@@ -29,6 +29,7 @@ import {
 import { EventStatus } from '@zentic/shared-types';
 import { Prisma } from '@prisma/client';
 import { Env } from '../../config/env.validation';
+import { StreamAccessService } from './stream-access.service';
 
 /**
  * Servicio principal del módulo de Streaming.
@@ -59,6 +60,7 @@ export class StreamingService {
     private readonly muxProvider: MuxStreamProvider,
     private readonly cloudflareProvider: CloudflareStreamProvider,
     private readonly emailService: EmailService,
+    private readonly streamAccess: StreamAccessService,
   ) {}
 
   // ── CRUD Events ────────────────────────────────────────────────────
@@ -111,13 +113,17 @@ export class StreamingService {
    * @throws NotFoundException si el evento no existe o fue eliminado
    * @returns Datos públicos del evento (sin info sensible como streamKey)
    */
-  async findPublic(slug: string) {
+  async findPublic(slug: string, accessToken?: string) {
     const event = await this.repo.findBySlug(slug);
     if (!event || event.deletedAt)
       throw new NotFoundException('Evento no encontrado');
 
+    const hasAccess =
+      event.isPublic ||
+      (await this.streamAccess.canAccess(accessToken, event.id));
+
     return {
-      id: event.id,
+      id: hasAccess ? event.id : null,
       title: event.title,
       slug: event.slug,
       status: event.status,
@@ -126,12 +132,10 @@ export class StreamingService {
       startedAt: event.startedAt,
       finishedAt: event.finishedAt,
       recordingUrl:
-        event.isPublic && event.status === 'FINISHED'
-          ? event.recordingUrl
-          : null,
+        hasAccess && event.status === 'FINISHED' ? event.recordingUrl : null,
       isPublic: event.isPublic,
       viewerCount: event.viewerCount,
-      deceased: event.deceased,
+      deceased: hasAccess ? event.deceased : null,
       tenant: {
         name: event.tenant.name,
         brandConfig: event.tenant.brandConfig,
@@ -480,10 +484,12 @@ export class StreamingService {
    * @throws NotFoundException si el evento no existe
    * @returns El mensaje creado
    */
-  async sendMessage(slug: string, dto: SendMessageDto) {
+  async sendMessage(slug: string, dto: SendMessageDto, accessToken?: string) {
     const event = await this.repo.findBySlug(slug);
     if (!event || event.deletedAt)
       throw new NotFoundException('Evento no encontrado');
+
+    await this.assertViewerAccess(event, accessToken);
 
     const message = await this.repo.createMessage({
       authorName: dto.authorName,
@@ -513,6 +519,16 @@ export class StreamingService {
     }
 
     return message;
+  }
+
+  /** Obtiene mensajes aprobados para la página pública, respetando privacidad. */
+  async getPublicMessages(slug: string, accessToken?: string) {
+    const event = await this.repo.findBySlug(slug);
+    if (!event || event.deletedAt) {
+      throw new NotFoundException('Evento no encontrado');
+    }
+    await this.assertViewerAccess(event, accessToken);
+    return this.repo.findMessagesByEvent(event.tenantId, event.id);
   }
 
   /**
@@ -601,10 +617,17 @@ export class StreamingService {
    * @throws NotFoundException si el evento no existe
    * @returns Confirmación de envío
    */
-  async sendReaction(slug: string, dto: SendReactionDto, clientIp?: string) {
+  async sendReaction(
+    slug: string,
+    dto: SendReactionDto,
+    clientIp?: string,
+    accessToken?: string,
+  ) {
     const event = await this.repo.findBySlug(slug);
     if (!event || event.deletedAt)
       throw new NotFoundException('Evento no encontrado');
+
+    await this.assertViewerAccess(event, accessToken);
 
     if (clientIp) {
       const now = Date.now();
@@ -724,7 +747,11 @@ export class StreamingService {
       throw new NotFoundException('Evento no encontrado');
 
     if (event.isPublic && !event.accessCode) {
-      return { valid: true, eventId: event.id };
+      return {
+        valid: true,
+        eventId: event.id,
+        accessToken: await this.streamAccess.issueToken(event.id),
+      };
     }
 
     const hashedCode = this.hashAccessCode(dto.code);
@@ -743,7 +770,11 @@ export class StreamingService {
       });
     }
 
-    return { valid: true, eventId: event.id };
+    return {
+      valid: true,
+      eventId: event.id,
+      accessToken: await this.streamAccess.issueToken(event.id),
+    };
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────
@@ -776,6 +807,16 @@ export class StreamingService {
    */
   private hashAccessCode(code: string): string {
     return createHash('sha256').update(code).digest('hex');
+  }
+
+  private async assertViewerAccess(
+    event: { id: string; isPublic: boolean },
+    accessToken?: string,
+  ): Promise<void> {
+    if (event.isPublic) return;
+    if (!(await this.streamAccess.canAccess(accessToken, event.id))) {
+      throw new ForbiddenException('Acceso requerido para este evento');
+    }
   }
 
   /** Retira credenciales y hashes antes de devolver un evento por endpoints generales. */
