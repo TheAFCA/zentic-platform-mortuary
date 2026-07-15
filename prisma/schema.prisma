@@ -319,6 +319,8 @@ model Event {
   estimatedDuration Int?
   streamKey        String?
   rtmpUrl          String?
+  provider         String?
+  providerStreamId String?        @unique
   status           EventStatus    @default(SCHEDULED)
   moderationMode   ModerationMode @default(AUTO)
   recordingUrl     String?

@@ -867,6 +867,13 @@ export class EventDetailComponent {
       this.socket.streamStatus$.subscribe((status) => {
         this.event.update((e) => (e ? { ...e, status: status as EventStatus } : e));
       });
+
+      this.socket.messagePending$.subscribe((msg) => {
+        this.pendingCount.update((c) => c + 1);
+        if (this.showingPending()) {
+          this.messages.update((prev) => [...prev, msg as unknown as Message]);
+        }
+      });
     }
   }
 

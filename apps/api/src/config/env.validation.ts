@@ -38,10 +38,13 @@ const envSchema = z.object({
   THROTTLE_LIMIT: z.coerce.number().default(100),
 
   // Streaming
-  STREAM_PROVIDER: z.enum(['mux', 'ivs']).default('mux'),
+  STREAM_PROVIDER: z.enum(['mux', 'cloudflare']).default('mux'),
   MUX_TOKEN_ID: z.string().optional(),
   MUX_TOKEN_SECRET: z.string().optional(),
   MUX_WEBHOOK_SECRET: z.string().optional(),
+  CLOUDFLARE_ACCOUNT_ID: z.string().optional(),
+  CLOUDFLARE_STREAM_API_TOKEN: z.string().optional(),
+  CLOUDFLARE_STREAM_WEBHOOK_SECRET: z.string().optional(),
 
   // Storage
   STORAGE_PROVIDER: z.enum(['r2', 's3']).default('r2'),

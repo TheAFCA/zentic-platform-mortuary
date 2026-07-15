@@ -251,20 +251,27 @@ describe('StreamingController', () => {
   });
 
   describe('approveMessage', () => {
-    it('should call service.approveMessage with tenantId, id and messageId and return the result', async () => {
+    it('should call service.approveMessage with tenantId, id, messageId and the current user id, returning the result', async () => {
       const tenantId = 'tenant-1';
       const id = 'event-1';
       const messageId = 'msg-1';
+      const user = { sub: 'user-1' } as any;
       const expected = { id: messageId, status: 'approved' };
       service.approveMessage.mockResolvedValue(expected as any);
 
-      const result = await controller.approveMessage(tenantId, id, messageId);
+      const result = await controller.approveMessage(
+        tenantId,
+        id,
+        messageId,
+        user,
+      );
 
       expect(service.approveMessage).toHaveBeenCalledTimes(1);
       expect(service.approveMessage).toHaveBeenCalledWith(
         tenantId,
         id,
         messageId,
+        'user-1',
       );
       expect(result).toBe(expected);
     });

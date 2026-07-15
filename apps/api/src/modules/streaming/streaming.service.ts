@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   NotFoundException,
   ConflictException,
@@ -10,6 +11,14 @@ import { ConfigService } from '@nestjs/config';
 import { randomBytes, createHash } from 'crypto';
 import { StreamingRepository } from './streaming.repository';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { EmailService } from '../email/email.service';
+import {
+  StreamProvider,
+  StreamWebhookEvent,
+  STREAM_PROVIDER_TOKEN,
+} from './providers/stream-provider.interface';
+import { MuxStreamProvider } from './providers/mux-stream.provider';
+import { CloudflareStreamProvider } from './providers/cloudflare-stream.provider';
 import {
   CreateEventDto,
   UpdateEventDto,
@@ -25,9 +34,10 @@ import { Env } from '../../config/env.validation';
  * Servicio principal del módulo de Streaming.
  *
  * Implementa toda la lógica de negocio para la gestión de eventos de transmisión
- * en vivo: creación con generación de stream keys, ciclo de vida del stream
- * (iniciar/detener), sistema de mensajes con moderación, reacciones en tiempo
- * real con rate limiting, validación de códigos de acceso y registro de leads.
+ * en vivo: creación de live streams reales vía el proveedor configurado
+ * (Mux/Cloudflare Stream), ciclo de vida del stream (iniciar/detener),
+ * sistema de mensajes con moderación, reacciones en tiempo real con rate
+ * limiting, validación de códigos de acceso y registro de leads.
  *
  * @remarks
  * Las reglas de negocio implementadas incluyen:
@@ -45,6 +55,10 @@ export class StreamingService {
     private readonly repo: StreamingRepository,
     private readonly gateway: NotificationsGateway,
     private readonly config: ConfigService<Env>,
+    @Inject(STREAM_PROVIDER_TOKEN) private readonly provider: StreamProvider,
+    private readonly muxProvider: MuxStreamProvider,
+    private readonly cloudflareProvider: CloudflareStreamProvider,
+    private readonly emailService: EmailService,
   ) {}
 
   // ── CRUD Events ────────────────────────────────────────────────────
@@ -172,14 +186,10 @@ export class StreamingService {
     }
 
     const slug = this.generateSlug(dto.title);
-    const streamKey = this.generateStreamKey();
-    const rtmpUrl = this.getRtmpUrl();
 
     const eventData: Prisma.EventCreateInput = {
       title: dto.title,
       slug,
-      streamKey,
-      rtmpUrl,
       ceremonyType: dto.ceremonyType,
       description: dto.description,
       estimatedDuration: dto.estimatedDuration,
@@ -198,7 +208,17 @@ export class StreamingService {
         : {}),
     };
 
-    return this.repo.create(eventData);
+    const event = await this.repo.create(eventData);
+
+    const { streamKey, rtmpUrl, providerStreamId } =
+      await this.provider.createLiveStream();
+
+    return this.repo.update(tenantId, event.id, {
+      streamKey,
+      rtmpUrl,
+      provider: this.provider.name,
+      providerStreamId,
+    });
   }
 
   /**
@@ -295,6 +315,17 @@ export class StreamingService {
       );
     }
 
+    if (event.providerStreamId) {
+      const status = await this.provider.getStreamStatus(
+        event.providerStreamId,
+      );
+      if (status !== 'active') {
+        throw new BadRequestException(
+          'No se detecta señal de video. Verifica la configuración del OBS.',
+        );
+      }
+    }
+
     const updated = await this.repo.update(tenantId, id, {
       status: 'LIVE',
       startedAt: new Date(),
@@ -306,8 +337,47 @@ export class StreamingService {
       status: EventStatus.LIVE,
     });
 
+    await this.notifyLeadsStreamStarted(event.slug, event.title, id);
+
     this.logger.log(`Stream started: ${id}`);
     return updated;
+  }
+
+  /**
+   * Envía un email a los leads del evento que dejaron su correo, avisando
+   * que la transmisión ya comenzó (RF-STREAM-011). Un fallo individual de
+   * envío no debe interrumpir el inicio del stream.
+   */
+  private async notifyLeadsStreamStarted(
+    slug: string,
+    eventTitle: string,
+    eventId: string,
+  ): Promise<void> {
+    const leads = await this.repo.findLeadsWithEmailByEvent(eventId);
+    if (!leads.length) return;
+
+    const frontendUrl = this.config.get<string>('FRONTEND_URL');
+    const eventUrl = `${frontendUrl}/e/${slug}`;
+
+    const results = await Promise.allSettled(
+      leads
+        .filter((lead): lead is typeof lead & { email: string } => !!lead.email)
+        .map((lead) =>
+          this.emailService.sendStreamStartedEmail({
+            to: lead.email,
+            eventTitle,
+            eventUrl,
+          }),
+        ),
+    );
+
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        this.logger.warn(
+          `Failed to send stream-started email: ${result.reason}`,
+        );
+      }
+    }
   }
 
   /**
@@ -326,6 +396,10 @@ export class StreamingService {
       throw new BadRequestException(
         `El evento está en estado "${event.status}", no se puede finalizar`,
       );
+    }
+
+    if (event.providerStreamId) {
+      await this.provider.disableLiveStream(event.providerStreamId);
     }
 
     const updated = await this.repo.update(tenantId, id, {
@@ -394,18 +468,22 @@ export class StreamingService {
       tenantId: event.tenantId,
     });
 
+    const messagePayload = {
+      eventId: event.id,
+      tenantId: event.tenantId,
+      message: {
+        id: message.id,
+        authorName: message.authorName,
+        content: message.content,
+        iconType: message.iconType,
+        createdAt: message.createdAt.toISOString(),
+      },
+    };
+
     if (event.moderationMode === 'AUTO') {
-      this.gateway.broadcastNewMessage(event.id, {
-        eventId: event.id,
-        tenantId: event.tenantId,
-        message: {
-          id: message.id,
-          authorName: message.authorName,
-          content: message.content,
-          iconType: message.iconType,
-          createdAt: message.createdAt.toISOString(),
-        },
-      });
+      this.gateway.broadcastNewMessage(event.id, messagePayload);
+    } else {
+      this.gateway.broadcastMessagePending(event.id, messagePayload);
     }
 
     return message;
@@ -420,12 +498,17 @@ export class StreamingService {
    * @param messageId - Identificador del mensaje
    * @returns El mensaje aprobado
    */
-  async approveMessage(tenantId: string, eventId: string, messageId: string) {
+  async approveMessage(
+    tenantId: string,
+    eventId: string,
+    messageId: string,
+    approvedByUserId: string,
+  ) {
     await this.findOne(tenantId, eventId);
     const message = await this.repo.approveMessage(
       eventId,
       messageId,
-      tenantId,
+      approvedByUserId,
     );
 
     this.gateway.broadcastNewMessage(eventId, {
@@ -534,6 +617,68 @@ export class StreamingService {
     return { sent: true };
   }
 
+  // ── Provider webhooks ────────────────────────────────────────────────
+
+  /**
+   * Procesa un webhook entrante de Mux. Verifica la firma y, si el evento
+   * indica que la grabación está lista, actualiza `recordingUrl` del evento.
+   *
+   * @param rawBody - Cuerpo crudo del request (requerido para verificar la firma)
+   * @param headers - Cabeceras HTTP del request
+   */
+  async handleMuxWebhook(
+    rawBody: Buffer,
+    headers: Record<string, string | string[] | undefined>,
+  ): Promise<void> {
+    const event = this.muxProvider.parseWebhookEvent(rawBody, headers);
+    await this.processProviderWebhookEvent(event);
+  }
+
+  /**
+   * Procesa un webhook entrante de Cloudflare Stream. Misma lógica que el de Mux.
+   *
+   * @param rawBody - Cuerpo crudo del request (requerido para verificar la firma)
+   * @param headers - Cabeceras HTTP del request
+   */
+  async handleCloudflareWebhook(
+    rawBody: Buffer,
+    headers: Record<string, string | string[] | undefined>,
+  ): Promise<void> {
+    const event = this.cloudflareProvider.parseWebhookEvent(rawBody, headers);
+    await this.processProviderWebhookEvent(event);
+  }
+
+  /**
+   * Aplica el efecto de un evento de webhook ya verificado y normalizado.
+   * Solo `recording.ready` produce un cambio; los demás son informativos
+   * (el estado LIVE/FINISHED lo controla el operador desde el panel).
+   * Idempotente: reescribir los mismos campos no tiene efecto secundario
+   * si el proveedor reenvía el mismo evento.
+   */
+  private async processProviderWebhookEvent(
+    event: StreamWebhookEvent | null,
+  ): Promise<void> {
+    if (!event || event.type !== 'recording.ready') return;
+
+    const found = await this.repo.findByProviderStreamId(
+      event.providerStreamId,
+    );
+    if (!found) return;
+
+    const recordingExpiry =
+      found.tenant.plan === 'ENTERPRISE'
+        ? null
+        : new Date(
+            Date.now() +
+              (found.tenant.plan === 'PRO' ? 90 : 30) * 24 * 60 * 60 * 1000,
+          );
+
+    await this.repo.update(found.tenantId, found.id, {
+      recordingUrl: event.recordingUrl,
+      recordingExpiry,
+    });
+  }
+
   // ── Access code ────────────────────────────────────────────────────
 
   /**
@@ -593,29 +738,6 @@ export class StreamingService {
       .slice(0, 60);
     const suffix = randomBytes(4).toString('hex');
     return `${base}-${suffix}`;
-  }
-
-  /**
-   * Genera una stream key criptográficamente segura para configurar OBS.
-   * Prefijada con "zentic_" para identificación en el proveedor de streaming.
-   *
-   * @returns Stream key de 192 bits en hexadecimal
-   */
-  private generateStreamKey(): string {
-    return `zentic_${randomBytes(24).toString('hex')}`;
-  }
-
-  /**
-   * Obtiene la URL RTMP base según el proveedor de streaming configurado.
-   *
-   * @returns URL RTMP para configuración de OBS
-   */
-  private getRtmpUrl(): string {
-    const provider = this.config.get<string>('STREAM_PROVIDER');
-    if (provider === 'mux') {
-      return 'rtmps://global-live.mux.com:443/app';
-    }
-    return 'rtmp://example.com/live';
   }
 
   /**

@@ -24,6 +24,7 @@ async function bootstrap() {
   const logger = new JsonLoggerService('ZENTIC API');
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger,
+    rawBody: true,
   });
   const config = app.get(ConfigService);
 

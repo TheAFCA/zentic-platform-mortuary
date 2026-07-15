@@ -69,6 +69,21 @@ export class StreamingRepository {
   }
 
   /**
+   * Busca un evento por el id que le asignó el proveedor de streaming
+   * (Mux/Cloudflare). Usado por los webhooks para localizar el evento sin
+   * conocer el tenant de antemano.
+   *
+   * @param providerStreamId - Identificador del live stream en el proveedor
+   * @returns Evento con el plan del tenant, o null si no existe
+   */
+  async findByProviderStreamId(providerStreamId: string) {
+    return this.prisma.event.findUnique({
+      where: { providerStreamId },
+      include: { tenant: { select: { plan: true } } },
+    });
+  }
+
+  /**
    * Busca un evento por su slug público (URL amigable).
    * Incluye datos del difunto y configuración de marca del tenant.
    * Usado por la página pública del evento (sin autenticación).
@@ -308,6 +323,20 @@ export class StreamingRepository {
    */
   async createLead(data: Prisma.LeadCreateInput) {
     return this.prisma.lead.create({ data });
+  }
+
+  /**
+   * Obtiene los leads de un evento que dejaron su email, para notificarles
+   * cuando la transmisión inicia (RF-STREAM-011).
+   *
+   * @param eventId - Identificador del evento
+   * @returns Leads con email no nulo
+   */
+  async findLeadsWithEmailByEvent(eventId: string) {
+    return this.prisma.lead.findMany({
+      where: { eventId, email: { not: null }, deletedAt: null },
+      select: { email: true, name: true },
+    });
   }
 
   // ── Deceased ────────────────────────────────────────────────────────

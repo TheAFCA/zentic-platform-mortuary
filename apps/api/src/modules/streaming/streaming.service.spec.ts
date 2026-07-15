@@ -11,6 +11,13 @@ import { EventStatus, ModerationMode } from '@zentic/shared-types';
 import { StreamingService } from './streaming.service';
 import { StreamingRepository } from './streaming.repository';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { EmailService } from '../email/email.service';
+import {
+  StreamProvider,
+  STREAM_PROVIDER_TOKEN,
+} from './providers/stream-provider.interface';
+import { MuxStreamProvider } from './providers/mux-stream.provider';
+import { CloudflareStreamProvider } from './providers/cloudflare-stream.provider';
 import {
   CreateEventDto,
   SendMessageDto,
@@ -25,6 +32,10 @@ describe('StreamingService', () => {
     server: { to: jest.Mock; emit: jest.Mock };
   };
   let mockConfig: jest.Mocked<ConfigService>;
+  let mockProvider: jest.Mocked<StreamProvider>;
+  let mockMuxProvider: jest.Mocked<MuxStreamProvider>;
+  let mockCloudflareProvider: jest.Mocked<CloudflareStreamProvider>;
+  let mockEmailService: jest.Mocked<EmailService>;
   let randomBytesSpy: jest.SpyInstance;
 
   const tenantId = 'tenant-1';
@@ -172,7 +183,13 @@ describe('StreamingService', () => {
       findByRoomAndTimeOverlap: jest.fn(),
       createLead: jest.fn(),
       updateViewerCount: jest.fn(),
+      findLeadsWithEmailByEvent: jest.fn().mockResolvedValue([]),
+      findByProviderStreamId: jest.fn(),
     } as unknown as jest.Mocked<StreamingRepository>;
+
+    mockRepo.update.mockImplementation((_tenantId: any, id: any, data: any) =>
+      Promise.resolve({ ...baseEvent, id, ...data }),
+    );
 
     mockGateway = {
       broadcastStreamStatus: jest.fn(),
@@ -189,12 +206,40 @@ describe('StreamingService', () => {
       get: jest.fn().mockReturnValue('mux'),
     } as unknown as jest.Mocked<ConfigService>;
 
+    mockProvider = {
+      name: 'mux',
+      createLiveStream: jest.fn().mockResolvedValue({
+        streamKey: 'zentic_defaultstreamkey',
+        rtmpUrl: 'rtmps://global-live.mux.com:443/app',
+        providerStreamId: 'mux-live-stream-1',
+      }),
+      getStreamStatus: jest.fn().mockResolvedValue('active'),
+      disableLiveStream: jest.fn().mockResolvedValue(undefined),
+      parseWebhookEvent: jest.fn(),
+    } as unknown as jest.Mocked<StreamProvider>;
+
+    mockMuxProvider = {
+      parseWebhookEvent: jest.fn(),
+    } as unknown as jest.Mocked<MuxStreamProvider>;
+
+    mockCloudflareProvider = {
+      parseWebhookEvent: jest.fn(),
+    } as unknown as jest.Mocked<CloudflareStreamProvider>;
+
+    mockEmailService = {
+      sendStreamStartedEmail: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<EmailService>;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StreamingService,
         { provide: StreamingRepository, useValue: mockRepo },
         { provide: NotificationsGateway, useValue: mockGateway },
         { provide: ConfigService, useValue: mockConfig },
+        { provide: STREAM_PROVIDER_TOKEN, useValue: mockProvider },
+        { provide: MuxStreamProvider, useValue: mockMuxProvider },
+        { provide: CloudflareStreamProvider, useValue: mockCloudflareProvider },
+        { provide: EmailService, useValue: mockEmailService },
       ],
     }).compile();
 
@@ -400,37 +445,33 @@ describe('StreamingService', () => {
       );
     });
 
-    it('should generate slug, streamKey and rtmpUrl', async () => {
+    it('should generate a unique slug and request credentials from the provider', async () => {
       mockRepo.createDeceased.mockResolvedValue(createdDeceased as any);
       mockRepo.findDeceasedByTenant.mockResolvedValue(createdDeceased as any);
       mockRepo.findByRoomAndTimeOverlap.mockResolvedValue(null);
       mockRepo.create.mockImplementation((data: any) =>
         Promise.resolve({ ...data, id: 'new-id' }),
       );
+      mockProvider.createLiveStream.mockResolvedValue({
+        streamKey: 'zentic_generatedkey',
+        rtmpUrl: 'rtmps://global-live.mux.com:443/app',
+        providerStreamId: 'mux-live-stream-new',
+      });
 
       await service.create(tenantId, createDto);
 
       const createCallArgs = mockRepo.create.mock.calls[0][0] as any;
       expect(createCallArgs.slug).toMatch(/^new-event-/);
-      expect(createCallArgs.streamKey).toMatch(/^zentic_[a-f0-9]+$/);
-      expect(createCallArgs.rtmpUrl).toBe(
-        'rtmps://global-live.mux.com:443/app',
-      );
-    });
+      expect(createCallArgs.streamKey).toBeUndefined();
 
-    it('should use fallback RTMP URL when provider is not mux', async () => {
-      mockConfig.get.mockReturnValue('ivs');
-      mockRepo.createDeceased.mockResolvedValue(createdDeceased as any);
-      mockRepo.findDeceasedByTenant.mockResolvedValue(createdDeceased as any);
-      mockRepo.findByRoomAndTimeOverlap.mockResolvedValue(null);
-      mockRepo.create.mockImplementation((data: any) =>
-        Promise.resolve({ ...data, id: 'new-id' }),
-      );
-
-      await service.create(tenantId, createDto);
-
-      const createCallArgs = mockRepo.create.mock.calls[0][0] as any;
-      expect(createCallArgs.rtmpUrl).toBe('rtmp://example.com/live');
+      expect(mockProvider.createLiveStream).toHaveBeenCalled();
+      const updateCallArgs = mockRepo.update.mock.calls[0][2] as any;
+      expect(updateCallArgs).toEqual({
+        streamKey: 'zentic_generatedkey',
+        rtmpUrl: 'rtmps://global-live.mux.com:443/app',
+        provider: 'mux',
+        providerStreamId: 'mux-live-stream-new',
+      });
     });
 
     it('should hash accessCode if provided', async () => {
@@ -613,6 +654,67 @@ describe('StreamingService', () => {
       );
       expect(mockRepo.update).not.toHaveBeenCalled();
     });
+
+    it('should check the provider signal when providerStreamId is set and throw if not active', async () => {
+      mockRepo.findById.mockResolvedValue({
+        ...mockEventFindById,
+        providerStreamId: 'mux-live-stream-1',
+      } as any);
+      mockProvider.getStreamStatus.mockResolvedValue('idle');
+
+      await expect(service.startStream(tenantId, eventId)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockProvider.getStreamStatus).toHaveBeenCalledWith(
+        'mux-live-stream-1',
+      );
+      expect(mockRepo.update).not.toHaveBeenCalled();
+    });
+
+    it('should start the stream when the provider reports an active signal', async () => {
+      mockRepo.findById.mockResolvedValue({
+        ...mockEventFindById,
+        providerStreamId: 'mux-live-stream-1',
+      } as any);
+      mockProvider.getStreamStatus.mockResolvedValue('active');
+
+      const result = await service.startStream(tenantId, eventId);
+
+      expect(result.status).toBe('LIVE');
+    });
+
+    it('should email leads with an email on file that the stream started', async () => {
+      mockRepo.findById.mockResolvedValue(mockEventFindById as any);
+      mockRepo.findLeadsWithEmailByEvent.mockResolvedValue([
+        { name: 'Ana', email: 'ana@example.com' },
+        { name: 'Sin correo', email: null },
+      ] as any);
+      mockConfig.get.mockReturnValue('https://app.zentic.pro');
+
+      await service.startStream(tenantId, eventId);
+
+      expect(mockRepo.findLeadsWithEmailByEvent).toHaveBeenCalledWith(eventId);
+      expect(mockEmailService.sendStreamStartedEmail).toHaveBeenCalledTimes(1);
+      expect(mockEmailService.sendStreamStartedEmail).toHaveBeenCalledWith({
+        to: 'ana@example.com',
+        eventTitle: mockEventFindById.title,
+        eventUrl: `https://app.zentic.pro/e/${mockEventFindById.slug}`,
+      });
+    });
+
+    it('should not fail startStream when a lead email fails to send', async () => {
+      mockRepo.findById.mockResolvedValue(mockEventFindById as any);
+      mockRepo.findLeadsWithEmailByEvent.mockResolvedValue([
+        { name: 'Ana', email: 'ana@example.com' },
+      ] as any);
+      mockEmailService.sendStreamStartedEmail.mockRejectedValue(
+        new Error('SMTP down'),
+      );
+
+      const result = await service.startStream(tenantId, eventId);
+
+      expect(result.status).toBe('LIVE');
+    });
   });
 
   describe('stopStream', () => {
@@ -667,6 +769,31 @@ describe('StreamingService', () => {
         BadRequestException,
       );
       expect(mockRepo.update).not.toHaveBeenCalled();
+    });
+
+    it('should disable the live stream on the provider when providerStreamId is set', async () => {
+      mockRepo.findById.mockResolvedValue({
+        ...mockEventFindById,
+        status: 'LIVE',
+        providerStreamId: 'mux-live-stream-1',
+      } as any);
+
+      await service.stopStream(tenantId, eventId);
+
+      expect(mockProvider.disableLiveStream).toHaveBeenCalledWith(
+        'mux-live-stream-1',
+      );
+    });
+
+    it('should not call the provider when there is no providerStreamId', async () => {
+      mockRepo.findById.mockResolvedValue({
+        ...mockEventFindById,
+        status: 'LIVE',
+      } as any);
+
+      await service.stopStream(tenantId, eventId);
+
+      expect(mockProvider.disableLiveStream).not.toHaveBeenCalled();
     });
   });
 
@@ -756,15 +883,17 @@ describe('StreamingService', () => {
       expect(result).toEqual(createdMessage);
     });
 
-    it('should create a message with MANUAL moderation without broadcast', async () => {
+    it('should create a message with MANUAL moderation and notify the moderation queue instead of viewers', async () => {
       mockRepo.findBySlug.mockResolvedValue({
         ...mockEventFindBySlug,
         moderationMode: 'MANUAL',
       } as any);
-      mockRepo.createMessage.mockResolvedValue({
+      const pendingMessage = {
         ...mockMessage,
+        id: 'msg-pending',
         status: 'PENDING',
-      } as any);
+      };
+      mockRepo.createMessage.mockResolvedValue(pendingMessage as any);
 
       const result = await service.sendMessage('test-slug', sendMessageDto);
 
@@ -772,6 +901,21 @@ describe('StreamingService', () => {
         expect.objectContaining({ status: 'PENDING' }),
       );
       expect(mockGateway.broadcastNewMessage).not.toHaveBeenCalled();
+      expect(mockGateway.broadcastMessagePending).toHaveBeenCalledWith(
+        eventId,
+        {
+          eventId,
+          tenantId,
+          message: {
+            id: 'msg-pending',
+            authorName: pendingMessage.authorName,
+            content: pendingMessage.content,
+            iconType: pendingMessage.iconType,
+            createdAt: pendingMessage.createdAt.toISOString(),
+          },
+        },
+      );
+      expect(result).toEqual(pendingMessage);
     });
 
     it('should throw NotFoundException when event not found', async () => {
@@ -794,12 +938,17 @@ describe('StreamingService', () => {
       };
       mockRepo.approveMessage.mockResolvedValue(approvedMessage as any);
 
-      const result = await service.approveMessage(tenantId, eventId, messageId);
+      const result = await service.approveMessage(
+        tenantId,
+        eventId,
+        messageId,
+        'operator-1',
+      );
 
       expect(mockRepo.approveMessage).toHaveBeenCalledWith(
         eventId,
         messageId,
-        tenantId,
+        'operator-1',
       );
       expect(mockGateway.broadcastNewMessage).toHaveBeenCalledWith(eventId, {
         eventId,
@@ -819,7 +968,7 @@ describe('StreamingService', () => {
       mockRepo.findById.mockResolvedValue(null);
 
       await expect(
-        service.approveMessage(tenantId, eventId, messageId),
+        service.approveMessage(tenantId, eventId, messageId, 'operator-1'),
       ).rejects.toThrow(NotFoundException);
       expect(mockRepo.approveMessage).not.toHaveBeenCalled();
     });
@@ -1076,21 +1225,6 @@ describe('StreamingService', () => {
       expect(slug).toMatch(/^mi-ceremonia-especial-abababab$/);
     });
 
-    it('generateStreamKey should produce zentic_ prefixed hex', async () => {
-      const dto = {
-        title: 'Test',
-        ceremonyType: 'VELATORIO',
-        scheduledAt: '2026-08-01T10:00:00Z',
-        deceasedId,
-      } as CreateEventDto;
-
-      await service.create(tenantId, dto);
-
-      const streamKey = (mockRepo.create.mock.calls[0][0] as any).streamKey;
-      expect(streamKey).toMatch(/^zentic_/);
-      expect(streamKey).toHaveLength(55);
-    });
-
     it('hashAccessCode should produce a SHA-256 hex digest', async () => {
       const dto = {
         title: 'Test',
@@ -1105,6 +1239,83 @@ describe('StreamingService', () => {
       const accessCode = (mockRepo.create.mock.calls[0][0] as any).accessCode;
       expect(accessCode).toHaveLength(64);
       expect(accessCode).toMatch(/^[a-f0-9]{64}$/);
+    });
+  });
+
+  describe('handleMuxWebhook / handleCloudflareWebhook', () => {
+    const rawBody = Buffer.from('{}');
+    const headers = { 'mux-signature': 'v1=abc' };
+
+    it('ignores an invalid or unrecognized webhook', async () => {
+      mockMuxProvider.parseWebhookEvent.mockReturnValue(null);
+
+      await service.handleMuxWebhook(rawBody, headers);
+
+      expect(mockRepo.findByProviderStreamId).not.toHaveBeenCalled();
+    });
+
+    it('ignores stream.active/idle events (state is driven by the operator panel)', async () => {
+      mockMuxProvider.parseWebhookEvent.mockReturnValue({
+        type: 'stream.active',
+        providerStreamId: 'mux-live-stream-1',
+      });
+
+      await service.handleMuxWebhook(rawBody, headers);
+
+      expect(mockRepo.findByProviderStreamId).not.toHaveBeenCalled();
+    });
+
+    it('sets recordingUrl and a 30-day expiry for a BASIC plan when recording.ready arrives', async () => {
+      mockMuxProvider.parseWebhookEvent.mockReturnValue({
+        type: 'recording.ready',
+        providerStreamId: 'mux-live-stream-1',
+        recordingUrl: 'https://stream.mux.com/abc.m3u8',
+      });
+      mockRepo.findByProviderStreamId.mockResolvedValue({
+        id: eventId,
+        tenantId,
+        tenant: { plan: 'BASIC' },
+      } as any);
+
+      await service.handleMuxWebhook(rawBody, headers);
+
+      expect(mockRepo.update).toHaveBeenCalledWith(tenantId, eventId, {
+        recordingUrl: 'https://stream.mux.com/abc.m3u8',
+        recordingExpiry: expect.any(Date),
+      });
+    });
+
+    it('sets no expiry (indefinite) for an ENTERPRISE plan', async () => {
+      mockCloudflareProvider.parseWebhookEvent.mockReturnValue({
+        type: 'recording.ready',
+        providerStreamId: 'cf-live-input-1',
+        recordingUrl: 'https://videodelivery.net/abc/manifest/video.m3u8',
+      });
+      mockRepo.findByProviderStreamId.mockResolvedValue({
+        id: eventId,
+        tenantId,
+        tenant: { plan: 'ENTERPRISE' },
+      } as any);
+
+      await service.handleCloudflareWebhook(rawBody, headers);
+
+      expect(mockRepo.update).toHaveBeenCalledWith(tenantId, eventId, {
+        recordingUrl: 'https://videodelivery.net/abc/manifest/video.m3u8',
+        recordingExpiry: null,
+      });
+    });
+
+    it('is a no-op when the event cannot be found by providerStreamId', async () => {
+      mockMuxProvider.parseWebhookEvent.mockReturnValue({
+        type: 'recording.ready',
+        providerStreamId: 'unknown-stream',
+        recordingUrl: 'https://stream.mux.com/abc.m3u8',
+      });
+      mockRepo.findByProviderStreamId.mockResolvedValue(null);
+
+      await service.handleMuxWebhook(rawBody, headers);
+
+      expect(mockRepo.update).not.toHaveBeenCalled();
     });
   });
 });

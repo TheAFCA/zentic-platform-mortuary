@@ -17,6 +17,8 @@ import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import { TenantId } from '../../common/decorators/tenant-id.decorator';
 import { Public } from '../../common/decorators/public.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { JwtPayload } from '@zentic/shared-types';
 import {
   CreateEventDto,
   UpdateEventDto,
@@ -228,8 +230,14 @@ export class StreamingController {
     @TenantId() tenantId: string,
     @Param('id') id: string,
     @Param('messageId') messageId: string,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.streamingService.approveMessage(tenantId, id, messageId);
+    return this.streamingService.approveMessage(
+      tenantId,
+      id,
+      messageId,
+      user.sub,
+    );
   }
 
   /**

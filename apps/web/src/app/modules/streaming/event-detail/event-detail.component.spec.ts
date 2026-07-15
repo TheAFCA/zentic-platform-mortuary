@@ -386,4 +386,51 @@ describe('EventDetailComponent', () => {
       expect(component.previewUrl()).toBeNull();
     });
   });
+
+  describe('messagePending$ subscription', () => {
+    it('increments pendingCount when a new pending message arrives', () => {
+      const { component, socket } = setup();
+
+      socket.messagePending$.next({
+        id: 'msg-3',
+        authorName: 'Carlos',
+        content: 'Nuevo mensaje',
+        iconType: null,
+        createdAt: '2026-07-15T10:03:00Z',
+      });
+
+      expect(component.pendingCount()).toBe(1);
+    });
+
+    it('appends the message to the list when the pending tab is showing', () => {
+      const { component, socket } = setup();
+      component.showingPending.set(true);
+
+      socket.messagePending$.next({
+        id: 'msg-3',
+        authorName: 'Carlos',
+        content: 'Nuevo mensaje',
+        iconType: null,
+        createdAt: '2026-07-15T10:03:00Z',
+      });
+
+      expect(component.messages().find((m: any) => m.id === 'msg-3')).toBeTruthy();
+    });
+
+    it('does not append to the list when the approved tab is showing', () => {
+      const { component, socket } = setup();
+      component.showingPending.set(false);
+
+      socket.messagePending$.next({
+        id: 'msg-3',
+        authorName: 'Carlos',
+        content: 'Nuevo mensaje',
+        iconType: null,
+        createdAt: '2026-07-15T10:03:00Z',
+      });
+
+      expect(component.messages().find((m: any) => m.id === 'msg-3')).toBeUndefined();
+      expect(component.pendingCount()).toBe(1);
+    });
+  });
 });

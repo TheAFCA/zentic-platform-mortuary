@@ -4,6 +4,7 @@ import { buildPasswordResetEmail } from './templates/password-reset.template';
 import { buildNewUserCredentialsEmail } from './templates/new-user-credentials.template';
 import { buildTenantSuspendedEmail } from './templates/tenant-suspended.template';
 import { buildTenantReactivatedEmail } from './templates/tenant-reactivated.template';
+import { buildStreamStartedEmail } from './templates/stream-started.template';
 
 type PasswordResetEmailInput = {
   to: string;
@@ -26,6 +27,12 @@ type TenantReactivatedEmailInput = {
   to: string;
   tenantName: string;
   loginUrl: string;
+};
+
+type StreamStartedEmailInput = {
+  to: string;
+  eventTitle: string;
+  eventUrl: string;
 };
 
 @Injectable()
@@ -65,6 +72,14 @@ export class EmailService {
     const message = buildTenantReactivatedEmail({
       tenantName: input.tenantName,
       loginUrl: input.loginUrl,
+    });
+    await this.send(input.to, message);
+  }
+
+  async sendStreamStartedEmail(input: StreamStartedEmailInput): Promise<void> {
+    const message = buildStreamStartedEmail({
+      eventTitle: input.eventTitle,
+      eventUrl: input.eventUrl,
     });
     await this.send(input.to, message);
   }

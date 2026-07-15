@@ -17,6 +17,7 @@ const mockPrisma = {
   },
   lead: {
     create: jest.fn(),
+    findMany: jest.fn(),
   },
   deceased: {
     create: jest.fn(),
@@ -224,6 +225,29 @@ describe('StreamingRepository', () => {
       (prisma.event.findUnique as jest.Mock).mockResolvedValue(null);
 
       const result = await repository.findBySlug('non-existent');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('findByProviderStreamId', () => {
+    it('should call event.findUnique with providerStreamId and include the tenant plan', async () => {
+      const mockEvent = { id: 'event-1', providerStreamId: 'mux-live-1' };
+      (prisma.event.findUnique as jest.Mock).mockResolvedValue(mockEvent);
+
+      const result = await repository.findByProviderStreamId('mux-live-1');
+
+      expect(prisma.event.findUnique).toHaveBeenCalledWith({
+        where: { providerStreamId: 'mux-live-1' },
+        include: { tenant: { select: { plan: true } } },
+      });
+      expect(result).toEqual(mockEvent);
+    });
+
+    it('should return null when no event matches', async () => {
+      (prisma.event.findUnique as jest.Mock).mockResolvedValue(null);
+
+      const result = await repository.findByProviderStreamId('unknown');
 
       expect(result).toBeNull();
     });
@@ -623,6 +647,21 @@ describe('StreamingRepository', () => {
 
       expect(prisma.lead.create).toHaveBeenCalledWith({ data });
       expect(result).toEqual(mockLead);
+    });
+  });
+
+  describe('findLeadsWithEmailByEvent', () => {
+    it('should call lead.findMany filtering by eventId and non-null email', async () => {
+      const leads = [{ email: 'jane@test.com', name: 'Jane Doe' }];
+      (prisma.lead.findMany as jest.Mock).mockResolvedValue(leads);
+
+      const result = await repository.findLeadsWithEmailByEvent('event-1');
+
+      expect(prisma.lead.findMany).toHaveBeenCalledWith({
+        where: { eventId: 'event-1', email: { not: null }, deletedAt: null },
+        select: { email: true, name: true },
+      });
+      expect(result).toEqual(leads);
     });
   });
 

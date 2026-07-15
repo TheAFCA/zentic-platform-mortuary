@@ -46,6 +46,11 @@ export class NotificationsGateway
 
   private readonly logger = new Logger(NotificationsGateway.name);
 
+  /** eventId -> ids de sockets viewers (excluye administradores) conectados a ese evento. */
+  private readonly eventViewers = new Map<string, Set<string>>();
+  /** socketId -> eventId, para saber a qué evento pertenecía un socket al desconectarse. */
+  private readonly socketToEvent = new Map<string, string>();
+
   afterInit(_server: Server) {
     this.logger.log('WebSocket gateway initialized');
   }
@@ -56,6 +61,12 @@ export class NotificationsGateway
 
   handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`);
+    const eventId = this.socketToEvent.get(client.id);
+    this.socketToEvent.delete(client.id);
+    if (eventId) {
+      this.removeViewer(eventId, client.id);
+      this.broadcastCurrentViewerCount(eventId);
+    }
   }
 
   /**
@@ -72,7 +83,10 @@ export class NotificationsGateway
     @MessageBody() data: { eventId: string },
   ) {
     await client.join(`event:${data.eventId}`);
+    this.socketToEvent.set(client.id, data.eventId);
+    this.addViewer(data.eventId, client.id);
     this.logger.log(`Client ${client.id} joined event room: ${data.eventId}`);
+    this.broadcastCurrentViewerCount(data.eventId);
   }
 
   /**
@@ -87,11 +101,15 @@ export class NotificationsGateway
     @MessageBody() data: { eventId: string },
   ) {
     await client.leave(`event:${data.eventId}`);
+    this.socketToEvent.delete(client.id);
+    this.removeViewer(data.eventId, client.id);
+    this.broadcastCurrentViewerCount(data.eventId);
   }
 
   /**
    * Suscribe un administrador a la sala de moderación de un evento.
    * Los administradores reciben eventos de mensajes pendientes de moderación.
+   * Se excluye al administrador del contador de espectadores.
    *
    * @param client - Socket del administrador
    * @param data - Objeto con el eventId
@@ -102,7 +120,9 @@ export class NotificationsGateway
     @MessageBody() data: { eventId: string },
   ) {
     await client.join(`event:${data.eventId}:admin`);
+    this.removeViewer(data.eventId, client.id);
     this.logger.log(`Admin ${client.id} joined admin room: ${data.eventId}`);
+    this.broadcastCurrentViewerCount(data.eventId);
   }
 
   /**
@@ -117,6 +137,29 @@ export class NotificationsGateway
     @MessageBody() data: { eventId: string },
   ) {
     await client.leave(`event:${data.eventId}:admin`);
+  }
+
+  private addViewer(eventId: string, socketId: string): void {
+    if (!this.eventViewers.has(eventId)) {
+      this.eventViewers.set(eventId, new Set());
+    }
+    this.eventViewers.get(eventId)!.add(socketId);
+  }
+
+  private removeViewer(eventId: string, socketId: string): void {
+    const viewers = this.eventViewers.get(eventId);
+    if (!viewers) return;
+    viewers.delete(socketId);
+    if (viewers.size === 0) this.eventViewers.delete(eventId);
+  }
+
+  /**
+   * Emite el contador de espectadores actual de un evento (RF-STREAM-009).
+   * `tenantId` se deja vacío: el frontend solo consume `count` de este payload.
+   */
+  private broadcastCurrentViewerCount(eventId: string): void {
+    const count = this.eventViewers.get(eventId)?.size ?? 0;
+    this.broadcastViewerCount(eventId, { eventId, tenantId: '', count });
   }
 
   /**
