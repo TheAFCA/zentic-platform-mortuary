@@ -1,12 +1,29 @@
 <table class="data-table">
   <thead>
     <tr>
+      <th *ngIf="selectable" class="data-table__select">
+        <input
+          type="checkbox"
+          data-testid="data-table-select-all"
+          [checked]="allSelected"
+          [indeterminate]="someSelected"
+          (change)="toggleAll()"
+        />
+      </th>
       <th *ngFor="let col of columns">{{ col.label }}</th>
       <th *ngIf="actionsTemplate"></th>
     </tr>
   </thead>
   <tbody>
     <tr *ngFor="let row of rows" data-testid="data-row">
+      <td *ngIf="selectable" class="data-table__select">
+        <input
+          type="checkbox"
+          data-testid="data-table-select-row"
+          [checked]="isSelected(row)"
+          (change)="toggleRow(row)"
+        />
+      </td>
       <td *ngFor="let col of columns">{{ cellValue(row, col) }}</td>
       <td *ngIf="actionsTemplate" class="data-table__actions">
         <ng-container *ngTemplateOutlet="actionsTemplate; context: { $implicit: row }" />

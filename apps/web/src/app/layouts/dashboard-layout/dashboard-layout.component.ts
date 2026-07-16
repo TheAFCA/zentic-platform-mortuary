@@ -10,6 +10,7 @@ import { Permission } from '@zentic/shared-types';
 import { ImpersonationSessionService } from '../../core/services/impersonation-session.service';
 import { ImpersonationApiService } from '../../core/services/impersonation-api.service';
 import { AuthStateService } from '../../core/services/auth-state.service';
+import { PendingMessagesBadgeService } from '../../core/services/pending-messages-badge.service';
 import { ImpersonationBannerComponent } from '../../shared/organisms/impersonation-banner/impersonation-banner.component';
 import { HasPermissionDirective } from '../../shared/directives/has-permission.directive';
 
@@ -18,6 +19,8 @@ interface NavItem {
   label: string;
   icon: string;
   permission?: Permission;
+  /** Conteo reactivo mostrado como badge junto al label (ej: mensajes pendientes). */
+  badgeCount?: () => number;
 }
 
 interface NavSection {
@@ -47,8 +50,13 @@ interface NavSection {
 export class DashboardLayoutComponent {
   protected readonly router = inject(Router);
   protected readonly impersonationSession = inject(ImpersonationSessionService);
+  protected readonly pendingMessagesBadge = inject(PendingMessagesBadgeService);
   private readonly impersonationApi = inject(ImpersonationApiService);
   private readonly authState = inject(AuthStateService);
+
+  constructor() {
+    this.pendingMessagesBadge.start();
+  }
 
   protected readonly superAdminNavItems: NavItem[] = [
     { path: '/super-admin/dashboard', label: 'Dashboard', icon: 'insights' },
@@ -89,6 +97,13 @@ export class DashboardLayoutComponent {
           label: 'Invitaciones',
           icon: 'mail',
           permission: 'invitations:read',
+        },
+        {
+          path: '/admin/tribute-book',
+          label: 'Libro de Homenajes',
+          icon: 'auto_stories',
+          permission: 'messages:read',
+          badgeCount: () => this.pendingMessagesBadge.count(),
         },
         {
           path: '/admin/clientes',

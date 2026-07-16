@@ -52,6 +52,11 @@
   white-space: nowrap;
 }
 
+.data-table__select {
+  width: 2.5rem;
+  text-align: center;
+}
+
 .data-table__empty {
   text-align: center;
   color: panel.$muted;
