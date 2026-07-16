@@ -3,6 +3,10 @@ import {
   TributeBookContext,
 } from './tribute-book-pdf.generator';
 import { FilesService } from '../../files/files.service';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const sharpFactory = require('sharp') as (input: Buffer) => {
+  webp(): { toBuffer(): Promise<Buffer> };
+};
 
 describe('TributeBookPdfGenerator', () => {
   let filesService: jest.Mocked<FilesService>;
@@ -76,6 +80,26 @@ describe('TributeBookPdfGenerator', () => {
       'http://x/photo.webp',
     );
     expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  it('embeds a real WEBP photo without throwing (pdfkit only decodes JPEG/PNG natively)', async () => {
+    const pngBuffer = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      'base64',
+    );
+    const webpBuffer = await sharpFactory(pngBuffer).webp().toBuffer();
+    filesService.readLocalFile.mockResolvedValue(webpBuffer);
+
+    const buffer = await generator.generate(
+      baseContext({
+        deceased: {
+          ...baseContext().deceased,
+          photoUrl: 'http://x/photo.webp',
+        },
+      }),
+    );
+
+    expect(buffer.subarray(0, 4).toString()).toBe('%PDF');
   });
 
   it('handles multiple messages across pages without throwing', async () => {
