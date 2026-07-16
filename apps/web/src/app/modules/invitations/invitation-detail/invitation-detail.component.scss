@@ -1,0 +1,101 @@
+@use '../../../shared/styles/panel' as panel;
+
+.invitation-detail {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 48rem;
+}
+
+.invitation-detail__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.invitation-detail__error {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
+
+.panel-card {
+  @include panel.panel-card;
+}
+
+.panel-card__body {
+  padding: 1.5rem;
+}
+
+.invitation-detail__summary {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.invitation-detail__name {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: panel.$ink;
+}
+
+.invitation-detail__meta {
+  margin: 0;
+  color: panel.$muted;
+  font-size: 0.9rem;
+}
+
+.invitation-detail__message {
+  margin: 0.5rem 0 0;
+  font-style: italic;
+  color: panel.$ink-secondary;
+}
+
+.invitation-detail__actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  border-top: 1px solid panel.$border-light;
+}
+
+.invitation-detail__share {
+  display: grid;
+  gap: 0.75rem;
+  border-top: 1px solid panel.$border-light;
+}
+
+.invitation-detail__share-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: panel.$muted;
+}
+
+.invitation-detail__share-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.invitation-detail__share-input {
+  flex: 1;
+  @include panel.sa-pill-input;
+}
+
+.invitation-detail__loading {
+  color: panel.$muted;
+}
+
+.btn-primary {
+  @include panel.primary-button;
+}
+
+.btn-ghost {
+  @include panel.ghost-button;
+}
+
+.btn-ghost--sm {
+  min-height: 2.25rem;
+  padding: 0 0.9rem;
+  font-size: 0.85rem;
+}
