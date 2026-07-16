@@ -322,7 +322,11 @@ export class StreamingRepository {
    * @param messageId - Identificador del mensaje a eliminar
    * @returns El mensaje marcado como eliminado
    */
-  async softDeleteMessage(tenantId: string, eventId: string, messageId: string) {
+  async softDeleteMessage(
+    tenantId: string,
+    eventId: string,
+    messageId: string,
+  ) {
     return this.prisma.message.update({
       where: { id: messageId, eventId, tenantId },
       data: { deletedAt: new Date() },

@@ -25,8 +25,18 @@ describe('StreamingRepository — multi-tenant isolation', () => {
   const tenantB = 'tenant-b';
   const eventA = { id: 'event-a', tenantId: tenantA, deletedAt: null };
   const eventB = { id: 'event-b', tenantId: tenantB, deletedAt: null };
-  const msgA = { id: 'msg-a', eventId: 'event-a', tenantId: tenantA, deletedAt: null };
-  const msgB = { id: 'msg-b', eventId: 'event-b', tenantId: tenantB, deletedAt: null };
+  const msgA = {
+    id: 'msg-a',
+    eventId: 'event-a',
+    tenantId: tenantA,
+    deletedAt: null,
+  };
+  const msgB = {
+    id: 'msg-b',
+    eventId: 'event-b',
+    tenantId: tenantB,
+    deletedAt: null,
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -75,7 +85,11 @@ describe('StreamingRepository — multi-tenant isolation', () => {
       await repository.approveMessage(tenantA, 'event-a', 'msg-a', 'user-1');
       expect(mockPrisma.message.update).toHaveBeenCalledWith({
         where: { id: 'msg-a', eventId: 'event-a', tenantId: tenantA },
-        data: { status: 'APPROVED', approvedBy: 'user-1', approvedAt: expect.any(Date) },
+        data: {
+          status: 'APPROVED',
+          approvedBy: 'user-1',
+          approvedAt: expect.any(Date),
+        },
       });
     });
   });
@@ -167,7 +181,12 @@ describe('StreamingRepository — multi-tenant isolation', () => {
       mockPrisma.message.findMany.mockResolvedValue([]);
       await repository.findMessagesByEvent(tenantA, 'event-a');
       expect(mockPrisma.message.findMany).toHaveBeenCalledWith({
-        where: { tenantId: tenantA, eventId: 'event-a', deletedAt: null, status: 'APPROVED' },
+        where: {
+          tenantId: tenantA,
+          eventId: 'event-a',
+          deletedAt: null,
+          status: 'APPROVED',
+        },
         orderBy: { createdAt: 'asc' },
       });
     });
@@ -178,7 +197,12 @@ describe('StreamingRepository — multi-tenant isolation', () => {
       mockPrisma.message.findMany.mockResolvedValue([]);
       await repository.findMessagesPendingModeration(tenantA, 'event-a');
       expect(mockPrisma.message.findMany).toHaveBeenCalledWith({
-        where: { tenantId: tenantA, eventId: 'event-a', status: 'PENDING', deletedAt: null },
+        where: {
+          tenantId: tenantA,
+          eventId: 'event-a',
+          status: 'PENDING',
+          deletedAt: null,
+        },
         orderBy: { createdAt: 'asc' },
       });
     });
@@ -189,7 +213,12 @@ describe('StreamingRepository — multi-tenant isolation', () => {
       mockPrisma.lead.findMany.mockResolvedValue([]);
       await repository.findLeadsWithEmailByEvent(tenantA, 'event-a');
       expect(mockPrisma.lead.findMany).toHaveBeenCalledWith({
-        where: { tenantId: tenantA, eventId: 'event-a', email: { not: null }, deletedAt: null },
+        where: {
+          tenantId: tenantA,
+          eventId: 'event-a',
+          email: { not: null },
+          deletedAt: null,
+        },
         select: { email: true, name: true },
       });
     });
@@ -217,7 +246,9 @@ describe('StreamingRepository — multi-tenant isolation', () => {
 
     it('update no actualiza (Prisma lanza P2025 con tenantId incorrecto)', async () => {
       mockPrisma.event.update.mockRejectedValue(
-        Object.assign(new Error('Record to update not found.'), { code: 'P2025' }),
+        Object.assign(new Error('Record to update not found.'), {
+          code: 'P2025',
+        }),
       );
       await expect(
         repository.update(tenantA, 'event-b', { title: 'X' }),
@@ -230,11 +261,11 @@ describe('StreamingRepository — multi-tenant isolation', () => {
 
     it('softDelete no elimina', async () => {
       mockPrisma.event.update.mockRejectedValue(
-        Object.assign(new Error('Record to update not found.'), { code: 'P2025' }),
+        Object.assign(new Error('Record to update not found.'), {
+          code: 'P2025',
+        }),
       );
-      await expect(
-        repository.softDelete(tenantA, 'event-b'),
-      ).rejects.toThrow();
+      await expect(repository.softDelete(tenantA, 'event-b')).rejects.toThrow();
       expect(mockPrisma.event.update).toHaveBeenCalledWith({
         where: { id: 'event-b', tenantId: tenantA },
         data: expect.anything(),
@@ -243,7 +274,9 @@ describe('StreamingRepository — multi-tenant isolation', () => {
 
     it('approveMessage no modifica mensaje de otro tenant', async () => {
       mockPrisma.message.update.mockRejectedValue(
-        Object.assign(new Error('Record to update not found.'), { code: 'P2025' }),
+        Object.assign(new Error('Record to update not found.'), {
+          code: 'P2025',
+        }),
       );
       await expect(
         repository.approveMessage(tenantA, 'event-b', 'msg-b', 'user-1'),
@@ -252,7 +285,10 @@ describe('StreamingRepository — multi-tenant isolation', () => {
 
     it('findLeadsWithEmailByEvent no retorna leads de otro tenant', async () => {
       mockPrisma.lead.findMany.mockResolvedValue([]);
-      const result = await repository.findLeadsWithEmailByEvent(tenantA, 'event-b');
+      const result = await repository.findLeadsWithEmailByEvent(
+        tenantA,
+        'event-b',
+      );
       expect(result).toEqual([]);
       expect(mockPrisma.lead.findMany).toHaveBeenCalledWith(
         expect.objectContaining({

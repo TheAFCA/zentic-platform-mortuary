@@ -258,8 +258,7 @@ export class StreamingService {
         tenantId,
         dto.roomId,
       );
-      if (!existingRoom)
-        throw new NotFoundException('Sala no encontrada');
+      if (!existingRoom) throw new NotFoundException('Sala no encontrada');
     }
 
     if (dto.clientId) {
@@ -267,8 +266,7 @@ export class StreamingService {
         tenantId,
         dto.clientId,
       );
-      if (!existingClient)
-        throw new NotFoundException('Cliente no encontrado');
+      if (!existingClient) throw new NotFoundException('Cliente no encontrado');
     }
 
     if (dto.assignedToId) {
@@ -387,8 +385,7 @@ export class StreamingService {
         tenantId,
         dto.roomId,
       );
-      if (!existingRoom)
-        throw new NotFoundException('Sala no encontrada');
+      if (!existingRoom) throw new NotFoundException('Sala no encontrada');
     }
 
     if (dto.clientId !== undefined && dto.clientId) {
@@ -396,8 +393,7 @@ export class StreamingService {
         tenantId,
         dto.clientId,
       );
-      if (!existingClient)
-        throw new NotFoundException('Cliente no encontrado');
+      if (!existingClient) throw new NotFoundException('Cliente no encontrado');
     }
 
     if (dto.assignedToId !== undefined && dto.assignedToId) {
