@@ -105,6 +105,7 @@ export class ObituaryService {
 
     if (!accessGranted) {
       return {
+        id: existing.id,
         slug: existing.slug,
         status: existing.status as PublicObituary['status'],
         isPublic: existing.isPublic,
@@ -125,6 +126,7 @@ export class ObituaryService {
     );
 
     return {
+      id: existing.id,
       slug: existing.slug,
       status: existing.status as PublicObituary['status'],
       isPublic: existing.isPublic,

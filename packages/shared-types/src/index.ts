@@ -743,6 +743,8 @@ export interface PublicObituaryEvent {
  * debe mostrar un formulario para ingresar el código en vez del contenido.
  */
 export interface PublicObituary {
+  /** Expuesto para poder unirse a la sala de WebSocket `obituary:{id}` (RNF-TRIB-004). */
+  id: string;
   slug: string;
   status: ObituaryStatus;
   isPublic: boolean;

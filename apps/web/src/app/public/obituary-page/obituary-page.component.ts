@@ -4,8 +4,9 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
-import { PublicObituary } from '@zentic/shared-types';
+import { MessageStatus, ObituaryMessage, PublicObituary } from '@zentic/shared-types';
 import { ObituariesApiService } from '../../core/services/obituaries-api.service';
+import { ObituarySocketService } from '../../core/services/obituary-socket.service';
 import { InitialsAvatarComponent } from '../../shared/atoms/initials-avatar/initials-avatar.component';
 import { CondolenceFormComponent } from './condolence-form/condolence-form.component';
 import { ShareButtonsComponent } from '../../shared/molecules/share-buttons/share-buttons.component';
@@ -27,6 +28,7 @@ import { ShareButtonsComponent } from '../../shared/molecules/share-buttons/shar
 export class ObituaryPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly obituariesApi = inject(ObituariesApiService);
+  private readonly socket = inject(ObituarySocketService);
   private readonly meta = inject(Meta);
   private readonly title = inject(Title);
 
@@ -38,6 +40,28 @@ export class ObituaryPageComponent implements OnInit {
   readonly accessCodeError = signal('');
   /** Código ya validado — se reutiliza para no pedirlo de nuevo al dejar un mensaje. */
   readonly unlockedAccessCode = signal<string | null>(null);
+  /**
+   * Mensajes aprobados a mostrar — arranca con los que trae la carga inicial y se les van
+   * agregando los que llegan por WebSocket cuando el operador aprueba uno nuevo (RNF-TRIB-004).
+   */
+  readonly liveMessages = signal<ObituaryMessage[]>([]);
+
+  constructor() {
+    this.socket.newMessage$.subscribe((msg) => {
+      const newMessage: ObituaryMessage = {
+        id: msg.id,
+        obituaryId: this.obituary()?.id ?? '',
+        authorName: msg.authorName,
+        content: msg.content,
+        iconType: msg.iconType,
+        status: MessageStatus.APPROVED,
+        approvedBy: null,
+        approvedAt: null,
+        createdAt: msg.createdAt,
+      };
+      this.liveMessages.update((prev) => [...prev, newMessage]);
+    });
+  }
 
   readonly accessForm = new FormGroup({
     accessCode: new FormControl('', { nonNullable: true }),
@@ -85,7 +109,9 @@ export class ObituaryPageComponent implements OnInit {
         }
         this.unlockedAccessCode.set(code);
         this.obituary.set(obituary);
+        this.liveMessages.set(obituary.approvedMessages);
         this.updateMetaTags(obituary);
+        this.connectSocket(obituary.id);
       },
       error: (error: HttpErrorResponse) => {
         this.unlocking.set(false);
@@ -107,12 +133,20 @@ export class ObituaryPageComponent implements OnInit {
       next: (obituary) => {
         this.obituary.set(obituary);
         this.loading.set(false);
-        if (obituary.accessGranted) this.updateMetaTags(obituary);
+        if (obituary.accessGranted) {
+          this.liveMessages.set(obituary.approvedMessages);
+          this.updateMetaTags(obituary);
+          this.connectSocket(obituary.id);
+        }
       },
       error: () => {
         this.loading.set(false);
       },
     });
+  }
+
+  private connectSocket(obituaryId: string): void {
+    this.socket.connect(obituaryId);
   }
 
   private updateMetaTags(obituary: PublicObituary): void {
