@@ -204,9 +204,17 @@ export class ObituaryRepository {
     return { name: tenant.name, logoUrl: tenant.brandConfig?.logoUrl ?? null };
   }
 
-  findApprovedMessages(obituaryId: string): Promise<ObituaryMessage[]> {
+  findApprovedMessages(
+    tenantId: string,
+    obituaryId: string,
+  ): Promise<ObituaryMessage[]> {
     return this.prisma.obituaryMessage.findMany({
-      where: { obituaryId, status: MessageStatus.APPROVED, deletedAt: null },
+      where: {
+        obituaryId,
+        tenantId,
+        status: MessageStatus.APPROVED,
+        deletedAt: null,
+      },
       orderBy: { createdAt: 'asc' },
     });
   }

@@ -91,6 +91,8 @@ Implementación Mux: los eventos privados se aprovisionan con playback policy `s
 
 La escritura final debe incluir la frontera de tenant; no es suficiente consultar el recurso y posteriormente actualizarlo solo por `id`.
 
+**Avance:** 6/7 tareas implementadas (pendiente TEN-06: índices compuestos @@unique, requiere migración de BD). Se corrigieron además: `updateViewerCount` con tenantId, `findApprovedMessages` de obituario con tenantId, y reorden de validaciones en `create()` para evitar difuntos huérfanos. 19 nuevas pruebas de integración multi-tenant.
+
 ## Fase 3: reproducción real del stream
 
 - [ ] **PLAY-01:** Extender `CreateLiveStreamResult` con playback ID y playback URL.
@@ -230,7 +232,7 @@ existingEnd > newStart
 
 - [x] Acceso privado con token válido, inválido y expirado.
 - [x] Acceso WebSocket anónimo, autorizado y administrativo.
-- [ ] Intentos de crear relaciones entre dos tenants.
+- [x] Intentos de crear relaciones entre dos tenants.
 - [ ] Ausencia de credenciales en cada tipo de respuesta.
 - [ ] Inicio y finalización concurrentes.
 - [ ] Fallos de Mux y Cloudflare en cada etapa.

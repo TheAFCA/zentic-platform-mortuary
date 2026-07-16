@@ -238,6 +238,60 @@ export class StreamingService {
   async create(tenantId: string, dto: CreateEventDto) {
     let deceasedId = dto.deceasedId;
 
+    if (!deceasedId && !dto.deceased) {
+      throw new BadRequestException(
+        'Se requiere un difunto asociado (deceasedId o deceased)',
+      );
+    }
+
+    if (dto.deceasedId) {
+      const existingDeceased = await this.repo.findDeceasedByTenant(
+        tenantId,
+        dto.deceasedId,
+      );
+      if (!existingDeceased)
+        throw new BadRequestException('Difunto no encontrado');
+    }
+
+    if (dto.roomId) {
+      const existingRoom = await this.repo.findRoomByTenant(
+        tenantId,
+        dto.roomId,
+      );
+      if (!existingRoom)
+        throw new NotFoundException('Sala no encontrada');
+    }
+
+    if (dto.clientId) {
+      const existingClient = await this.repo.findClientByTenant(
+        tenantId,
+        dto.clientId,
+      );
+      if (!existingClient)
+        throw new NotFoundException('Cliente no encontrado');
+    }
+
+    if (dto.assignedToId) {
+      const existingUser = await this.repo.findUserByTenant(
+        tenantId,
+        dto.assignedToId,
+      );
+      if (!existingUser)
+        throw new NotFoundException('Usuario asignado no encontrado');
+    }
+
+    if (dto.roomId && dto.estimatedDuration) {
+      const overlapping = await this.repo.findByRoomAndTimeOverlap(
+        tenantId,
+        dto.roomId,
+        new Date(dto.scheduledAt),
+        dto.estimatedDuration,
+      );
+      if (overlapping) {
+        throw new ConflictException('La sala está ocupada en ese horario');
+      }
+    }
+
     if (!deceasedId && dto.deceased) {
       const deceased = await this.repo.createDeceased({
         tenantId,
@@ -256,33 +310,6 @@ export class StreamingService {
       deceasedId = deceased.id;
     }
 
-    if (!deceasedId) {
-      throw new BadRequestException(
-        'Se requiere un difunto asociado (deceasedId o deceased)',
-      );
-    }
-
-    if (!dto.deceasedId) {
-      const existingDeceased = await this.repo.findDeceasedByTenant(
-        tenantId,
-        deceasedId,
-      );
-      if (!existingDeceased)
-        throw new BadRequestException('Difunto no encontrado');
-    }
-
-    if (dto.roomId && dto.estimatedDuration) {
-      const overlapping = await this.repo.findByRoomAndTimeOverlap(
-        tenantId,
-        dto.roomId,
-        new Date(dto.scheduledAt),
-        dto.estimatedDuration,
-      );
-      if (overlapping) {
-        throw new ConflictException('La sala está ocupada en ese horario');
-      }
-    }
-
     const slug = this.generateSlug(dto.title);
 
     const eventData: Prisma.EventCreateInput = {
@@ -298,7 +325,7 @@ export class StreamingService {
       moderationMode: dto.moderationMode ?? 'AUTO',
       scheduledAt: new Date(dto.scheduledAt),
       tenant: { connect: { id: tenantId } },
-      deceased: { connect: { id: deceasedId } },
+      deceased: { connect: { id: deceasedId! } },
       ...(dto.roomId ? { room: { connect: { id: dto.roomId } } } : {}),
       ...(dto.clientId ? { client: { connect: { id: dto.clientId } } } : {}),
       ...(dto.assignedToId
@@ -353,6 +380,42 @@ export class StreamingService {
       throw new BadRequestException(
         'No se puede modificar un evento en curso o finalizado',
       );
+    }
+
+    if (dto.roomId !== undefined && dto.roomId) {
+      const existingRoom = await this.repo.findRoomByTenant(
+        tenantId,
+        dto.roomId,
+      );
+      if (!existingRoom)
+        throw new NotFoundException('Sala no encontrada');
+    }
+
+    if (dto.clientId !== undefined && dto.clientId) {
+      const existingClient = await this.repo.findClientByTenant(
+        tenantId,
+        dto.clientId,
+      );
+      if (!existingClient)
+        throw new NotFoundException('Cliente no encontrado');
+    }
+
+    if (dto.assignedToId !== undefined && dto.assignedToId) {
+      const existingUser = await this.repo.findUserByTenant(
+        tenantId,
+        dto.assignedToId,
+      );
+      if (!existingUser)
+        throw new NotFoundException('Usuario asignado no encontrado');
+    }
+
+    if (dto.deceasedId !== undefined) {
+      const existingDeceased = await this.repo.findDeceasedByTenant(
+        tenantId,
+        dto.deceasedId,
+      );
+      if (!existingDeceased)
+        throw new BadRequestException('Difunto no encontrado');
     }
 
     const updateData: Prisma.EventUpdateInput = {};
@@ -459,7 +522,7 @@ export class StreamingService {
       status: EventStatus.LIVE,
     });
 
-    await this.notifyLeadsStreamStarted(event.slug, event.title, id);
+    await this.notifyLeadsStreamStarted(tenantId, event.slug, event.title, id);
 
     this.logger.log(`Stream started: ${id}`);
     return this.withoutStreamingSecrets(updated);
@@ -471,11 +534,12 @@ export class StreamingService {
    * envío no debe interrumpir el inicio del stream.
    */
   private async notifyLeadsStreamStarted(
+    tenantId: string,
     slug: string,
     eventTitle: string,
     eventId: string,
   ): Promise<void> {
-    const leads = await this.repo.findLeadsWithEmailByEvent(eventId);
+    const leads = await this.repo.findLeadsWithEmailByEvent(tenantId, eventId);
     if (!leads.length) return;
 
     const frontendUrl = this.config.get<string>('FRONTEND_URL');
@@ -640,6 +704,7 @@ export class StreamingService {
   ) {
     await this.findOneEntity(tenantId, eventId);
     const message = await this.repo.approveMessage(
+      tenantId,
       eventId,
       messageId,
       approvedByUserId,
@@ -676,7 +741,7 @@ export class StreamingService {
     reason?: string,
   ) {
     await this.findOneEntity(tenantId, eventId);
-    return this.repo.rejectMessage(eventId, messageId, reason);
+    return this.repo.rejectMessage(tenantId, eventId, messageId, reason);
   }
 
   /**
@@ -691,7 +756,7 @@ export class StreamingService {
    */
   async deleteMessage(tenantId: string, eventId: string, messageId: string) {
     await this.findOneEntity(tenantId, eventId);
-    return this.repo.softDeleteMessage(eventId, messageId);
+    return this.repo.softDeleteMessage(tenantId, eventId, messageId);
   }
 
   // ── Reactions ──────────────────────────────────────────────────────

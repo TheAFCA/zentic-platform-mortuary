@@ -136,7 +136,7 @@ export class StreamingRepository {
    */
   async update(tenantId: string, id: string, data: Prisma.EventUpdateInput) {
     return this.prisma.event.update({
-      where: { id },
+      where: { id, tenantId },
       data,
     });
   }
@@ -171,7 +171,7 @@ export class StreamingRepository {
    */
   async softDelete(tenantId: string, id: string) {
     return this.prisma.event.update({
-      where: { id },
+      where: { id, tenantId },
       data: { deletedAt: new Date(), status: 'CANCELLED' },
     });
   }
@@ -273,9 +273,14 @@ export class StreamingRepository {
    * @param approvedBy - Identificador del operador que aprueba
    * @returns El mensaje actualizado a estado APPROVED
    */
-  async approveMessage(eventId: string, messageId: string, approvedBy: string) {
+  async approveMessage(
+    tenantId: string,
+    eventId: string,
+    messageId: string,
+    approvedBy: string,
+  ) {
     return this.prisma.message.update({
-      where: { id: messageId, eventId },
+      where: { id: messageId, eventId, tenantId },
       data: {
         status: 'APPROVED',
         approvedBy,
@@ -287,14 +292,20 @@ export class StreamingRepository {
   /**
    * Rechaza un mensaje, opcionalmente con una razón del rechazo.
    *
+   * @param tenantId - Identificador del tenant
    * @param eventId - Identificador del evento
    * @param messageId - Identificador del mensaje a rechazar
    * @param reason - Razón opcional del rechazo (visible para el autor)
    * @returns El mensaje actualizado a estado REJECTED
    */
-  async rejectMessage(eventId: string, messageId: string, reason?: string) {
+  async rejectMessage(
+    tenantId: string,
+    eventId: string,
+    messageId: string,
+    reason?: string,
+  ) {
     return this.prisma.message.update({
-      where: { id: messageId, eventId },
+      where: { id: messageId, eventId, tenantId },
       data: {
         status: 'REJECTED',
         rejectedReason: reason ?? null,
@@ -306,13 +317,14 @@ export class StreamingRepository {
    * Soft-delete de un mensaje (lo oculta de la vista pública).
    * El administrador puede restaurarlo hasta 7 días después (RN-STREAM-006).
    *
+   * @param tenantId - Identificador del tenant
    * @param eventId - Identificador del evento
    * @param messageId - Identificador del mensaje a eliminar
    * @returns El mensaje marcado como eliminado
    */
-  async softDeleteMessage(eventId: string, messageId: string) {
+  async softDeleteMessage(tenantId: string, eventId: string, messageId: string) {
     return this.prisma.message.update({
-      where: { id: messageId, eventId },
+      where: { id: messageId, eventId, tenantId },
       data: { deletedAt: new Date() },
     });
   }
@@ -326,9 +338,9 @@ export class StreamingRepository {
    * @param count - Número actual de espectadores
    * @returns El evento actualizado
    */
-  async updateViewerCount(eventId: string, count: number) {
+  async updateViewerCount(tenantId: string, eventId: string, count: number) {
     return this.prisma.event.update({
-      where: { id: eventId },
+      where: { id: eventId, tenantId },
       data: { viewerCount: count },
     });
   }
@@ -353,10 +365,30 @@ export class StreamingRepository {
    * @param eventId - Identificador del evento
    * @returns Leads con email no nulo
    */
-  async findLeadsWithEmailByEvent(eventId: string) {
+  async findLeadsWithEmailByEvent(tenantId: string, eventId: string) {
     return this.prisma.lead.findMany({
-      where: { eventId, email: { not: null }, deletedAt: null },
+      where: { tenantId, eventId, email: { not: null }, deletedAt: null },
       select: { email: true, name: true },
+    });
+  }
+
+  // ── Tenant-scoped entity lookups ────────────────────────────────────
+
+  async findRoomByTenant(tenantId: string, roomId: string) {
+    return this.prisma.room.findFirst({
+      where: { id: roomId, tenantId, deletedAt: null },
+    });
+  }
+
+  async findClientByTenant(tenantId: string, clientId: string) {
+    return this.prisma.client.findFirst({
+      where: { id: clientId, tenantId, deletedAt: null },
+    });
+  }
+
+  async findUserByTenant(tenantId: string, userId: string) {
+    return this.prisma.user.findFirst({
+      where: { id: userId, tenantId, deletedAt: null },
     });
   }
 

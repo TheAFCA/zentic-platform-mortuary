@@ -183,6 +183,9 @@ describe('StreamingService', () => {
       createDeceased: jest.fn(),
       findDeceasedByTenant: jest.fn(),
       findByRoomAndTimeOverlap: jest.fn(),
+      findRoomByTenant: jest.fn(),
+      findClientByTenant: jest.fn(),
+      findUserByTenant: jest.fn(),
       createLead: jest.fn(),
       updateViewerCount: jest.fn(),
       findLeadsWithEmailByEvent: jest.fn().mockResolvedValue([]),
@@ -555,30 +558,47 @@ describe('StreamingService', () => {
         biography: undefined,
         epitaph: undefined,
       });
-      expect(mockRepo.findDeceasedByTenant).toHaveBeenCalledWith(
-        tenantId,
-        'deceased-new',
-      );
+      expect(mockRepo.findDeceasedByTenant).not.toHaveBeenCalled();
       expect(mockRepo.create).toHaveBeenCalled();
       expect(result.id).toBe('new-event-id');
     });
 
-    it('should create an event with existing deceasedId', async () => {
+    it('should create an event with existing deceasedId and validate tenant', async () => {
       const dtoWithDeceasedId = {
         ...createDto,
         deceased: undefined,
         deceasedId,
       } as unknown as CreateEventDto;
 
+      mockRepo.findDeceasedByTenant.mockResolvedValue(mockDeceased as any);
       mockRepo.findByRoomAndTimeOverlap.mockResolvedValue(null);
       mockRepo.create.mockResolvedValue(baseEvent as any);
 
       const result = await service.create(tenantId, dtoWithDeceasedId);
 
       expect(mockRepo.createDeceased).not.toHaveBeenCalled();
-      expect(mockRepo.findDeceasedByTenant).not.toHaveBeenCalled();
+      expect(mockRepo.findDeceasedByTenant).toHaveBeenCalledWith(
+        tenantId,
+        deceasedId,
+      );
       expect(mockRepo.create).toHaveBeenCalled();
       expect(result.id).toBe(eventId);
+    });
+
+    it('should throw BadRequestException when deceasedId belongs to another tenant', async () => {
+      const dtoWithDeceasedId = {
+        ...createDto,
+        deceased: undefined,
+        deceasedId,
+      } as unknown as CreateEventDto;
+
+      mockRepo.findDeceasedByTenant.mockResolvedValue(null);
+
+      await expect(
+        service.create(tenantId, dtoWithDeceasedId),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockRepo.createDeceased).not.toHaveBeenCalled();
+      expect(mockRepo.create).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException when no deceased info provided', async () => {
@@ -593,18 +613,26 @@ describe('StreamingService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw BadRequestException when created deceased not found', async () => {
+    it('should not validate deceased tenant when creating via nested deceased data', async () => {
       mockRepo.createDeceased.mockResolvedValue(createdDeceased as any);
-      mockRepo.findDeceasedByTenant.mockResolvedValue(null);
+      mockRepo.findByRoomAndTimeOverlap.mockResolvedValue(null);
+      mockRepo.create.mockResolvedValue(baseEvent as any);
 
-      await expect(service.create(tenantId, createDto)).rejects.toThrow(
-        BadRequestException,
-      );
+      const result = await service.create(tenantId, createDto);
+
+      expect(mockRepo.createDeceased).toHaveBeenCalled();
+      expect(mockRepo.findDeceasedByTenant).not.toHaveBeenCalled();
+      expect(mockRepo.create).toHaveBeenCalled();
+      expect(result.id).toBe(eventId);
     });
 
     it('should throw ConflictException when room overlaps', async () => {
       mockRepo.createDeceased.mockResolvedValue(createdDeceased as any);
       mockRepo.findDeceasedByTenant.mockResolvedValue(createdDeceased as any);
+      mockRepo.findRoomByTenant.mockResolvedValue({
+        id: 'room-1',
+        tenantId,
+      } as any);
       mockRepo.findByRoomAndTimeOverlap.mockResolvedValue({
         id: 'conflicting-event',
       } as any);
@@ -665,6 +693,54 @@ describe('StreamingService', () => {
       expect(createCallArgs.accessCode).toBeDefined();
       expect(createCallArgs.accessCode).not.toBe('secret123');
       expect(createCallArgs.accessCode).toHaveLength(64);
+    });
+
+    it('should throw NotFoundException when roomId belongs to another tenant', async () => {
+      const dtoWithCrossTenantRoom = {
+        ...createDto,
+        deceasedId,
+        roomId: 'room-from-another-tenant',
+      } as unknown as CreateEventDto;
+
+      mockRepo.findDeceasedByTenant.mockResolvedValue(mockDeceased as any);
+      mockRepo.findRoomByTenant.mockResolvedValue(null);
+
+      await expect(
+        service.create(tenantId, dtoWithCrossTenantRoom),
+      ).rejects.toThrow(NotFoundException);
+      expect(mockRepo.create).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when clientId belongs to another tenant', async () => {
+      const dtoWithCrossTenantClient = {
+        ...createDto,
+        deceasedId,
+        clientId: 'client-from-another-tenant',
+      } as unknown as CreateEventDto;
+
+      mockRepo.findDeceasedByTenant.mockResolvedValue(mockDeceased as any);
+      mockRepo.findClientByTenant.mockResolvedValue(null);
+
+      await expect(
+        service.create(tenantId, dtoWithCrossTenantClient),
+      ).rejects.toThrow(NotFoundException);
+      expect(mockRepo.create).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when assignedToId belongs to another tenant', async () => {
+      const dtoWithCrossTenantUser = {
+        ...createDto,
+        deceasedId,
+        assignedToId: 'user-from-another-tenant',
+      } as unknown as CreateEventDto;
+
+      mockRepo.findDeceasedByTenant.mockResolvedValue(mockDeceased as any);
+      mockRepo.findUserByTenant.mockResolvedValue(null);
+
+      await expect(
+        service.create(tenantId, dtoWithCrossTenantUser),
+      ).rejects.toThrow(NotFoundException);
+      expect(mockRepo.create).not.toHaveBeenCalled();
     });
 
     it('should not set accessCode when not provided', async () => {
@@ -736,8 +812,66 @@ describe('StreamingService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
+    it('should throw NotFoundException when updating with roomId from another tenant', async () => {
+      mockRepo.findById.mockResolvedValue(mockEventFindById as any);
+      mockRepo.findRoomByTenant.mockResolvedValue(null);
+
+      await expect(
+        service.update(tenantId, eventId, { roomId: 'room-other-tenant' }),
+      ).rejects.toThrow(NotFoundException);
+      expect(mockRepo.update).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when updating with clientId from another tenant', async () => {
+      mockRepo.findById.mockResolvedValue(mockEventFindById as any);
+      mockRepo.findClientByTenant.mockResolvedValue(null);
+
+      await expect(
+        service.update(tenantId, eventId, { clientId: 'client-other-tenant' }),
+      ).rejects.toThrow(NotFoundException);
+      expect(mockRepo.update).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when updating with assignedToId from another tenant', async () => {
+      mockRepo.findById.mockResolvedValue(mockEventFindById as any);
+      mockRepo.findUserByTenant.mockResolvedValue(null);
+
+      await expect(
+        service.update(tenantId, eventId, {
+          assignedToId: 'user-other-tenant',
+        }),
+      ).rejects.toThrow(NotFoundException);
+      expect(mockRepo.update).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException when updating with deceasedId from another tenant', async () => {
+      mockRepo.findById.mockResolvedValue(mockEventFindById as any);
+      mockRepo.findDeceasedByTenant.mockResolvedValue(null);
+
+      await expect(
+        service.update(tenantId, eventId, { deceasedId: 'deceased-other-tenant' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockRepo.update).not.toHaveBeenCalled();
+    });
+
     it('should build Prisma.EventUpdateInput from non-undefined fields', async () => {
       mockRepo.findById.mockResolvedValue(mockEventFindById as any);
+      mockRepo.findRoomByTenant.mockResolvedValue({
+        id: 'room-2',
+        tenantId,
+      } as any);
+      mockRepo.findClientByTenant.mockResolvedValue({
+        id: 'client-1',
+        tenantId,
+      } as any);
+      mockRepo.findUserByTenant.mockResolvedValue({
+        id: 'user-1',
+        tenantId,
+      } as any);
+      mockRepo.findDeceasedByTenant.mockResolvedValue({
+        id: 'deceased-2',
+        tenantId,
+      } as any);
       mockRepo.update.mockResolvedValue(mockEventFindById as any);
 
       await service.update(tenantId, eventId, {
@@ -884,7 +1018,10 @@ describe('StreamingService', () => {
 
       await service.startStream(tenantId, eventId);
 
-      expect(mockRepo.findLeadsWithEmailByEvent).toHaveBeenCalledWith(eventId);
+      expect(mockRepo.findLeadsWithEmailByEvent).toHaveBeenCalledWith(
+        tenantId,
+        eventId,
+      );
       expect(mockEmailService.sendStreamStartedEmail).toHaveBeenCalledTimes(1);
       expect(mockEmailService.sendStreamStartedEmail).toHaveBeenCalledWith({
         to: 'ana@example.com',
@@ -1179,6 +1316,7 @@ describe('StreamingService', () => {
       );
 
       expect(mockRepo.approveMessage).toHaveBeenCalledWith(
+        tenantId,
         eventId,
         messageId,
         'operator-1',
@@ -1226,6 +1364,7 @@ describe('StreamingService', () => {
       );
 
       expect(mockRepo.rejectMessage).toHaveBeenCalledWith(
+        tenantId,
         eventId,
         messageId,
         reason,
@@ -1244,6 +1383,7 @@ describe('StreamingService', () => {
       const result = await service.rejectMessage(tenantId, eventId, messageId);
 
       expect(mockRepo.rejectMessage).toHaveBeenCalledWith(
+        tenantId,
         eventId,
         messageId,
         undefined,
@@ -1260,6 +1400,7 @@ describe('StreamingService', () => {
       const result = await service.deleteMessage(tenantId, eventId, messageId);
 
       expect(mockRepo.softDeleteMessage).toHaveBeenCalledWith(
+        tenantId,
         eventId,
         messageId,
       );

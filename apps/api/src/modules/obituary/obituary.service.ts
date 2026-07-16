@@ -128,6 +128,7 @@ export class ObituaryService {
       ? await this.obituaryRepo.findEventById(tenantId, existing.eventId)
       : null;
     const approvedMessages = await this.obituaryRepo.findApprovedMessages(
+      tenantId,
       existing.id,
     );
 
@@ -322,6 +323,7 @@ export class ObituaryService {
 
     // RN-OBT-008: el libro de homenajes solo incluye mensajes aprobados.
     const approvedMessages = await this.obituaryRepo.findApprovedMessages(
+      tenantId,
       existing.id,
     );
     if (approvedMessages.length === 0) {
