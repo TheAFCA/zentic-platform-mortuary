@@ -408,10 +408,17 @@ export class EventPageComponent {
     });
 
     this.socket.streamStatus$.subscribe((status) => {
+      const prevStatus = this.evt()?.status as string | undefined;
       this.evt.update((e) => (e ? { ...e, status: status as EventStatus } : e));
+      if (prevStatus === 'LIVE' && status === 'FINISHED') {
+        this.pollRecordingUrl();
+      }
     });
 
-    this.destroyRef.onDestroy(() => this.clearPlaybackRefreshTimer());
+    this.destroyRef.onDestroy(() => {
+      this.clearPlaybackRefreshTimer();
+      this.cancelPoll();
+    });
   }
 
   /** Carga los datos públicos del evento desde la API */
@@ -464,6 +471,54 @@ export class EventPageComponent {
     if (!hasPrivatePlayback) return;
 
     this.playbackRefreshTimer = setInterval(() => this.refreshPlaybackUrl(), 45 * 60 * 1000);
+  }
+
+  private pollAttempts = 0;
+  private livePlaybackUrl: string | null = null;
+  private pollTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private pollRecordingUrl(): void {
+    this.livePlaybackUrl = this.evt()?.playbackUrl ?? null;
+    this.pollAttempts = 0;
+    this.schedulePoll();
+  }
+
+  private schedulePoll(): void {
+    const delay = [2_000, 5_000, 10_000, 30_000][this.pollAttempts] ?? 60_000;
+    this.pollTimer = setTimeout(() => {
+      this.pollTimer = null;
+      this.api.findPublic(this.slug).subscribe({
+        next: (ev) => {
+          const hasRecording =
+            ev.recordingUrl &&
+            ev.recordingUrl !== this.livePlaybackUrl &&
+            (ev.status as string) === 'FINISHED';
+          if (hasRecording) {
+            this.evt.set(ev);
+            this.pollAttempts = 0;
+            return;
+          }
+          if (this.pollAttempts < 8) {
+            this.pollAttempts++;
+            this.schedulePoll();
+          }
+        },
+        error: () => {
+          if (this.pollAttempts < 8) {
+            this.pollAttempts++;
+            this.schedulePoll();
+          }
+        },
+      });
+    }, delay);
+  }
+
+  private cancelPoll(): void {
+    if (this.pollTimer) {
+      clearTimeout(this.pollTimer);
+      this.pollTimer = null;
+    }
+    this.pollAttempts = 0;
   }
 
   private clearPlaybackRefreshTimer(): void {

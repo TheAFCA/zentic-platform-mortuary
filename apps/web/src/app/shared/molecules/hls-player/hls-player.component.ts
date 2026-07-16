@@ -214,31 +214,38 @@ export class HlsPlayerComponent implements OnDestroy {
   private initPlayer(url: string, video: HTMLVideoElement, generation: number): void {
     const canPlayNative = video.canPlayType('application/vnd.apple.mpegurl');
     if (canPlayNative === 'probably' || canPlayNative === 'maybe') {
-      this.playNative(url, video);
+      this.playNative(url, video, generation);
     } else {
       void this.playWithHlsJs(url, video, generation);
     }
   }
 
-  private playNative(url: string, video: HTMLVideoElement): void {
+  private playNative(url: string, video: HTMLVideoElement, generation: number): void {
     video.src = url;
 
     this.addNativeListener(video, 'loadedmetadata', () => {
+      if (!this.isCurrentPlayback(url, video, generation)) return;
       this.status.set('ready');
     });
     this.addNativeListener(video, 'error', () => {
+      if (!this.isCurrentPlayback(url, video, generation)) return;
+      this.requestPlaybackRefresh(generation);
       this.status.set('error');
     });
     this.addNativeListener(video, 'waiting', () => {
+      if (!this.isCurrentPlayback(url, video, generation)) return;
       if (this.status() === 'ready') this.status.set('reconnecting');
     });
     this.addNativeListener(video, 'stalled', () => {
+      if (!this.isCurrentPlayback(url, video, generation)) return;
       if (this.status() === 'ready') this.status.set('no_signal');
     });
     this.addNativeListener(video, 'canplay', () => {
+      if (!this.isCurrentPlayback(url, video, generation)) return;
       this.status.set('ready');
     });
     this.addNativeListener(video, 'playing', () => {
+      if (!this.isCurrentPlayback(url, video, generation)) return;
       this.status.set('ready');
     });
   }

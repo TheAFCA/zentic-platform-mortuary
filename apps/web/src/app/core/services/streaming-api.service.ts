@@ -21,7 +21,7 @@ export interface StreamingEvent {
   streamKey?: string | null;
   rtmpUrl?: string | null;
   recordingUrl: string | null;
-  playbackUrl: string | null;
+  playbackUrl?: string | null;
   viewerCount: number;
   moderationMode: string;
   createdAt: string;

@@ -73,16 +73,7 @@ export class StreamingService {
    */
   async findAll(tenantId: string) {
     const events = await this.repo.findManyByTenant(tenantId);
-    return Promise.all(
-      events.map(async (event) => {
-        const needsPlayback =
-          event.status === 'LIVE' || event.status === 'FINISHED';
-        const playbackUrl = needsPlayback
-          ? await this.resolvePlaybackUrl(event)
-          : null;
-        return { ...this.withoutStreamingSecrets(event), playbackUrl };
-      }),
-    );
+    return events.map((event) => this.withoutStreamingSecrets(event));
   }
 
   /**

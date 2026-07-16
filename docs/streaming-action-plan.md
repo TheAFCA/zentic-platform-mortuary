@@ -6,12 +6,15 @@ Este documento transforma los hallazgos de la auditoría del módulo de streamin
 
 El módulo no debe considerarse listo para producción hasta completar las fases de seguridad, aislamiento multi-tenant, reproducción y consistencia del ciclo de vida.
 
+La decisión de mantener esta fase enfocada en Mux, con extensibilidad futura preparada pero fuera de alcance, está documentada en [streaming-provider-decision.md](./streaming-provider-decision.md).
+
 ## Objetivos
 
 - Proteger eventos, grabaciones y canales WebSocket privados.
 - Evitar exposición de credenciales de transmisión.
 - Garantizar el aislamiento de datos entre tenants.
-- Habilitar la reproducción HLS real con Mux y Cloudflare.
+- Habilitar la reproducción HLS real con Mux.
+- Dejar la abstracción lista para sumar otros proveedores en el futuro sin mezclar ese trabajo con la fase actual.
 - Hacer que las transiciones del stream sean atómicas e idempotentes.
 - Preparar WebSocket, rate limiting y presencia para múltiples réplicas.
 - Aumentar la cobertura mediante pruebas de seguridad, integración y E2E.
@@ -93,20 +96,20 @@ La escritura final debe incluir la frontera de tenant; no es suficiente consulta
 
 **Avance:** 5/7 tareas implementadas. TEN-06 (índices compuestos) pendiente (requiere migración de BD). TEN-07 parcial: existen pruebas unitarias cross-tenant con mocks, pero falta una prueba real con dos tenants persistidos en PostgreSQL. Se corrigieron además: `updateViewerCount` con tenantId, `findApprovedMessages` de obituario con tenantId, y reorden de validaciones en `create()` para evitar difuntos huérfanos.
 
-## Fase 3: reproducción real del stream
+## Fase 3: reproducción real del stream con Mux
 
 - [x] **PLAY-01:** Extender `CreateLiveStreamResult` con playback ID y playback URL.
 - [x] **PLAY-02:** Añadir al modelo los campos necesarios para reproducción en vivo (`playbackId`, `playbackPolicy`).
 - [x] **PLAY-03:** Guardar `playbackId`, `playbackPolicy` y `playbackUrl` al crear el recurso remoto.
 - [x] **PLAY-04:** Implementar la obtención de HLS para Mux (via `getPlaybackUrl`).
-- [x] **PLAY-05:** Implementar HLS público y privado para Cloudflare (dominio `customer-<CODE>.cloudflarestream.com` y token firmado para eventos privados).
+- [ ] **PLAY-05:** Mantener el contrato de reproducción preparado para futuros proveedores sin añadir otra integración en esta fase.
 - [x] **PLAY-06:** Usar `playbackUrl` resuelto como `src` del video (tanto admin como público).
 - [x] **PLAY-07:** Integrar `hls.js` con recuperación de errores, fallback HLS nativo y limpieza al cambiar/quitar la fuente o destruir el componente.
 - [x] **PLAY-08:** Mostrar estados: conectando/live/sin-señal/reconectando/finalizado/error + modo live vs recording.
 - [x] **PLAY-09:** Probar de forma automatizada la selección HLS nativa y `hls.js`, la limpieza de recursos, fuentes reemplazadas y recuperación de errores.
-- [ ] **PLAY-10:** Validar el flujo completo con OBS, cuentas reales de Mux y Cloudflare, Safari y un navegador basado en Chromium.
+- [ ] **PLAY-10:** Validar el flujo completo con OBS, cuentas reales de Mux, Safari y un navegador basado en Chromium.
 
-**Avance:** 9/10 tareas implementadas. La configuración de Cloudflare requiere `CLOUDFLARE_STREAM_CUSTOMER_CODE` además de las credenciales de API. PLAY-10 permanece pendiente porque necesita infraestructura y navegadores reales.
+**Avance:** 8/10 tareas implementadas. PLAY-05 queda reservado como base para futuros proveedores y PLAY-10 permanece pendiente porque necesita infraestructura y navegadores reales.
 
 **Criterio de salida:** OBS emite, el proveedor recibe la señal y un espectador autorizado puede reproducirla desde la página del evento.
 
@@ -144,9 +147,9 @@ LIVE/PAUSED -> INTERRUPTED
 ### Resolución del proveedor
 
 - [ ] **PROV-01:** Resolver el proveedor mediante `event.provider`, no mediante la configuración activa global.
-- [ ] **PROV-02:** Crear un registro o factory que entregue Mux o Cloudflare por nombre.
+- [ ] **PROV-02:** Crear un registro o factory que soporte Mux hoy y permita sumar otros proveedores después sin tocar los flujos de dominio.
 - [ ] **PROV-03:** Rechazar de forma controlada proveedores desconocidos en datos históricos.
-- [ ] **PROV-04:** Validar `response.ok` en todas las operaciones de Cloudflare.
+- [ ] **PROV-04:** Validar `response.ok` en todas las operaciones del proveedor.
 - [ ] **PROV-05:** Añadir timeouts y errores externos tipados.
 - [ ] **PROV-06:** Diferenciar entre ausencia de señal e indisponibilidad del proveedor.
 
@@ -237,9 +240,9 @@ existingEnd > newStart
 - [ ] Intentos de crear relaciones entre dos tenants.
 - [ ] Ausencia de credenciales en cada tipo de respuesta.
 - [ ] Inicio y finalización concurrentes.
-- [ ] Fallos de Mux y Cloudflare en cada etapa.
+- [ ] Fallos de Mux en cada etapa.
 - [ ] Compensación de recursos huérfanos.
-- [ ] Cambio de proveedor con eventos históricos.
+- [ ] Resolución del proveedor con eventos históricos.
 - [ ] Solapamientos y concurrencia de salas.
 - [ ] Rate limiting distribuido.
 - [ ] Expiración de grabaciones.
@@ -269,7 +272,7 @@ Se debe retirar `!modules/streaming/**` de la configuración de cobertura de la 
 5. Completar `SCHED-*`, `MOD-*` y `SCALE-*`.
 6. Completar `REC-*` y `DATA-*`.
 7. Completar `WEB-*`.
-8. Ejecutar pruebas E2E, de carga y validación con proveedores reales.
+8. Ejecutar pruebas E2E, de carga y validación con Mux real.
 
 ## Puerta de salida a producción
 
@@ -280,7 +283,7 @@ La salida a producción queda bloqueada hasta que se cumplan estas condiciones:
 - Los eventos privados están protegidos en REST, WebSocket y playback.
 - Ninguna respuesta de lectura general expone credenciales.
 - Las pruebas multi-tenant negativas están aprobadas.
-- La reproducción HLS fue validada con los proveedores configurados.
+- La reproducción HLS fue validada con Mux.
 - Las transiciones de estado superan pruebas concurrentes e idempotentes.
 - Existe monitoreo de errores de proveedor, webhooks y recursos huérfanos.
 
