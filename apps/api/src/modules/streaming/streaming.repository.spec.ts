@@ -576,7 +576,11 @@ describe('StreamingRepository', () => {
       };
       (prisma.message.update as jest.Mock).mockResolvedValue(mockMessage);
 
-      const result = await repository.rejectMessage(tenantId, eventId, messageId);
+      const result = await repository.rejectMessage(
+        tenantId,
+        eventId,
+        messageId,
+      );
 
       expect(prisma.message.update).toHaveBeenCalledWith({
         where: { id: messageId, eventId, tenantId },
@@ -807,10 +811,7 @@ describe('StreamingRepository', () => {
     it('should return null when user belongs to another tenant', async () => {
       (prisma.user.findFirst as jest.Mock).mockResolvedValue(null);
 
-      const result = await repository.findUserByTenant(
-        tenantId,
-        'user-other',
-      );
+      const result = await repository.findUserByTenant(tenantId, 'user-other');
 
       expect(result).toBeNull();
     });

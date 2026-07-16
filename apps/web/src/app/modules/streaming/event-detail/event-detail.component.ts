@@ -15,6 +15,7 @@ import {
 import { StreamingSocketService } from '../../../core/services/streaming-socket.service';
 import { EventStatus } from '@zentic/shared-types';
 import { AuthStateService } from '../../../core/services/auth-state.service';
+import { HlsPlayerComponent } from '../../../shared/molecules/hls-player/hls-player.component';
 
 @Component({
   selector: 'app-event-detail',
@@ -27,6 +28,7 @@ import { AuthStateService } from '../../../core/services/auth-state.service';
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatTooltipModule,
+    HlsPlayerComponent,
   ],
   styles: [
     `
@@ -774,16 +776,20 @@ import { AuthStateService } from '../../../core/services/auth-state.service';
         }
 
         @if (activeTab() === 'recording') {
-          @if (ev.recordingUrl && ev.status === 'FINISHED') {
+          @if (ev.playbackUrl && (ev.status === 'LIVE' || ev.status === 'FINISHED')) {
             <div class="recording-card">
-              <video
-                controls
-                [src]="ev.recordingUrl"
-                style="width:100%;display:block;aspect-ratio:16/9;background:#000;"
-              ></video>
-              <div class="recording-card__footer">
-                Grabación disponible — descárgala desde el panel de administración
-              </div>
+              <app-hls-player
+                [src]="ev.playbackUrl"
+                [posterUrl]="ev.deceased.photoUrl ?? ''"
+                [mode]="ev.status === 'FINISHED' ? 'recording' : 'live'"
+              >
+                La grabación estará disponible cuando finalice el evento
+              </app-hls-player>
+              @if (ev.status === 'FINISHED') {
+                <div class="recording-card__footer">
+                  Grabación disponible — descárgala desde el panel de administración
+                </div>
+              }
             </div>
           } @else {
             <div class="recording-card">

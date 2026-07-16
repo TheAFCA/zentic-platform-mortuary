@@ -56,6 +56,8 @@ describe('StreamingService', () => {
     startedAt: null as Date | null,
     finishedAt: null as Date | null,
     recordingUrl: null as string | null,
+    playbackId: null as string | null,
+    playbackPolicy: null as string | null,
     isPublic: true,
     viewerCount: 0,
     streamKey: 'zentic_abababababababababababab',
@@ -234,6 +236,7 @@ describe('StreamingService', () => {
 
     mockCloudflareProvider = {
       parseWebhookEvent: jest.fn(),
+      getPlaybackUrl: jest.fn(),
     } as unknown as jest.Mocked<CloudflareStreamProvider>;
 
     mockEmailService = {
@@ -393,7 +396,9 @@ describe('StreamingService', () => {
         provider: 'mux',
         isPublic: false,
         status: 'FINISHED',
-        recordingUrl: 'mux:signed:playback-private',
+        playbackId: 'playback-private',
+        playbackPolicy: 'signed',
+        recordingUrl: null,
       } as any);
       mockStreamAccess.canAccess.mockResolvedValue(true);
       mockMuxProvider.getPlaybackUrl.mockResolvedValue(
@@ -407,7 +412,31 @@ describe('StreamingService', () => {
         'signed',
       );
       expect(result.playbackUrl).toContain('?token=jwt');
-      expect(result.recordingUrl).toContain('?token=jwt');
+    });
+
+    it('should sign a private Cloudflare playback reference after access', async () => {
+      mockRepo.findBySlug.mockResolvedValue({
+        ...mockEventFindBySlug,
+        provider: 'cloudflare',
+        isPublic: false,
+        status: 'LIVE',
+        playbackId: 'cf-private-input',
+        playbackPolicy: 'signed',
+        recordingUrl:
+          'https://customer-code.cloudflarestream.com/cf-private-input/manifest/video.m3u8',
+      } as any);
+      mockStreamAccess.canAccess.mockResolvedValue(true);
+      mockCloudflareProvider.getPlaybackUrl.mockResolvedValue(
+        'https://customer-code.cloudflarestream.com/signed.jwt/manifest/video.m3u8',
+      );
+
+      const result = await service.findPublic('private-event', 'viewer-token');
+
+      expect(mockCloudflareProvider.getPlaybackUrl).toHaveBeenCalledWith(
+        'cf-private-input',
+        'signed',
+      );
+      expect(result.playbackUrl).toContain('/signed.jwt/manifest/video.m3u8');
     });
 
     it('should not expose a finished recording for a private event', async () => {
@@ -594,9 +623,9 @@ describe('StreamingService', () => {
 
       mockRepo.findDeceasedByTenant.mockResolvedValue(null);
 
-      await expect(
-        service.create(tenantId, dtoWithDeceasedId),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.create(tenantId, dtoWithDeceasedId)).rejects.toThrow(
+        BadRequestException,
+      );
       expect(mockRepo.createDeceased).not.toHaveBeenCalled();
       expect(mockRepo.create).not.toHaveBeenCalled();
     });
@@ -672,6 +701,8 @@ describe('StreamingService', () => {
         rtmpUrl: 'rtmps://global-live.mux.com:443/app',
         provider: 'mux',
         providerStreamId: 'mux-live-stream-new',
+        playbackId: undefined,
+        playbackPolicy: undefined,
       });
     });
 
@@ -849,7 +880,9 @@ describe('StreamingService', () => {
       mockRepo.findDeceasedByTenant.mockResolvedValue(null);
 
       await expect(
-        service.update(tenantId, eventId, { deceasedId: 'deceased-other-tenant' }),
+        service.update(tenantId, eventId, {
+          deceasedId: 'deceased-other-tenant',
+        }),
       ).rejects.toThrow(BadRequestException);
       expect(mockRepo.update).not.toHaveBeenCalled();
     });
@@ -1679,6 +1712,8 @@ describe('StreamingService', () => {
 
       expect(mockRepo.update).toHaveBeenCalledWith(tenantId, eventId, {
         recordingUrl: 'https://stream.mux.com/abc.m3u8',
+        playbackId: undefined,
+        playbackPolicy: undefined,
         recordingExpiry: expect.any(Date),
       });
     });
@@ -1699,6 +1734,8 @@ describe('StreamingService', () => {
 
       expect(mockRepo.update).toHaveBeenCalledWith(tenantId, eventId, {
         recordingUrl: 'https://videodelivery.net/abc/manifest/video.m3u8',
+        playbackId: undefined,
+        playbackPolicy: undefined,
         recordingExpiry: null,
       });
     });

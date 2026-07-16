@@ -4,6 +4,7 @@ export interface CreateLiveStreamResult {
   providerStreamId: string;
   playbackId?: string;
   playbackPolicy?: 'public' | 'signed';
+  playbackUrl?: string;
 }
 
 export type StreamWebhookEvent =

@@ -321,6 +321,8 @@ model Event {
   rtmpUrl          String?
   provider         String?
   providerStreamId String?        @unique
+  playbackId       String?
+  playbackPolicy   String?
   status           EventStatus    @default(SCHEDULED)
   moderationMode   ModerationMode @default(AUTO)
   recordingUrl     String?

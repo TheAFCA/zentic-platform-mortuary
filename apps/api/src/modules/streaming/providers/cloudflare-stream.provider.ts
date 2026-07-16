@@ -27,11 +27,13 @@ export class CloudflareStreamProvider implements StreamProvider {
   private readonly accountId?: string;
   private readonly apiToken?: string;
   private readonly webhookSecret?: string;
+  private readonly customerCode?: string;
 
   constructor(private readonly config: ConfigService<Env>) {
     this.accountId = config.get<string>('CLOUDFLARE_ACCOUNT_ID');
     this.apiToken = config.get<string>('CLOUDFLARE_STREAM_API_TOKEN');
     this.webhookSecret = config.get<string>('CLOUDFLARE_STREAM_WEBHOOK_SECRET');
+    this.customerCode = config.get<string>('CLOUDFLARE_STREAM_CUSTOMER_CODE');
   }
 
   private get baseUrl(): string {
@@ -45,11 +47,19 @@ export class CloudflareStreamProvider implements StreamProvider {
     };
   }
 
-  async createLiveStream(): Promise<CreateLiveStreamResult> {
+  async createLiveStream(options?: {
+    signedPlayback?: boolean;
+  }): Promise<CreateLiveStreamResult> {
+    const signedPlayback = options?.signedPlayback ?? false;
     const response = await fetch(`${this.baseUrl}/live_inputs`, {
       method: 'POST',
       headers: this.authHeaders(),
-      body: JSON.stringify({ recording: { mode: 'automatic' } }),
+      body: JSON.stringify({
+        recording: {
+          mode: 'automatic',
+          requireSignedURLs: signedPlayback,
+        },
+      }),
     });
 
     if (!response.ok) {
@@ -66,7 +76,17 @@ export class CloudflareStreamProvider implements StreamProvider {
       streamKey: result.rtmps.streamKey,
       rtmpUrl: result.rtmps.url,
       providerStreamId: result.uid,
+      playbackId: result.uid,
+      playbackPolicy: signedPlayback ? 'signed' : 'public',
+      playbackUrl: this.buildLiveHlsUrl(result.uid),
     };
+  }
+
+  private buildLiveHlsUrl(identifier: string): string {
+    const host = this.customerCode
+      ? `customer-${this.customerCode}.cloudflarestream.com`
+      : 'videodelivery.net';
+    return `https://${host}/${identifier}/manifest/video.m3u8`;
   }
 
   async getStreamStatus(providerStreamId: string): Promise<'idle' | 'active'> {
@@ -106,9 +126,30 @@ export class CloudflareStreamProvider implements StreamProvider {
 
   async getPlaybackUrl(
     playbackId: string,
-    _policy: 'public' | 'signed',
+    policy: 'public' | 'signed',
   ): Promise<string> {
-    return playbackId;
+    if (policy === 'public') return this.buildLiveHlsUrl(playbackId);
+
+    const response = await fetch(
+      `${this.baseUrl}/${encodeURIComponent(playbackId)}/token`,
+      {
+        method: 'POST',
+        headers: this.authHeaders(),
+      },
+    );
+    if (!response.ok) {
+      throw new Error(
+        `Cloudflare Stream: no se pudo firmar el playback (${response.status})`,
+      );
+    }
+
+    const { result } = (await response.json()) as {
+      result?: { token?: string };
+    };
+    if (!result?.token) {
+      throw new Error('Cloudflare Stream: respuesta de firma sin token');
+    }
+    return this.buildLiveHlsUrl(result.token);
   }
 
   parseWebhookEvent(
@@ -142,7 +183,11 @@ export class CloudflareStreamProvider implements StreamProvider {
       if (!playback?.hls) return null;
       return {
         type: 'recording.ready',
-        providerStreamId: payload.uid,
+        providerStreamId:
+          typeof payload.liveInput === 'string'
+            ? payload.liveInput
+            : payload.uid,
+        playbackId: payload.uid,
         recordingUrl: playback.hls,
       };
     }

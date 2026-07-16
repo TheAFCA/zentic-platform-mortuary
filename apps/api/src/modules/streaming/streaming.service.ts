@@ -73,7 +73,16 @@ export class StreamingService {
    */
   async findAll(tenantId: string) {
     const events = await this.repo.findManyByTenant(tenantId);
-    return events.map((event) => this.withoutStreamingSecrets(event));
+    return Promise.all(
+      events.map(async (event) => {
+        const needsPlayback =
+          event.status === 'LIVE' || event.status === 'FINISHED';
+        const playbackUrl = needsPlayback
+          ? await this.resolvePlaybackUrl(event)
+          : null;
+        return { ...this.withoutStreamingSecrets(event), playbackUrl };
+      }),
+    );
   }
 
   /**
@@ -86,7 +95,12 @@ export class StreamingService {
    */
   async findOne(tenantId: string, id: string) {
     const event = await this.findOneEntity(tenantId, id);
-    return this.withoutStreamingSecrets(event);
+    const needsPlayback =
+      event.status === 'LIVE' || event.status === 'FINISHED';
+    const playbackUrl = needsPlayback
+      ? await this.resolvePlaybackUrl(event)
+      : null;
+    return { ...this.withoutStreamingSecrets(event), playbackUrl };
   }
 
   /** Obtiene una vista enmascarada de las credenciales RTMP. */
@@ -333,19 +347,25 @@ export class StreamingService {
 
     const event = await this.repo.create(eventData);
 
-    const { streamKey, rtmpUrl, providerStreamId, playbackId, playbackPolicy } =
-      await this.provider.createLiveStream({ signedPlayback: !event.isPublic });
+    const {
+      streamKey,
+      rtmpUrl,
+      providerStreamId,
+      playbackId,
+      playbackPolicy,
+      playbackUrl,
+    } = await this.provider.createLiveStream({
+      signedPlayback: !event.isPublic,
+    });
 
     const provisioned = await this.repo.update(tenantId, event.id, {
       streamKey,
       rtmpUrl,
       provider: this.provider.name,
       providerStreamId,
-      ...(playbackId && playbackPolicy
-        ? {
-            recordingUrl: this.muxPlaybackReference(playbackId, playbackPolicy),
-          }
-        : {}),
+      playbackId,
+      playbackPolicy,
+      ...(playbackUrl ? { recordingUrl: playbackUrl } : {}),
     });
     return this.withoutStreamingSecrets(provisioned);
   }
@@ -876,10 +896,9 @@ export class StreamingService {
           );
 
     await this.repo.update(found.tenantId, found.id, {
-      recordingUrl:
-        event.playbackId && event.playbackPolicy
-          ? this.muxPlaybackReference(event.playbackId, event.playbackPolicy)
-          : event.recordingUrl,
+      recordingUrl: event.recordingUrl ?? undefined,
+      playbackId: event.playbackId,
+      playbackPolicy: event.playbackPolicy,
       recordingExpiry,
     });
   }
@@ -977,25 +996,36 @@ export class StreamingService {
 
   private async resolvePlaybackUrl(event: {
     provider: string | null;
+    playbackId: string | null;
+    playbackPolicy: string | null;
     recordingUrl: string | null;
   }): Promise<string | null> {
-    const muxReference = event.recordingUrl?.match(
-      /^mux:(public|signed):(.+)$/,
-    );
-    if (event.provider === 'mux' && muxReference) {
-      return this.muxProvider.getPlaybackUrl(
-        muxReference[2],
-        muxReference[1] as 'public' | 'signed',
+    if (event.provider === 'mux') {
+      if (event.playbackId && event.playbackPolicy) {
+        return this.muxProvider.getPlaybackUrl(
+          event.playbackId,
+          event.playbackPolicy as 'public' | 'signed',
+        );
+      }
+      const legacy = event.recordingUrl?.match(/^mux:(public|signed):(.+)$/);
+      if (legacy) {
+        return this.muxProvider.getPlaybackUrl(
+          legacy[2],
+          legacy[1] as 'public' | 'signed',
+        );
+      }
+    }
+    if (
+      event.provider === 'cloudflare' &&
+      event.playbackId &&
+      event.playbackPolicy
+    ) {
+      return this.cloudflareProvider.getPlaybackUrl(
+        event.playbackId,
+        event.playbackPolicy as 'public' | 'signed',
       );
     }
     return event.recordingUrl;
-  }
-
-  private muxPlaybackReference(
-    playbackId: string,
-    policy: 'public' | 'signed',
-  ): string {
-    return `mux:${policy}:${playbackId}`;
   }
 
   private maskSecret(secret: string | null): string | null {
@@ -1007,12 +1037,22 @@ export class StreamingService {
   /** Retira credenciales y hashes antes de devolver un evento por endpoints generales. */
   private withoutStreamingSecrets<T extends Record<string, unknown>>(
     event: T,
-  ): Omit<T, 'streamKey' | 'rtmpUrl' | 'accessCode' | 'providerStreamId'> {
+  ): Omit<
+    T,
+    | 'streamKey'
+    | 'rtmpUrl'
+    | 'accessCode'
+    | 'providerStreamId'
+    | 'playbackId'
+    | 'playbackPolicy'
+  > {
     const {
       streamKey: _streamKey,
       rtmpUrl: _rtmpUrl,
       accessCode: _accessCode,
       providerStreamId: _providerStreamId,
+      playbackId: _playbackId,
+      playbackPolicy: _playbackPolicy,
       ...safeEvent
     } = event;
     return safeEvent;

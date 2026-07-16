@@ -12,6 +12,7 @@ export class EventListItemResponseDto {
 export class EventDetailResponseDto extends EventListItemResponseDto {
   @ApiPropertyOptional({ nullable: true }) description: string | null;
   @ApiPropertyOptional({ nullable: true }) recordingUrl: string | null;
+  @ApiPropertyOptional({ nullable: true }) playbackUrl: string | null;
 }
 
 export class PublicEventResponseDto {

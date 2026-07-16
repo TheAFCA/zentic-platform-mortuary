@@ -34,6 +34,7 @@ describe('StreamingApiService', () => {
     streamKey: null,
     rtmpUrl: null,
     recordingUrl: null,
+    playbackUrl: null,
     viewerCount: 0,
     moderationMode: 'auto',
     createdAt: '2026-07-01T12:00:00Z',

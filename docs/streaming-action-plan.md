@@ -79,15 +79,15 @@ Implementación Mux: los eventos privados se aprovisionan con playback policy `s
 
 ## Fase 2: aislamiento multi-tenant
 
-| ID     | Corrección                                                    | Criterio de aceptación                                                |
-| ------ | ------------------------------------------------------------- | --------------------------------------------------------------------- |
-| TEN-01 | Corregir la validación invertida de `deceasedId`              | Solo se pueden usar difuntos del tenant autenticado                   |
-| TEN-02 | Validar `roomId`, `clientId` y `assignedToId` al crear        | Un ID de otro tenant produce 404 o 400                                |
-| TEN-03 | Repetir las validaciones al actualizar                        | No se pueden cambiar relaciones hacia otro tenant                     |
-| TEN-04 | Incluir `tenantId` en todas las escrituras del repositorio    | Actualización, eliminación y moderación quedan delimitadas por tenant |
-| TEN-05 | Revisar mensajes, leads, obituarios y webhooks relacionados   | Ninguna relación puede cruzar tenants                                 |
-| TEN-06 | Añadir índices y restricciones compuestas cuando sean viables | La base de datos refuerza el aislamiento                              |
-| TEN-07 | Añadir pruebas negativas con al menos dos tenants             | Todos los intentos cruzados son rechazados                            |
+| ID     | Corrección                                                    | Criterio de aceptación                                                | Estado                                                              |
+| ------ | ------------------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| TEN-01 | Corregir la validación invertida de `deceasedId`              | Solo se pueden usar difuntos del tenant autenticado                   | ✅ Completado                                                       |
+| TEN-02 | Validar `roomId`, `clientId` y `assignedToId` al crear        | Un ID de otro tenant produce 404 o 400                                | ✅ Completado                                                       |
+| TEN-03 | Repetir las validaciones al actualizar                        | No se pueden cambiar relaciones hacia otro tenant                     | ✅ Completado                                                       |
+| TEN-04 | Incluir `tenantId` en todas las escrituras del repositorio    | Actualización, eliminación y moderación quedan delimitadas por tenant | ✅ Completado                                                       |
+| TEN-05 | Revisar mensajes, leads, obituarios y webhooks relacionados   | Ninguna relación puede cruzar tenants                                 | ✅ Completado                                                       |
+| TEN-06 | Añadir índices y restricciones compuestas cuando sean viables | La base de datos refuerza el aislamiento                              | ❌ Pendiente                                                        |
+| TEN-07 | Añadir pruebas negativas con al menos dos tenants             | Todos los intentos cruzados son rechazados                            | 🔄 Parcial (unitarias con mocks, falta integración real PostgreSQL) |
 
 La escritura final debe incluir la frontera de tenant; no es suficiente consultar el recurso y posteriormente actualizarlo solo por `id`.
 
@@ -95,16 +95,18 @@ La escritura final debe incluir la frontera de tenant; no es suficiente consulta
 
 ## Fase 3: reproducción real del stream
 
-- [ ] **PLAY-01:** Extender `CreateLiveStreamResult` con playback ID y playback URL.
-- [ ] **PLAY-02:** Añadir al modelo los campos necesarios para reproducción en vivo.
-- [ ] **PLAY-03:** Guardar los datos de playback al crear el recurso remoto.
-- [ ] **PLAY-04:** Implementar la obtención de HLS para Mux.
-- [ ] **PLAY-05:** Implementar la obtención de HLS para Cloudflare.
-- [ ] **PLAY-06:** Dejar de usar el slug como `src` del elemento `<video>`.
-- [ ] **PLAY-07:** Integrar un reproductor compatible con HLS y recuperación de errores.
-- [ ] **PLAY-08:** Mostrar los estados conectando, sin señal, reconectando, finalizado y error.
-- [ ] **PLAY-09:** Probar reproducción en Safari y navegadores que requieran `hls.js`.
-- [ ] **PLAY-10:** Validar el flujo completo con cuentas reales de Mux y Cloudflare.
+- [x] **PLAY-01:** Extender `CreateLiveStreamResult` con playback ID y playback URL.
+- [x] **PLAY-02:** Añadir al modelo los campos necesarios para reproducción en vivo (`playbackId`, `playbackPolicy`).
+- [x] **PLAY-03:** Guardar `playbackId`, `playbackPolicy` y `playbackUrl` al crear el recurso remoto.
+- [x] **PLAY-04:** Implementar la obtención de HLS para Mux (via `getPlaybackUrl`).
+- [x] **PLAY-05:** Implementar HLS público y privado para Cloudflare (dominio `customer-<CODE>.cloudflarestream.com` y token firmado para eventos privados).
+- [x] **PLAY-06:** Usar `playbackUrl` resuelto como `src` del video (tanto admin como público).
+- [x] **PLAY-07:** Integrar `hls.js` con recuperación de errores, fallback HLS nativo y limpieza al cambiar/quitar la fuente o destruir el componente.
+- [x] **PLAY-08:** Mostrar estados: conectando/live/sin-señal/reconectando/finalizado/error + modo live vs recording.
+- [x] **PLAY-09:** Probar de forma automatizada la selección HLS nativa y `hls.js`, la limpieza de recursos, fuentes reemplazadas y recuperación de errores.
+- [ ] **PLAY-10:** Validar el flujo completo con OBS, cuentas reales de Mux y Cloudflare, Safari y un navegador basado en Chromium.
+
+**Avance:** 9/10 tareas implementadas. La configuración de Cloudflare requiere `CLOUDFLARE_STREAM_CUSTOMER_CODE` además de las credenciales de API. PLAY-10 permanece pendiente porque necesita infraestructura y navegadores reales.
 
 **Criterio de salida:** OBS emite, el proveedor recibe la señal y un espectador autorizado puede reproducirla desde la página del evento.
 

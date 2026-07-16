@@ -21,6 +21,7 @@ describe('CloudflareStreamProvider', () => {
     CLOUDFLARE_ACCOUNT_ID: 'account-1',
     CLOUDFLARE_STREAM_API_TOKEN: 'token-123',
     CLOUDFLARE_STREAM_WEBHOOK_SECRET: 'webhook-secret',
+    CLOUDFLARE_STREAM_CUSTOMER_CODE: 'customer-code',
   };
 
   beforeEach(() => {
@@ -65,14 +66,48 @@ describe('CloudflareStreamProvider', () => {
           headers: expect.objectContaining({
             Authorization: 'Bearer token-123',
           }),
-          body: JSON.stringify({ recording: { mode: 'automatic' } }),
+          body: JSON.stringify({
+            recording: {
+              mode: 'automatic',
+              requireSignedURLs: false,
+            },
+          }),
         }),
       );
       expect(result).toEqual({
         streamKey: 'key-abc',
         rtmpUrl: 'rtmps://live.cloudflare.com:443/live/',
         providerStreamId: 'cf-live-1',
+        playbackId: 'cf-live-1',
+        playbackPolicy: 'public',
+        playbackUrl:
+          'https://customer-customer-code.cloudflarestream.com/cf-live-1/manifest/video.m3u8',
       });
+    });
+
+    it('configures signed playback for private live inputs', async () => {
+      fetchMock.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          result: {
+            uid: 'cf-private-1',
+            rtmps: {
+              url: 'rtmps://live.cloudflare.com/live',
+              streamKey: 'key',
+            },
+          },
+        }),
+      });
+
+      const result = await provider.createLiveStream({ signedPlayback: true });
+
+      expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+        recording: {
+          mode: 'automatic',
+          requireSignedURLs: true,
+        },
+      });
+      expect(result.playbackPolicy).toBe('signed');
     });
 
     it('throws when Cloudflare responds with an error status', async () => {
@@ -81,6 +116,42 @@ describe('CloudflareStreamProvider', () => {
       await expect(provider.createLiveStream()).rejects.toThrow(
         'Cloudflare Stream: no se pudo crear el live input (500)',
       );
+    });
+  });
+
+  describe('getPlaybackUrl', () => {
+    it('returns the canonical manifest URL for public playback', async () => {
+      await expect(
+        provider.getPlaybackUrl('cf-live-1', 'public'),
+      ).resolves.toBe(
+        'https://customer-customer-code.cloudflarestream.com/cf-live-1/manifest/video.m3u8',
+      );
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('requests a token and places it in the private manifest URL', async () => {
+      fetchMock.mockResolvedValue({
+        ok: true,
+        json: async () => ({ result: { token: 'signed.jwt.token' } }),
+      });
+
+      await expect(
+        provider.getPlaybackUrl('cf-private-1', 'signed'),
+      ).resolves.toBe(
+        'https://customer-customer-code.cloudflarestream.com/signed.jwt.token/manifest/video.m3u8',
+      );
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://api.cloudflare.com/client/v4/accounts/account-1/stream/cf-private-1/token',
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+
+    it('rejects an unsuccessful token response', async () => {
+      fetchMock.mockResolvedValue({ ok: false, status: 403 });
+
+      await expect(
+        provider.getPlaybackUrl('cf-private-1', 'signed'),
+      ).rejects.toThrow('no se pudo firmar el playback (403)');
     });
   });
 
@@ -192,6 +263,7 @@ describe('CloudflareStreamProvider', () => {
     it('returns a normalized recording.ready event when readyToStream and playback.hls are present', () => {
       const payload = {
         uid: 'cf-live-1',
+        liveInput: 'cf-input-1',
         readyToStream: true,
         playback: {
           hls: 'https://videodelivery.net/cf-live-1/manifest/video.m3u8',
@@ -210,7 +282,8 @@ describe('CloudflareStreamProvider', () => {
 
       expect(event).toEqual({
         type: 'recording.ready',
-        providerStreamId: 'cf-live-1',
+        providerStreamId: 'cf-input-1',
+        playbackId: 'cf-live-1',
         recordingUrl: 'https://videodelivery.net/cf-live-1/manifest/video.m3u8',
       });
     });

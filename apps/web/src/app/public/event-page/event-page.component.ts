@@ -17,6 +17,7 @@ import {
   SocketMessage,
 } from '../../core/services/streaming-socket.service';
 import { EventStatus } from '@zentic/shared-types';
+import { HlsPlayerComponent } from '../../shared/molecules/hls-player/hls-player.component';
 
 /** Iconos de reacción rápida disponibles */
 const REACTION_ICONS = [
@@ -58,6 +59,7 @@ const REACTION_ICONS = [
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatTooltipModule,
+    HlsPlayerComponent,
   ],
   template: `
     @if (loading()) {
@@ -182,23 +184,21 @@ const REACTION_ICONS = [
           <main class="max-w-4xl mx-auto px-4 py-6">
             <!-- Video player -->
             <div class="aspect-video bg-black rounded-lg overflow-hidden mb-6 relative">
-              @if (event.status === 'LIVE') {
-                <div
-                  class="absolute top-3 left-3 z-10 flex items-center gap-2 bg-red-600 text-white px-2 py-1 rounded text-sm"
-                >
-                  <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-                  EN VIVO
-                </div>
-              }
               @if (event.status === 'LIVE' || event.status === 'FINISHED') {
-                <video
-                  controls
-                  class="w-full h-full"
+                <app-hls-player
                   [src]="event.playbackUrl"
-                  poster="{{ event.deceased?.photoUrl ?? '' }}"
+                  [posterUrl]="event.deceased?.photoUrl ?? ''"
+                  [mode]="event.status === 'FINISHED' ? 'recording' : 'live'"
                 >
-                  Tu navegador no soporta video.
-                </video>
+                  El evento comenzará pronto
+                </app-hls-player>
+                @if (event.status === 'LIVE') {
+                  <div
+                    class="absolute bottom-3 right-3 z-20 bg-black/60 text-white px-2 py-1 rounded text-sm"
+                  >
+                    {{ viewerCount() }} espectadores
+                  </div>
+                }
               } @else {
                 <div class="w-full h-full flex items-center justify-center text-white">
                   <div class="text-center">
@@ -210,14 +210,6 @@ const REACTION_ICONS = [
                       </p>
                     }
                   </div>
-                </div>
-              }
-
-              @if (event.status === 'LIVE') {
-                <div
-                  class="absolute bottom-3 right-3 z-10 bg-black/60 text-white px-2 py-1 rounded text-sm"
-                >
-                  {{ viewerCount() }} espectadores
                 </div>
               }
             </div>
