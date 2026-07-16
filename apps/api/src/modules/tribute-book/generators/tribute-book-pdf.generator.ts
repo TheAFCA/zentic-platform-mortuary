@@ -10,6 +10,7 @@ import { PdfGenerator } from './pdf-generator.interface';
 export interface TributeBookMessage {
   authorName: string;
   content: string;
+  iconType: string | null;
   createdAt: Date;
 }
 
@@ -33,6 +34,21 @@ const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
   month: 'long',
   year: 'numeric',
 };
+
+// Los emoji del selector de íconos (❤️🕯️🌸🕊️) no son representables con las fuentes
+// estándar de pdfkit (WinAnsiEncoding) — se usa una etiqueta en español en su lugar.
+const ICON_LABELS: Record<string, string> = {
+  HEART: 'Corazón',
+  CANDLE: 'Vela',
+  FLOWER: 'Flor',
+  DOVE: 'Paloma',
+  CROSS: 'Cruz',
+};
+
+function iconLabel(iconType: string | null): string | null {
+  if (!iconType) return null;
+  return ICON_LABELS[iconType.toUpperCase()] ?? null;
+}
 
 @Injectable()
 export class TributeBookPdfGenerator implements PdfGenerator<TributeBookContext> {
@@ -142,7 +158,11 @@ export class TributeBookPdfGenerator implements PdfGenerator<TributeBookContext>
         doc.addPage();
       }
 
-      doc.fontSize(12).font('Helvetica-Bold').text(message.authorName);
+      const label = iconLabel(message.iconType);
+      const authorLine = label
+        ? `${message.authorName}  ·  ${label}`
+        : message.authorName;
+      doc.fontSize(12).font('Helvetica-Bold').text(authorLine);
       doc
         .font('Helvetica')
         .fontSize(9)

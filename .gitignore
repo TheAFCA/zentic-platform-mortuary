@@ -48,6 +48,10 @@ docker-compose.override.yml
 apps/api/uploads/*
 !apps/api/uploads/.gitkeep
 
+# Archivos generados no públicos (ej: PDFs del Libro de Homenajes) — nunca servidos vía static assets
+apps/api/private-storage/*
+!apps/api/private-storage/.gitkeep
+
 # Large media files
 *.mp4
 *.mov

@@ -8,28 +8,23 @@ import {
   Param,
   Body,
   Query,
-  Res,
   UseGuards,
   UseInterceptors,
   UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Response } from 'express';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtPayload } from '@zentic/shared-types';
 import { ObituaryService } from './obituary.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import { TenantId } from '../../common/decorators/tenant-id.decorator';
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { CreateObituaryDto } from './dto/create-obituary.dto';
 import { UpdateObituaryDto } from './dto/update-obituary.dto';
 import { ListObituariesQueryDto } from './dto/list-obituaries-query.dto';
 import { CreateObituaryMessageDto } from './dto/create-obituary-message.dto';
-import { ListObituaryMessagesQueryDto } from './dto/list-obituary-messages-query.dto';
 
 @ApiTags('obituaries')
 @ApiBearerAuth()
@@ -116,20 +111,6 @@ export class ObituaryController {
     return this.obituaryService.uploadPhoto(tenantId, id, file);
   }
 
-  @Get(':id/book-of-tributes')
-  @RequirePermission('messages:export')
-  async generateBookOfTributes(
-    @TenantId() tenantId: string,
-    @Param('id') id: string,
-    @Res() res: Response,
-  ) {
-    const { buffer, filename } =
-      await this.obituaryService.generateBookOfTributes(tenantId, id);
-    res.header('Content-Type', 'application/pdf');
-    res.header('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(buffer);
-  }
-
   @Public()
   @Post(':slug/messages')
   submitMessage(
@@ -138,37 +119,5 @@ export class ObituaryController {
     @Body() dto: CreateObituaryMessageDto,
   ) {
     return this.obituaryService.submitMessage(tenantId, slug, dto);
-  }
-
-  @Get(':id/messages')
-  @RequirePermission('messages:read')
-  listMessages(
-    @TenantId() tenantId: string,
-    @Param('id') id: string,
-    @Query() query: ListObituaryMessagesQueryDto,
-  ) {
-    return this.obituaryService.listMessages(tenantId, id, query);
-  }
-
-  @Patch(':id/messages/:msgId/approve')
-  @RequirePermission('messages:approve')
-  approveMessage(
-    @TenantId() tenantId: string,
-    @Param('id') id: string,
-    @Param('msgId') msgId: string,
-    @CurrentUser() user: JwtPayload,
-  ) {
-    return this.obituaryService.approveMessage(tenantId, id, msgId, user.sub);
-  }
-
-  @Patch(':id/messages/:msgId/reject')
-  @RequirePermission('messages:approve')
-  rejectMessage(
-    @TenantId() tenantId: string,
-    @Param('id') id: string,
-    @Param('msgId') msgId: string,
-    @CurrentUser() user: JwtPayload,
-  ) {
-    return this.obituaryService.rejectMessage(tenantId, id, msgId, user.sub);
   }
 }

@@ -14,6 +14,7 @@ import {
   WsNewMessage,
   WsViewerCount,
   WsStreamStatus,
+  WsObituaryMessage,
 } from '@zentic/shared-types';
 
 /**
@@ -120,6 +121,40 @@ export class NotificationsGateway
   }
 
   /**
+   * Suscribe un cliente a la sala de un obituario específico (Módulo 10: Libro de
+   * Homenajes). A diferencia de los eventos de streaming, la página de obituario es
+   * estática por defecto — esta sala solo existe para reflejar cambios de moderación
+   * en tiempo real (RNF-TRIB-004).
+   *
+   * @param client - Socket del cliente conectado
+   * @param data - Objeto con el obituaryId
+   */
+  @SubscribeMessage('join-obituary')
+  async handleJoinObituary(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { obituaryId: string },
+  ) {
+    await client.join(`obituary:${data.obituaryId}`);
+    this.logger.log(
+      `Client ${client.id} joined obituary room: ${data.obituaryId}`,
+    );
+  }
+
+  /**
+   * Remueve un cliente de la sala de un obituario.
+   *
+   * @param client - Socket del cliente
+   * @param data - Objeto con el obituaryId
+   */
+  @SubscribeMessage('leave-obituary')
+  async handleLeaveObituary(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { obituaryId: string },
+  ) {
+    await client.leave(`obituary:${data.obituaryId}`);
+  }
+
+  /**
    * Transmite un nuevo mensaje aprobado a todos los viewers del evento.
    *
    * @param eventId - Identificador del evento
@@ -170,5 +205,16 @@ export class NotificationsGateway
    */
   broadcastReaction(eventId: string, payload: WsNewMessage) {
     this.server.to(`event:${eventId}`).emit('new-reaction', payload);
+  }
+
+  /**
+   * Transmite un mensaje de homenaje recién aprobado a los viewers de la página
+   * pública de un obituario (Módulo 10: Libro de Homenajes, RNF-TRIB-004).
+   *
+   * @param obituaryId - Identificador del obituario
+   * @param payload - Datos del mensaje (autor, contenido, icono, fecha)
+   */
+  broadcastObituaryMessage(obituaryId: string, payload: WsObituaryMessage) {
+    this.server.to(`obituary:${obituaryId}`).emit('new-message', payload);
   }
 }

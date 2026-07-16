@@ -25,6 +25,7 @@ describe('TributeBookPdfGenerator', () => {
       {
         authorName: 'Juan Pérez',
         content: 'Un abrazo enorme',
+        iconType: null,
         createdAt: new Date('2026-07-02'),
       },
     ],
@@ -81,11 +82,46 @@ describe('TributeBookPdfGenerator', () => {
     const manyMessages = Array.from({ length: 50 }, (_, i) => ({
       authorName: `Autor ${i}`,
       content: 'Mensaje de condolencia '.repeat(10),
+      iconType: null,
       createdAt: new Date('2026-07-02'),
     }));
 
     const buffer = await generator.generate(
       baseContext({ messages: manyMessages }),
+    );
+
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  it('renders a known iconType as a Spanish label without throwing', async () => {
+    const buffer = await generator.generate(
+      baseContext({
+        messages: [
+          {
+            authorName: 'Ana Gómez',
+            content: 'Que descanses en paz',
+            iconType: 'CANDLE',
+            createdAt: new Date('2026-07-02'),
+          },
+        ],
+      }),
+    );
+
+    expect(buffer.length).toBeGreaterThan(0);
+  });
+
+  it('ignores an unknown iconType without throwing', async () => {
+    const buffer = await generator.generate(
+      baseContext({
+        messages: [
+          {
+            authorName: 'Ana Gómez',
+            content: 'Que descanses en paz',
+            iconType: 'UNKNOWN_TYPE',
+            createdAt: new Date('2026-07-02'),
+          },
+        ],
+      }),
     );
 
     expect(buffer.length).toBeGreaterThan(0);
