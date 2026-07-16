@@ -782,6 +782,7 @@ import { HlsPlayerComponent } from '../../../shared/molecules/hls-player/hls-pla
                 [src]="ev.playbackUrl"
                 [posterUrl]="ev.deceased.photoUrl ?? ''"
                 [mode]="ev.status === 'FINISHED' ? 'recording' : 'live'"
+                (playbackRefreshRequested)="refreshPlaybackUrl()"
               >
                 La grabación estará disponible cuando finalice el evento
               </app-hls-player>
@@ -1015,6 +1016,10 @@ export class EventDetailComponent {
       },
       error: () => this.messagesLoading.set(false),
     });
+  }
+
+  refreshPlaybackUrl(): void {
+    this.loadEvent();
   }
 
   approveMessage(messageId: string): void {

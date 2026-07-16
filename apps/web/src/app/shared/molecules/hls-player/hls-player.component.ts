@@ -1,6 +1,7 @@
 import {
   Component,
   input,
+  output,
   signal,
   ElementRef,
   viewChild,
@@ -174,6 +175,7 @@ export class HlsPlayerComponent implements OnDestroy {
   private activeUrl: string | null = null;
   private activeVideo: HTMLVideoElement | null = null;
   private playbackGeneration = 0;
+  private refreshRequestedGeneration: number | null = null;
   private nativeListeners: Array<{
     el: HTMLElement;
     type: string;
@@ -187,6 +189,7 @@ export class HlsPlayerComponent implements OnDestroy {
   readonly src = input<string | null>(null);
   readonly posterUrl = input('');
   readonly mode = input<PlayerMode>('live');
+  readonly playbackRefreshRequested = output<void>();
 
   constructor() {
     afterRenderEffect({ write: () => this.onSrcChange() });
@@ -198,6 +201,7 @@ export class HlsPlayerComponent implements OnDestroy {
     if (url === this.activeUrl && video === this.activeVideo) return;
 
     const generation = ++this.playbackGeneration;
+    this.refreshRequestedGeneration = null;
     this.destroyPlayback();
     this.status.set('loading');
     if (!url || !video) return;
@@ -280,7 +284,11 @@ export class HlsPlayerComponent implements OnDestroy {
           }
           if (data.fatal) {
             if (data.type === 'networkError') {
+              this.requestPlaybackRefresh(generation);
               this.status.set('reconnecting');
+              if (this.reconnectTimer) {
+                clearTimeout(this.reconnectTimer);
+              }
               this.reconnectTimer = setTimeout(() => {
                 this.reconnectTimer = null;
                 if (this.isCurrentPlayback(url, video, generation)) {
@@ -323,6 +331,12 @@ export class HlsPlayerComponent implements OnDestroy {
     return (
       generation === this.playbackGeneration && url === this.activeUrl && video === this.activeVideo
     );
+  }
+
+  private requestPlaybackRefresh(generation: number): void {
+    if (this.refreshRequestedGeneration === generation) return;
+    this.refreshRequestedGeneration = generation;
+    this.playbackRefreshRequested.emit();
   }
 
   private addNativeListener(el: HTMLElement, type: string, fn: EventListener): void {

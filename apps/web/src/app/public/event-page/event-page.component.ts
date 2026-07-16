@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -189,6 +189,7 @@ const REACTION_ICONS = [
                   [src]="event.playbackUrl"
                   [posterUrl]="event.deceased?.photoUrl ?? ''"
                   [mode]="event.status === 'FINISHED' ? 'recording' : 'live'"
+                  (playbackRefreshRequested)="refreshPlaybackUrl()"
                 >
                   El evento comenzará pronto
                 </app-hls-player>
@@ -336,6 +337,7 @@ export class EventPageComponent {
   private readonly api = inject(StreamingApiService);
   private readonly socket = inject(StreamingSocketService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly destroyRef = inject(DestroyRef);
 
   /** Indica si los datos del evento están cargando */
   readonly loading = signal(true);
@@ -388,6 +390,8 @@ export class EventPageComponent {
 
   private slug = '';
   private eventId = '';
+  private playbackRefreshTimer: ReturnType<typeof setInterval> | null = null;
+  private playbackRefreshInFlight = false;
 
   constructor() {
     this.slug = this.route.snapshot.paramMap.get('slug') ?? '';
@@ -406,6 +410,8 @@ export class EventPageComponent {
     this.socket.streamStatus$.subscribe((status) => {
       this.evt.update((e) => (e ? { ...e, status: status as EventStatus } : e));
     });
+
+    this.destroyRef.onDestroy(() => this.clearPlaybackRefreshTimer());
   }
 
   /** Carga los datos públicos del evento desde la API */
@@ -415,6 +421,7 @@ export class EventPageComponent {
     this.api.findPublic(this.slug).subscribe({
       next: (ev) => {
         this.evt.set(ev);
+        this.schedulePlaybackRefresh(ev);
         this.loading.set(false);
         this.eventId = ev.id ?? '';
 
@@ -431,6 +438,38 @@ export class EventPageComponent {
         this.accessLoading.set(false);
       },
     });
+  }
+
+  refreshPlaybackUrl(): void {
+    if (this.playbackRefreshInFlight || !this.accessGranted()) return;
+
+    this.playbackRefreshInFlight = true;
+    this.api.getPlayback(this.slug).subscribe({
+      next: ({ url }) => {
+        this.evt.update((event) => (event ? { ...event, playbackUrl: url } : event));
+        this.playbackRefreshInFlight = false;
+      },
+      error: () => {
+        this.playbackRefreshInFlight = false;
+      },
+    });
+  }
+
+  private schedulePlaybackRefresh(event: PublicEvent): void {
+    this.clearPlaybackRefreshTimer();
+    const hasPrivatePlayback =
+      !event.isPublic &&
+      Boolean(event.playbackUrl) &&
+      (event.status === EventStatus.LIVE || event.status === EventStatus.FINISHED);
+    if (!hasPrivatePlayback) return;
+
+    this.playbackRefreshTimer = setInterval(() => this.refreshPlaybackUrl(), 45 * 60 * 1000);
+  }
+
+  private clearPlaybackRefreshTimer(): void {
+    if (!this.playbackRefreshTimer) return;
+    clearInterval(this.playbackRefreshTimer);
+    this.playbackRefreshTimer = null;
   }
 
   /** Valida el código de acceso y concede acceso si es correcto */

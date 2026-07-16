@@ -155,6 +155,33 @@ describe('CloudflareStreamProvider', () => {
     });
   });
 
+  describe('legacy playback protection', () => {
+    it('enables signed URLs for a legacy video', async () => {
+      fetchMock.mockResolvedValue({ ok: true });
+
+      await provider.enableSignedPlayback('legacy-video');
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://api.cloudflare.com/client/v4/accounts/account-1/stream/legacy-video',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ requireSignedURLs: true }),
+        }),
+      );
+    });
+
+    it('extracts a video id only from an HLS manifest URL', () => {
+      expect(
+        provider.extractPlaybackId(
+          'https://videodelivery.net/legacy-video/manifest/video.m3u8',
+        ),
+      ).toBe('legacy-video');
+      expect(
+        provider.extractPlaybackId('https://example.com/video.mp4'),
+      ).toBeNull();
+    });
+  });
+
   describe('getStreamStatus', () => {
     it('returns active when the live input is connected', async () => {
       fetchMock.mockResolvedValue({

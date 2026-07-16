@@ -166,4 +166,23 @@ describe('HlsPlayerComponent', () => {
     expect(fixture.componentInstance.status()).toBe('reconnecting');
     expect(hls.recoverMediaError).toHaveBeenCalledOnce();
   });
+
+  it('requests a playback refresh once for repeated network errors', async () => {
+    vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('');
+    fixture.componentRef.setInput('src', 'https://stream.example/live.m3u8');
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(hlsMockState.instances).toHaveLength(1));
+    const hls = latestHlsInstance();
+    const refreshSpy = vi.spyOn(fixture.componentInstance.playbackRefreshRequested, 'emit');
+    const networkError = {
+      fatal: true,
+      type: 'networkError',
+      details: 'manifestLoadError',
+    };
+
+    emitHls(hls, 'error', undefined, networkError);
+    emitHls(hls, 'error', undefined, networkError);
+
+    expect(refreshSpy).toHaveBeenCalledOnce();
+  });
 });

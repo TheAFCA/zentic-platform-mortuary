@@ -152,6 +152,33 @@ export class CloudflareStreamProvider implements StreamProvider {
     return this.buildLiveHlsUrl(result.token);
   }
 
+  async enableSignedPlayback(playbackId: string): Promise<void> {
+    const response = await fetch(
+      `${this.baseUrl}/${encodeURIComponent(playbackId)}`,
+      {
+        method: 'POST',
+        headers: this.authHeaders(),
+        body: JSON.stringify({ requireSignedURLs: true }),
+      },
+    );
+    if (!response.ok) {
+      throw new Error(
+        `Cloudflare Stream: no se pudo proteger el playback heredado (${response.status})`,
+      );
+    }
+  }
+
+  extractPlaybackId(playbackUrl: string): string | null {
+    try {
+      const parts = new URL(playbackUrl).pathname.split('/').filter(Boolean);
+      return parts[1] === 'manifest' && parts[2] === 'video.m3u8'
+        ? (parts[0] ?? null)
+        : null;
+    } catch {
+      return null;
+    }
+  }
+
   parseWebhookEvent(
     rawBody: Buffer,
     headers: Record<string, string | string[] | undefined>,

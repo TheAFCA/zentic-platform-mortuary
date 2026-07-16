@@ -995,6 +995,9 @@ export class StreamingService {
   }
 
   private async resolvePlaybackUrl(event: {
+    id?: string;
+    tenantId?: string;
+    isPublic?: boolean;
     provider: string | null;
     playbackId: string | null;
     playbackPolicy: string | null;
@@ -1025,7 +1028,30 @@ export class StreamingService {
         event.playbackPolicy as 'public' | 'signed',
       );
     }
+    if (event.provider === 'cloudflare' && event.isPublic === false) {
+      return this.resolveLegacyCloudflarePlayback(event);
+    }
     return event.recordingUrl;
+  }
+
+  private async resolveLegacyCloudflarePlayback(event: {
+    id?: string;
+    tenantId?: string;
+    recordingUrl: string | null;
+  }): Promise<string | null> {
+    if (!event.id || !event.tenantId || !event.recordingUrl) return null;
+
+    const playbackId = this.cloudflareProvider.extractPlaybackId(
+      event.recordingUrl,
+    );
+    if (!playbackId) return null;
+
+    await this.cloudflareProvider.enableSignedPlayback(playbackId);
+    await this.repo.update(event.tenantId, event.id, {
+      playbackId,
+      playbackPolicy: 'signed',
+    });
+    return this.cloudflareProvider.getPlaybackUrl(playbackId, 'signed');
   }
 
   private maskSecret(secret: string | null): string | null {

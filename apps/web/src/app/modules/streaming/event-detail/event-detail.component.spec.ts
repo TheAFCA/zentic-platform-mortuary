@@ -210,6 +210,15 @@ describe('EventDetailComponent', () => {
     expect(api.getCredentials).toHaveBeenCalledWith('evt-1');
   });
 
+  it('reloads the event when the player requests a refreshed playback URL', () => {
+    const { component, api } = setup();
+    api.findOne.mockClear();
+
+    component.refreshPlaybackUrl();
+
+    expect(api.findOne).toHaveBeenCalledWith('evt-1');
+  });
+
   it('should show error state when event load fails', () => {
     const { component, api } = setup({
       apiOverrides: {

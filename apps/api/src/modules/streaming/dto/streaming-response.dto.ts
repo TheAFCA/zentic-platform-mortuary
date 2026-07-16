@@ -7,6 +7,7 @@ export class EventListItemResponseDto {
   @ApiProperty() status: string;
   @ApiProperty() isPublic: boolean;
   @ApiProperty() scheduledAt: Date;
+  @ApiPropertyOptional({ nullable: true }) playbackUrl: string | null;
 }
 
 export class EventDetailResponseDto extends EventListItemResponseDto {

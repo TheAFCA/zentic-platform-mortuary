@@ -237,6 +237,8 @@ describe('StreamingService', () => {
     mockCloudflareProvider = {
       parseWebhookEvent: jest.fn(),
       getPlaybackUrl: jest.fn(),
+      enableSignedPlayback: jest.fn(),
+      extractPlaybackId: jest.fn(),
     } as unknown as jest.Mocked<CloudflareStreamProvider>;
 
     mockEmailService = {
@@ -437,6 +439,35 @@ describe('StreamingService', () => {
         'signed',
       );
       expect(result.playbackUrl).toContain('/signed.jwt/manifest/video.m3u8');
+    });
+
+    it('should protect and migrate a private legacy Cloudflare recording on first access', async () => {
+      mockRepo.findBySlug.mockResolvedValue({
+        ...mockEventFindBySlug,
+        provider: 'cloudflare',
+        isPublic: false,
+        status: 'FINISHED',
+        playbackId: null,
+        playbackPolicy: null,
+        recordingUrl:
+          'https://videodelivery.net/legacy-video/manifest/video.m3u8',
+      } as any);
+      mockStreamAccess.canAccess.mockResolvedValue(true);
+      mockCloudflareProvider.extractPlaybackId.mockReturnValue('legacy-video');
+      mockCloudflareProvider.getPlaybackUrl.mockResolvedValue(
+        'https://customer-code.cloudflarestream.com/signed-token/manifest/video.m3u8',
+      );
+
+      const result = await service.findPublic('legacy-private', 'viewer-token');
+
+      expect(mockCloudflareProvider.enableSignedPlayback).toHaveBeenCalledWith(
+        'legacy-video',
+      );
+      expect(mockRepo.update).toHaveBeenCalledWith(tenantId, eventId, {
+        playbackId: 'legacy-video',
+        playbackPolicy: 'signed',
+      });
+      expect(result.playbackUrl).toContain('/signed-token/manifest/video.m3u8');
     });
 
     it('should not expose a finished recording for a private event', async () => {
