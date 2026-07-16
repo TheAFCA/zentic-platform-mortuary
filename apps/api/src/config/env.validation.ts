@@ -42,6 +42,13 @@ const envSchema = z.object({
   MUX_TOKEN_ID: z.string().optional(),
   MUX_TOKEN_SECRET: z.string().optional(),
   MUX_WEBHOOK_SECRET: z.string().optional(),
+  MUX_SIGNING_KEY_ID: z.string().optional(),
+  MUX_PRIVATE_KEY: z.string().optional(),
+  MUX_PLAYBACK_TOKEN_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(14400),
   CLOUDFLARE_ACCOUNT_ID: z.string().optional(),
   CLOUDFLARE_STREAM_API_TOKEN: z.string().optional(),
   CLOUDFLARE_STREAM_WEBHOOK_SECRET: z.string().optional(),

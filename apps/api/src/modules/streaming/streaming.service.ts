@@ -26,7 +26,7 @@ import {
   SendReactionDto,
   AccessCodeDto,
 } from './dto';
-import { EventStatus } from '@zentic/shared-types';
+import { EventStatus, JwtPayload } from '@zentic/shared-types';
 import { Prisma } from '@prisma/client';
 import { Env } from '../../config/env.validation';
 import { StreamAccessService } from './stream-access.service';
@@ -89,13 +89,86 @@ export class StreamingService {
     return this.withoutStreamingSecrets(event);
   }
 
-  /** Obtiene las credenciales RTMP únicamente para operadores autorizados. */
+  /** Obtiene una vista enmascarada de las credenciales RTMP. */
   async getCredentials(tenantId: string, id: string) {
     const event = await this.findOneEntity(tenantId, id);
     return {
+      streamKey: this.maskSecret(event.streamKey),
+      rtmpUrl: event.rtmpUrl,
+      revealed: false,
+    };
+  }
+
+  async revealCredentials(
+    tenantId: string,
+    id: string,
+    actor: JwtPayload,
+    ipAddress?: string,
+  ) {
+    const event = await this.findOneEntity(tenantId, id);
+    await this.repo.createCredentialAudit({
+      actorId: actor.sub,
+      role: actor.role,
+      tenantId,
+      eventId: id,
+      action: 'STREAM_KEY_REVEALED',
+      ipAddress,
+    });
+    return {
       streamKey: event.streamKey,
       rtmpUrl: event.rtmpUrl,
+      revealed: true,
     };
+  }
+
+  async rotateStreamKey(
+    tenantId: string,
+    id: string,
+    actor: JwtPayload,
+    ipAddress?: string,
+  ) {
+    const event = await this.findOneEntity(tenantId, id);
+    if (event.status === 'LIVE' || event.status === 'PAUSED') {
+      throw new ConflictException(
+        'No se puede rotar la stream key durante una transmisión activa',
+      );
+    }
+    if (!event.providerStreamId || event.provider !== 'mux') {
+      throw new BadRequestException(
+        'El evento no tiene un stream Mux rotatable',
+      );
+    }
+    const streamKey = await this.muxProvider.resetStreamKey(
+      event.providerStreamId,
+    );
+    await this.repo.update(tenantId, id, { streamKey });
+    await this.repo.createCredentialAudit({
+      actorId: actor.sub,
+      role: actor.role,
+      tenantId,
+      eventId: id,
+      action: 'STREAM_KEY_ROTATED',
+      ipAddress,
+    });
+    return { streamKey, rtmpUrl: event.rtmpUrl, revealed: true };
+  }
+
+  async auditCredentialCopy(
+    tenantId: string,
+    id: string,
+    actor: JwtPayload,
+    ipAddress?: string,
+  ) {
+    await this.findOneEntity(tenantId, id);
+    await this.repo.createCredentialAudit({
+      actorId: actor.sub,
+      role: actor.role,
+      tenantId,
+      eventId: id,
+      action: 'STREAM_KEY_COPIED',
+      ipAddress,
+    });
+    return { recorded: true };
   }
 
   private async findOneEntity(tenantId: string, id: string) {
@@ -122,6 +195,8 @@ export class StreamingService {
       event.isPublic ||
       (await this.streamAccess.canAccess(accessToken, event.id));
 
+    const playbackUrl = hasAccess ? await this.resolvePlaybackUrl(event) : null;
+
     return {
       id: hasAccess ? event.id : null,
       title: event.title,
@@ -132,7 +207,8 @@ export class StreamingService {
       startedAt: event.startedAt,
       finishedAt: event.finishedAt,
       recordingUrl:
-        hasAccess && event.status === 'FINISHED' ? event.recordingUrl : null,
+        hasAccess && event.status === 'FINISHED' ? playbackUrl : null,
+      playbackUrl,
       isPublic: event.isPublic,
       viewerCount: event.viewerCount,
       deceased: hasAccess ? event.deceased : null,
@@ -232,16 +308,32 @@ export class StreamingService {
 
     const event = await this.repo.create(eventData);
 
-    const { streamKey, rtmpUrl, providerStreamId } =
-      await this.provider.createLiveStream();
+    const { streamKey, rtmpUrl, providerStreamId, playbackId, playbackPolicy } =
+      await this.provider.createLiveStream({ signedPlayback: !event.isPublic });
 
     const provisioned = await this.repo.update(tenantId, event.id, {
       streamKey,
       rtmpUrl,
       provider: this.provider.name,
       providerStreamId,
+      ...(playbackId && playbackPolicy
+        ? {
+            recordingUrl: this.muxPlaybackReference(playbackId, playbackPolicy),
+          }
+        : {}),
     });
     return this.withoutStreamingSecrets(provisioned);
+  }
+
+  async getPlayback(slug: string, accessToken?: string) {
+    const event = await this.repo.findBySlug(slug);
+    if (!event || event.deletedAt) {
+      throw new NotFoundException('Evento no encontrado');
+    }
+    await this.assertViewerAccess(event, accessToken);
+    const url = await this.resolvePlaybackUrl(event);
+    if (!url) throw new NotFoundException('Playback no disponible');
+    return { url };
   }
 
   /**
@@ -723,7 +815,10 @@ export class StreamingService {
           );
 
     await this.repo.update(found.tenantId, found.id, {
-      recordingUrl: event.recordingUrl,
+      recordingUrl:
+        event.playbackId && event.playbackPolicy
+          ? this.muxPlaybackReference(event.playbackId, event.playbackPolicy)
+          : event.recordingUrl,
       recordingExpiry,
     });
   }
@@ -817,6 +912,35 @@ export class StreamingService {
     if (!(await this.streamAccess.canAccess(accessToken, event.id))) {
       throw new ForbiddenException('Acceso requerido para este evento');
     }
+  }
+
+  private async resolvePlaybackUrl(event: {
+    provider: string | null;
+    recordingUrl: string | null;
+  }): Promise<string | null> {
+    const muxReference = event.recordingUrl?.match(
+      /^mux:(public|signed):(.+)$/,
+    );
+    if (event.provider === 'mux' && muxReference) {
+      return this.muxProvider.getPlaybackUrl(
+        muxReference[2],
+        muxReference[1] as 'public' | 'signed',
+      );
+    }
+    return event.recordingUrl;
+  }
+
+  private muxPlaybackReference(
+    playbackId: string,
+    policy: 'public' | 'signed',
+  ): string {
+    return `mux:${policy}:${playbackId}`;
+  }
+
+  private maskSecret(secret: string | null): string | null {
+    if (!secret) return null;
+    if (secret.length <= 8) return '••••••••';
+    return `${secret.slice(0, 4)}••••••••${secret.slice(-4)}`;
   }
 
   /** Retira credenciales y hashes antes de devolver un evento por endpoints generales. */

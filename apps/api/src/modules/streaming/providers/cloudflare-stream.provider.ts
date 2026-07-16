@@ -98,6 +98,19 @@ export class CloudflareStreamProvider implements StreamProvider {
     });
   }
 
+  async resetStreamKey(_providerStreamId: string): Promise<string> {
+    throw new Error(
+      'La rotación de stream key de Cloudflare no está habilitada',
+    );
+  }
+
+  async getPlaybackUrl(
+    playbackId: string,
+    _policy: 'public' | 'signed',
+  ): Promise<string> {
+    return playbackId;
+  }
+
   parseWebhookEvent(
     rawBody: Buffer,
     headers: Record<string, string | string[] | undefined>,

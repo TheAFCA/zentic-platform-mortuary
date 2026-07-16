@@ -194,7 +194,7 @@ const REACTION_ICONS = [
                 <video
                   controls
                   class="w-full h-full"
-                  [src]="event.status === 'FINISHED' ? event.recordingUrl : event.slug"
+                  [src]="event.playbackUrl"
                   poster="{{ event.deceased?.photoUrl ?? '' }}"
                 >
                   Tu navegador no soporta video.

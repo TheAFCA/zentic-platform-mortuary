@@ -598,15 +598,23 @@ import { AuthStateService } from '../../../core/services/auth-state.service';
                   <code class="creds-field__value" [matTooltip]="ev.streamKey!">{{
                     ev.streamKey
                   }}</code>
-                  <button
-                    mat-icon-button
-                    (click)="copyToClipboard(ev.streamKey!)"
-                    matTooltip="Copiar"
-                  >
-                    <mat-icon>content_copy</mat-icon>
-                  </button>
+                  @if (credentialsRevealed()) {
+                    <button
+                      mat-icon-button
+                      (click)="copyStreamKey(ev.streamKey!)"
+                      matTooltip="Copiar"
+                    >
+                      <mat-icon>content_copy</mat-icon>
+                    </button>
+                  } @else {
+                    <button mat-button (click)="revealCredentials()">Revelar</button>
+                  }
                 </div>
               </div>
+              <button mat-stroked-button (click)="rotateStreamKey()">
+                <mat-icon>sync</mat-icon>
+                Rotar stream key
+              </button>
               <div class="creds-field">
                 <span class="creds-field__label">RTMP URL</span>
                 <div class="creds-field__row">
@@ -850,6 +858,7 @@ export class EventDetailComponent {
 
   private readonly sanitizer = inject(DomSanitizer);
   private eventId = '';
+  readonly credentialsRevealed = signal(false);
 
   constructor() {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
@@ -897,6 +906,43 @@ export class EventDetailComponent {
       this.snackBar.open('Copiado al portapapeles', 'Cerrar', {
         duration: 2000,
       });
+    });
+  }
+
+  copyStreamKey(value: string): void {
+    this.api.auditStreamKeyCopy(this.eventId).subscribe({
+      next: () => this.copyToClipboard(value),
+      error: () =>
+        this.snackBar.open('No fue posible registrar la copia', 'Cerrar', {
+          duration: 3000,
+        }),
+    });
+  }
+
+  revealCredentials(): void {
+    this.api.revealCredentials(this.eventId).subscribe({
+      next: (credentials) => {
+        this.credentialsRevealed.set(true);
+        this.event.update((event) => (event ? { ...event, ...credentials } : event));
+      },
+      error: () =>
+        this.snackBar.open('No fue posible revelar las credenciales', 'Cerrar', {
+          duration: 3000,
+        }),
+    });
+  }
+
+  rotateStreamKey(): void {
+    this.api.rotateStreamKey(this.eventId).subscribe({
+      next: (credentials) => {
+        this.credentialsRevealed.set(true);
+        this.event.update((event) => (event ? { ...event, ...credentials } : event));
+        this.snackBar.open('Stream key rotada', 'Cerrar', { duration: 3000 });
+      },
+      error: () =>
+        this.snackBar.open('No fue posible rotar la stream key', 'Cerrar', {
+          duration: 3000,
+        }),
     });
   }
 

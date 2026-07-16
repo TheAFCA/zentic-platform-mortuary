@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { EventStatus, MessageStatus, Prisma } from '@prisma/client';
+import { EventStatus, MessageStatus, Prisma, UserRole } from '@prisma/client';
 
 /**
  * Repositorio del módulo de Streaming.
@@ -138,6 +138,27 @@ export class StreamingRepository {
     return this.prisma.event.update({
       where: { id },
       data,
+    });
+  }
+
+  async createCredentialAudit(input: {
+    actorId: string;
+    role: UserRole;
+    tenantId: string;
+    eventId: string;
+    action: 'STREAM_KEY_REVEALED' | 'STREAM_KEY_COPIED' | 'STREAM_KEY_ROTATED';
+    ipAddress?: string;
+  }) {
+    return this.prisma.auditLog.create({
+      data: {
+        actorId: input.actorId,
+        role: input.role,
+        tenantId: input.tenantId,
+        action: input.action,
+        entityType: 'Event',
+        entityId: input.eventId,
+        ipAddress: input.ipAddress,
+      },
     });
   }
 

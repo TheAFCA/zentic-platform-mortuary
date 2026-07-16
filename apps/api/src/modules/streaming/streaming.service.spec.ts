@@ -187,6 +187,7 @@ describe('StreamingService', () => {
       updateViewerCount: jest.fn(),
       findLeadsWithEmailByEvent: jest.fn().mockResolvedValue([]),
       findByProviderStreamId: jest.fn(),
+      createCredentialAudit: jest.fn(),
     } as unknown as jest.Mocked<StreamingRepository>;
 
     mockRepo.update.mockImplementation((_tenantId: any, id: any, data: any) =>
@@ -217,11 +218,15 @@ describe('StreamingService', () => {
       }),
       getStreamStatus: jest.fn().mockResolvedValue('active'),
       disableLiveStream: jest.fn().mockResolvedValue(undefined),
+      resetStreamKey: jest.fn(),
+      getPlaybackUrl: jest.fn(),
       parseWebhookEvent: jest.fn(),
     } as unknown as jest.Mocked<StreamProvider>;
 
     mockMuxProvider = {
       parseWebhookEvent: jest.fn(),
+      resetStreamKey: jest.fn(),
+      getPlaybackUrl: jest.fn(),
     } as unknown as jest.Mocked<MuxStreamProvider>;
 
     mockCloudflareProvider = {
@@ -295,8 +300,9 @@ describe('StreamingService', () => {
       mockRepo.findById.mockResolvedValue(mockEventFindById as any);
 
       await expect(service.getCredentials(tenantId, eventId)).resolves.toEqual({
-        streamKey: baseEvent.streamKey,
+        streamKey: 'zent••••••••abab',
         rtmpUrl: baseEvent.rtmpUrl,
+        revealed: false,
       });
     });
 
@@ -325,6 +331,7 @@ describe('StreamingService', () => {
         startedAt: baseEvent.startedAt,
         finishedAt: baseEvent.finishedAt,
         recordingUrl: null,
+        playbackUrl: null,
         isPublic: baseEvent.isPublic,
         viewerCount: baseEvent.viewerCount,
         deceased: mockEventFindBySlug.deceased,
@@ -377,6 +384,29 @@ describe('StreamingService', () => {
       expect(result.recordingUrl).toBe(recordingUrl);
     });
 
+    it('should sign a private Mux playback reference after access', async () => {
+      mockRepo.findBySlug.mockResolvedValue({
+        ...mockEventFindBySlug,
+        provider: 'mux',
+        isPublic: false,
+        status: 'FINISHED',
+        recordingUrl: 'mux:signed:playback-private',
+      } as any);
+      mockStreamAccess.canAccess.mockResolvedValue(true);
+      mockMuxProvider.getPlaybackUrl.mockResolvedValue(
+        'https://stream.mux.com/playback-private.m3u8?token=jwt',
+      );
+
+      const result = await service.findPublic('private-event', 'viewer-token');
+
+      expect(mockMuxProvider.getPlaybackUrl).toHaveBeenCalledWith(
+        'playback-private',
+        'signed',
+      );
+      expect(result.playbackUrl).toContain('?token=jwt');
+      expect(result.recordingUrl).toContain('?token=jwt');
+    });
+
     it('should not expose a finished recording for a private event', async () => {
       mockRepo.findBySlug.mockResolvedValue({
         ...mockEventFindBySlug,
@@ -415,6 +445,79 @@ describe('StreamingService', () => {
       expect(result.recordingUrl).toBe(
         'https://example.com/private-recording.mp4',
       );
+    });
+  });
+
+  describe('credential security', () => {
+    const actor = {
+      sub: 'operator-1',
+      role: 'OPERATOR',
+      tenantId,
+      permissions: ['streaming:manage'],
+    } as any;
+
+    it('reveals credentials only through an audited action', async () => {
+      mockRepo.findById.mockResolvedValue(mockEventFindById as any);
+
+      const result = await service.revealCredentials(
+        tenantId,
+        eventId,
+        actor,
+        '127.0.0.1',
+      );
+
+      expect(result).toEqual({
+        streamKey: baseEvent.streamKey,
+        rtmpUrl: baseEvent.rtmpUrl,
+        revealed: true,
+      });
+      expect(mockRepo.createCredentialAudit).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'STREAM_KEY_REVEALED' }),
+      );
+    });
+
+    it('rotates a scheduled Mux stream key and audits the operation', async () => {
+      mockRepo.findById.mockResolvedValue({
+        ...mockEventFindById,
+        provider: 'mux',
+        providerStreamId: 'mux-live-1',
+      } as any);
+      mockMuxProvider.resetStreamKey.mockResolvedValue('rotated-key');
+
+      const result = await service.rotateStreamKey(tenantId, eventId, actor);
+
+      expect(mockRepo.update).toHaveBeenCalledWith(tenantId, eventId, {
+        streamKey: 'rotated-key',
+      });
+      expect(mockRepo.createCredentialAudit).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'STREAM_KEY_ROTATED' }),
+      );
+      expect(result.streamKey).toBe('rotated-key');
+    });
+
+    it('audits copying a revealed stream key', async () => {
+      mockRepo.findById.mockResolvedValue(mockEventFindById as any);
+
+      await expect(
+        service.auditCredentialCopy(tenantId, eventId, actor, '127.0.0.1'),
+      ).resolves.toEqual({ recorded: true });
+      expect(mockRepo.createCredentialAudit).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'STREAM_KEY_COPIED' }),
+      );
+    });
+
+    it('rejects rotation during an active transmission', async () => {
+      mockRepo.findById.mockResolvedValue({
+        ...mockEventFindById,
+        provider: 'mux',
+        providerStreamId: 'mux-live-1',
+        status: 'LIVE',
+      } as any);
+
+      await expect(
+        service.rotateStreamKey(tenantId, eventId, actor),
+      ).rejects.toThrow(ConflictException);
+      expect(mockMuxProvider.resetStreamKey).not.toHaveBeenCalled();
     });
   });
 
@@ -532,7 +635,9 @@ describe('StreamingService', () => {
       expect(createCallArgs.slug).toMatch(/^new-event-/);
       expect(createCallArgs.streamKey).toBeUndefined();
 
-      expect(mockProvider.createLiveStream).toHaveBeenCalled();
+      expect(mockProvider.createLiveStream).toHaveBeenCalledWith({
+        signedPlayback: false,
+      });
       const updateCallArgs = mockRepo.update.mock.calls[0][2] as any;
       expect(updateCallArgs).toEqual({
         streamKey: 'zentic_generatedkey',

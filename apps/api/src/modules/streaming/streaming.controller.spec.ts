@@ -16,6 +16,9 @@ describe('StreamingController', () => {
     findAll: jest.fn(),
     findOne: jest.fn(),
     getCredentials: jest.fn(),
+    revealCredentials: jest.fn(),
+    rotateStreamKey: jest.fn(),
+    auditCredentialCopy: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
@@ -23,6 +26,7 @@ describe('StreamingController', () => {
     stopStream: jest.fn(),
     findPublic: jest.fn(),
     getPublicMessages: jest.fn(),
+    getPlayback: jest.fn(),
     sendMessage: jest.fn(),
     sendReaction: jest.fn(),
     validateAccessCode: jest.fn(),
@@ -91,7 +95,11 @@ describe('StreamingController', () => {
 
   describe('getCredentials', () => {
     it('should request credentials for the tenant event', async () => {
-      const expected = { streamKey: 'secret', rtmpUrl: 'rtmps://example' };
+      const expected = {
+        streamKey: 'secr••••••••cret',
+        rtmpUrl: 'rtmps://example',
+        revealed: false,
+      };
       service.getCredentials.mockResolvedValue(expected);
 
       const result = await controller.getCredentials('tenant-1', 'event-1');

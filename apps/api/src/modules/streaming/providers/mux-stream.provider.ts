@@ -16,27 +16,52 @@ export class MuxStreamProvider implements StreamProvider {
 
   private readonly logger = new Logger(MuxStreamProvider.name);
   private readonly client: Mux;
+  private readonly hasPlaybackSigning: boolean;
 
   constructor(config: ConfigService<Env>) {
+    const signingKeyId = config.get<string>('MUX_SIGNING_KEY_ID');
+    const privateKey = config.get<string>('MUX_PRIVATE_KEY');
+    this.hasPlaybackSigning = Boolean(signingKeyId && privateKey);
     this.client = new Mux({
       tokenId: config.get<string>('MUX_TOKEN_ID'),
       tokenSecret: config.get<string>('MUX_TOKEN_SECRET'),
       webhookSecret: config.get<string>('MUX_WEBHOOK_SECRET'),
+      jwtSigningKey: signingKeyId,
+      jwtPrivateKey: privateKey,
     });
+    this.playbackTokenTtlSeconds = config.get(
+      'MUX_PLAYBACK_TOKEN_TTL_SECONDS',
+      14400,
+    );
   }
 
-  async createLiveStream(): Promise<CreateLiveStreamResult> {
+  private readonly playbackTokenTtlSeconds: number;
+
+  async createLiveStream(options?: {
+    signedPlayback?: boolean;
+  }): Promise<CreateLiveStreamResult> {
+    if (options?.signedPlayback && !this.hasPlaybackSigning) {
+      throw new Error(
+        'Mux signed playback requiere MUX_SIGNING_KEY_ID y MUX_PRIVATE_KEY',
+      );
+    }
+    const playbackPolicy = options?.signedPlayback ? 'signed' : 'public';
     const liveStream = await this.client.video.liveStreams.create({
-      advanced_playback_policies: [{ policy: 'public' }],
+      advanced_playback_policies: [{ policy: playbackPolicy }],
       new_asset_settings: {
-        advanced_playback_policies: [{ policy: 'public' }],
+        advanced_playback_policies: [{ policy: playbackPolicy }],
       },
     });
+    const playbackId = liveStream.playback_ids?.find(
+      ({ policy }) => policy === playbackPolicy,
+    )?.id;
 
     return {
       streamKey: liveStream.stream_key,
       rtmpUrl: MUX_RTMP_URL,
       providerStreamId: liveStream.id,
+      playbackId,
+      playbackPolicy,
     };
   }
 
@@ -48,6 +73,28 @@ export class MuxStreamProvider implements StreamProvider {
 
   async disableLiveStream(providerStreamId: string): Promise<void> {
     await this.client.video.liveStreams.disable(providerStreamId);
+  }
+
+  async resetStreamKey(providerStreamId: string): Promise<string> {
+    const stream =
+      await this.client.video.liveStreams.resetStreamKey(providerStreamId);
+    if (!stream.stream_key) {
+      throw new Error('Mux no devolvió la nueva stream key');
+    }
+    return stream.stream_key;
+  }
+
+  async getPlaybackUrl(
+    playbackId: string,
+    policy: 'public' | 'signed',
+  ): Promise<string> {
+    const baseUrl = `https://stream.mux.com/${playbackId}.m3u8`;
+    if (policy === 'public') return baseUrl;
+    const token = await this.client.jwt.signPlaybackId(playbackId, {
+      expiration: `${this.playbackTokenTtlSeconds}s`,
+      type: 'video',
+    });
+    return `${baseUrl}?token=${token}`;
   }
 
   parseWebhookEvent(
@@ -72,7 +119,11 @@ export class MuxStreamProvider implements StreamProvider {
           return {
             type: 'recording.ready',
             providerStreamId,
-            recordingUrl: `https://stream.mux.com/${playbackId}.m3u8`,
+            playbackId,
+            playbackPolicy:
+              event.data.playback_ids?.[0]?.policy === 'signed'
+                ? 'signed'
+                : 'public',
           };
         }
         default:

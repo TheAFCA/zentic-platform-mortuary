@@ -4,6 +4,8 @@ import { MuxStreamProvider } from './mux-stream.provider';
 const mockLiveStreamsCreate = jest.fn();
 const mockLiveStreamsRetrieve = jest.fn();
 const mockLiveStreamsDisable = jest.fn();
+const mockLiveStreamsResetStreamKey = jest.fn();
+const mockSignPlaybackId = jest.fn();
 const mockWebhooksUnwrap = jest.fn();
 
 jest.mock('@mux/mux-node', () => {
@@ -13,8 +15,10 @@ jest.mock('@mux/mux-node', () => {
         create: mockLiveStreamsCreate,
         retrieve: mockLiveStreamsRetrieve,
         disable: mockLiveStreamsDisable,
+        resetStreamKey: mockLiveStreamsResetStreamKey,
       },
     },
+    jwt: { signPlaybackId: mockSignPlaybackId },
     webhooks: {
       unwrap: mockWebhooksUnwrap,
     },
@@ -28,7 +32,9 @@ describe('MuxStreamProvider', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     const config = {
-      get: jest.fn().mockReturnValue('test-value'),
+      get: jest.fn((key: string) =>
+        key === 'MUX_PLAYBACK_TOKEN_TTL_SECONDS' ? 3600 : 'test-value',
+      ),
     } as unknown as ConfigService;
     provider = new MuxStreamProvider(config);
   });
@@ -42,6 +48,7 @@ describe('MuxStreamProvider', () => {
       mockLiveStreamsCreate.mockResolvedValue({
         id: 'mux-live-1',
         stream_key: 'streamkey123',
+        playback_ids: [{ id: 'playback-public', policy: 'public' }],
       });
 
       const result = await provider.createLiveStream();
@@ -56,7 +63,28 @@ describe('MuxStreamProvider', () => {
         streamKey: 'streamkey123',
         rtmpUrl: 'rtmps://global-live.mux.com:443/app',
         providerStreamId: 'mux-live-1',
+        playbackId: 'playback-public',
+        playbackPolicy: 'public',
       });
+    });
+
+    it('creates private streams with signed playback policies', async () => {
+      mockLiveStreamsCreate.mockResolvedValue({
+        id: 'mux-live-private',
+        stream_key: 'private-key',
+        playback_ids: [{ id: 'playback-signed', policy: 'signed' }],
+      });
+
+      const result = await provider.createLiveStream({ signedPlayback: true });
+
+      expect(mockLiveStreamsCreate).toHaveBeenCalledWith({
+        advanced_playback_policies: [{ policy: 'signed' }],
+        new_asset_settings: {
+          advanced_playback_policies: [{ policy: 'signed' }],
+        },
+      });
+      expect(result.playbackId).toBe('playback-signed');
+      expect(result.playbackPolicy).toBe('signed');
     });
   });
 
@@ -86,6 +114,33 @@ describe('MuxStreamProvider', () => {
       await provider.disableLiveStream('mux-live-1');
 
       expect(mockLiveStreamsDisable).toHaveBeenCalledWith('mux-live-1');
+    });
+  });
+
+  describe('credentials and playback', () => {
+    it('resets and returns the new Mux stream key', async () => {
+      mockLiveStreamsResetStreamKey.mockResolvedValue({
+        stream_key: 'new-key',
+      });
+
+      await expect(provider.resetStreamKey('mux-live-1')).resolves.toBe(
+        'new-key',
+      );
+    });
+
+    it('signs URLs only for signed playback IDs', async () => {
+      mockSignPlaybackId.mockResolvedValue('signed-jwt');
+
+      await expect(
+        provider.getPlaybackUrl('public-id', 'public'),
+      ).resolves.toBe('https://stream.mux.com/public-id.m3u8');
+      await expect(
+        provider.getPlaybackUrl('signed-id', 'signed'),
+      ).resolves.toBe('https://stream.mux.com/signed-id.m3u8?token=signed-jwt');
+      expect(mockSignPlaybackId).toHaveBeenCalledWith('signed-id', {
+        expiration: '3600s',
+        type: 'video',
+      });
     });
   });
 
@@ -135,7 +190,8 @@ describe('MuxStreamProvider', () => {
       expect(event).toEqual({
         type: 'recording.ready',
         providerStreamId: 'mux-live-1',
-        recordingUrl: 'https://stream.mux.com/playback-abc.m3u8',
+        playbackId: 'playback-abc',
+        playbackPolicy: 'public',
       });
     });
 

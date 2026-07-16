@@ -60,6 +60,7 @@ export interface PublicEvent {
   startedAt: string | null;
   finishedAt: string | null;
   recordingUrl: string | null;
+  playbackUrl: string | null;
   isPublic: boolean;
   viewerCount: number;
   deceased: {
@@ -152,6 +153,7 @@ export interface AccessCodeInput {
 export interface StreamCredentials {
   streamKey: string | null;
   rtmpUrl: string | null;
+  revealed: boolean;
 }
 
 /**
@@ -178,6 +180,33 @@ export class StreamingApiService {
   /** Obtiene credenciales RTMP; requiere el permiso streaming:manage. */
   getCredentials(id: string) {
     return this.http.get<StreamCredentials>(`${environment.apiUrl}/events/${id}/credentials`);
+  }
+
+  /** Revela y audita las credenciales RTMP. */
+  revealCredentials(id: string) {
+    return this.http.post<StreamCredentials>(
+      `${environment.apiUrl}/events/${id}/credentials/reveal`,
+      {},
+    );
+  }
+
+  /** Rota la stream key en Mux y devuelve la nueva credencial. */
+  rotateStreamKey(id: string) {
+    return this.http.post<StreamCredentials>(
+      `${environment.apiUrl}/events/${id}/credentials/rotate`,
+      {},
+    );
+  }
+
+  auditStreamKeyCopy(id: string) {
+    return this.http.post<{ recorded: boolean }>(
+      `${environment.apiUrl}/events/${id}/credentials/audit-copy`,
+      {},
+    );
+  }
+
+  getPlayback(slug: string) {
+    return this.http.get<{ url: string }>(`${environment.apiUrl}/events/${slug}/playback`);
   }
 
   /** Obtiene datos públicos de un evento por slug (sin auth) */

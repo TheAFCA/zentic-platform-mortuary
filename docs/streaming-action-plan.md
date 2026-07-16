@@ -47,12 +47,12 @@ Estas tareas bloquean cualquier salida a producción.
 - [x] **SEC-06:** Diseñar un token de acceso temporal limitado a un evento.
 - [x] **SEC-07:** Hacer que `POST /events/:slug/access` entregue un token firmado con `eventId`, alcance y expiración.
 - [x] **SEC-08:** Transportar el token mediante una cookie `HttpOnly`, `Secure` y `SameSite`, o mediante un bearer token efímero documentado.
-- [ ] **SEC-09:** Validar el token al consultar eventos privados, consultar o enviar mensajes, enviar reacciones, reproducir contenido y conectarse por WebSocket.
+- [x] **SEC-09:** Validar el token al consultar eventos privados, consultar o enviar mensajes, enviar reacciones, reproducir contenido y conectarse por WebSocket.
 - [x] **SEC-10:** Separar la metadata pública mínima de los datos protegidos del difunto.
 - [x] **SEC-11:** Evitar que `findPublic()` entregue directamente una `recordingUrl` privada.
-- [ ] **SEC-12:** Generar playback URLs firmadas y de corta duración para contenido privado.
+- [x] **SEC-12:** Generar playback URLs firmadas y de corta duración para contenido privado.
 
-Avance de `SEC-09`: la validación ya cubre detalle privado, mensajes, reacciones y WebSocket. Permanece pendiente el playback firmado (`SEC-12`).
+Implementación Mux: los eventos privados se aprovisionan con playback policy `signed`; la API genera JWT de video de corta duración únicamente después de validar la cookie de acceso del evento.
 
 **Criterio de salida:** conocer el slug o el `eventId` no permite acceder a información, video, grabaciones o eventos WebSocket privados.
 
@@ -68,12 +68,14 @@ Avance de `SEC-09`: la validación ya cubre detalle privado, mensajes, reaccione
 
 ### Credenciales de emisión
 
-- [ ] **SEC-13:** Crear DTOs de respuesta explícitos para lista, detalle, administración y vistas públicas.
+- [x] **SEC-13:** Crear DTOs de respuesta explícitos para lista, detalle, administración y vistas públicas.
 - [x] **SEC-14:** Crear un endpoint separado para obtener credenciales RTMP.
 - [x] **SEC-15:** Proteger el endpoint de credenciales con `streaming:manage`.
-- [ ] **SEC-16:** Registrar quién consultó, copió o regeneró una stream key.
-- [ ] **SEC-17:** Enmascarar la stream key y revelarla solo mediante una acción explícita.
-- [ ] **SEC-18:** Permitir la rotación de la stream key.
+- [x] **SEC-16:** Registrar quién consultó, copió o regeneró una stream key.
+- [x] **SEC-17:** Enmascarar la stream key y revelarla solo mediante una acción explícita.
+- [x] **SEC-18:** Permitir la rotación de la stream key.
+
+**Fase 1 completada:** la implementación automatizada y sus pruebas están aprobadas. La validación smoke contra una cuenta Mux real requiere configurar las credenciales y signing keys del entorno.
 
 ## Fase 2: aislamiento multi-tenant
 

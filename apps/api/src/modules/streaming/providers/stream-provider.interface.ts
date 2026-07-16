@@ -2,12 +2,20 @@ export interface CreateLiveStreamResult {
   streamKey: string;
   rtmpUrl: string;
   providerStreamId: string;
+  playbackId?: string;
+  playbackPolicy?: 'public' | 'signed';
 }
 
 export type StreamWebhookEvent =
   | { type: 'stream.active'; providerStreamId: string }
   | { type: 'stream.idle'; providerStreamId: string }
-  | { type: 'recording.ready'; providerStreamId: string; recordingUrl: string };
+  | {
+      type: 'recording.ready';
+      providerStreamId: string;
+      recordingUrl?: string;
+      playbackId?: string;
+      playbackPolicy?: 'public' | 'signed';
+    };
 
 /**
  * Contrato común para proveedores de streaming en vivo (Mux, Cloudflare Stream).
@@ -18,13 +26,24 @@ export interface StreamProvider {
   readonly name: 'mux' | 'cloudflare';
 
   /** Crea un live stream real en el proveedor y devuelve las credenciales para OBS. */
-  createLiveStream(): Promise<CreateLiveStreamResult>;
+  createLiveStream(options?: {
+    signedPlayback?: boolean;
+  }): Promise<CreateLiveStreamResult>;
 
   /** Consulta si el proveedor está recibiendo señal RTMP (HU-STREAM-002). */
   getStreamStatus(providerStreamId: string): Promise<'idle' | 'active'>;
 
   /** Desactiva el live stream para que la stream key no pueda reutilizarse. */
   disableLiveStream(providerStreamId: string): Promise<void>;
+
+  /** Rota la clave RTMP y devuelve la nueva clave en texto plano. */
+  resetStreamKey(providerStreamId: string): Promise<string>;
+
+  /** Genera una URL de playback; las políticas signed deben expirar. */
+  getPlaybackUrl(
+    playbackId: string,
+    policy: 'public' | 'signed',
+  ): Promise<string>;
 
   /**
    * Verifica la firma del webhook y devuelve el evento normalizado, o `null`

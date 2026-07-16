@@ -12,7 +12,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { StreamingService } from './streaming.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -29,6 +29,11 @@ import {
   SendMessageDto,
   SendReactionDto,
   AccessCodeDto,
+  EventListItemResponseDto,
+  EventDetailResponseDto,
+  PublicEventResponseDto,
+  StreamCredentialsResponseDto,
+  PlaybackResponseDto,
 } from './dto';
 import {
   STREAM_ACCESS_COOKIE,
@@ -66,6 +71,7 @@ export class StreamingController {
    */
   @Get()
   @RequirePermission('streaming:read')
+  @ApiOkResponse({ type: EventListItemResponseDto, isArray: true })
   findAll(@TenantId() tenantId: string) {
     return this.streamingService.findAll(tenantId);
   }
@@ -78,6 +84,7 @@ export class StreamingController {
    */
   @Get(':id')
   @RequirePermission('streaming:read')
+  @ApiOkResponse({ type: EventDetailResponseDto })
   findOne(@TenantId() tenantId: string, @Param('id') id: string) {
     return this.streamingService.findOne(tenantId, id);
   }
@@ -85,8 +92,47 @@ export class StreamingController {
   /** Obtiene las credenciales RTMP para configurar el emisor. */
   @Get(':id/credentials')
   @RequirePermission('streaming:manage')
+  @ApiOkResponse({ type: StreamCredentialsResponseDto })
   getCredentials(@TenantId() tenantId: string, @Param('id') id: string) {
     return this.streamingService.getCredentials(tenantId, id);
+  }
+
+  /** Revela las credenciales mediante una acción explícita y auditada. */
+  @Post(':id/credentials/reveal')
+  @RequirePermission('streaming:manage')
+  @ApiOkResponse({ type: StreamCredentialsResponseDto })
+  revealCredentials(
+    @TenantId() tenantId: string,
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+    @Ip() ip: string,
+  ) {
+    return this.streamingService.revealCredentials(tenantId, id, user, ip);
+  }
+
+  /** Rota la stream key de Mux fuera de una transmisión activa. */
+  @Post(':id/credentials/rotate')
+  @RequirePermission('streaming:manage')
+  @ApiOkResponse({ type: StreamCredentialsResponseDto })
+  rotateStreamKey(
+    @TenantId() tenantId: string,
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+    @Ip() ip: string,
+  ) {
+    return this.streamingService.rotateStreamKey(tenantId, id, user, ip);
+  }
+
+  /** Registra la copia de una stream key previamente revelada. */
+  @Post(':id/credentials/audit-copy')
+  @RequirePermission('streaming:manage')
+  auditCredentialCopy(
+    @TenantId() tenantId: string,
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+    @Ip() ip: string,
+  ) {
+    return this.streamingService.auditCredentialCopy(tenantId, id, user, ip);
   }
 
   /**
@@ -165,6 +211,7 @@ export class StreamingController {
    */
   @Get(':slug/public')
   @Public()
+  @ApiOkResponse({ type: PublicEventResponseDto })
   findPublic(@Param('slug') slug: string, @Req() req: Request) {
     return this.streamingService.findPublic(slug, this.accessToken(req));
   }
@@ -174,6 +221,14 @@ export class StreamingController {
   @Public()
   getPublicMessages(@Param('slug') slug: string, @Req() req: Request) {
     return this.streamingService.getPublicMessages(slug, this.accessToken(req));
+  }
+
+  /** Entrega una URL de playback pública o firmada para el espectador actual. */
+  @Get(':slug/playback')
+  @Public()
+  @ApiOkResponse({ type: PlaybackResponseDto })
+  getPlayback(@Param('slug') slug: string, @Req() req: Request) {
+    return this.streamingService.getPlayback(slug, this.accessToken(req));
   }
 
   /**

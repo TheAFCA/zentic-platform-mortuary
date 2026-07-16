@@ -69,6 +69,9 @@ interface SetupReturn {
   api: {
     findOne: ReturnType<typeof vi.fn>;
     getCredentials: ReturnType<typeof vi.fn>;
+    revealCredentials: ReturnType<typeof vi.fn>;
+    rotateStreamKey: ReturnType<typeof vi.fn>;
+    auditStreamKeyCopy: ReturnType<typeof vi.fn>;
     startStream: ReturnType<typeof vi.fn>;
     stopStream: ReturnType<typeof vi.fn>;
     getMessages: ReturnType<typeof vi.fn>;
@@ -96,6 +99,9 @@ function setup(overrides?: {
   apiOverrides?: Partial<{
     findOne: ReturnType<typeof vi.fn>;
     getCredentials: ReturnType<typeof vi.fn>;
+    revealCredentials: ReturnType<typeof vi.fn>;
+    rotateStreamKey: ReturnType<typeof vi.fn>;
+    auditStreamKeyCopy: ReturnType<typeof vi.fn>;
     startStream: ReturnType<typeof vi.fn>;
     stopStream: ReturnType<typeof vi.fn>;
     getMessages: ReturnType<typeof vi.fn>;
@@ -122,9 +128,28 @@ function setup(overrides?: {
 
   const apiDefaults: SetupReturn['api'] = {
     findOne: vi.fn().mockReturnValue(of(mockEvent)),
-    getCredentials: vi
-      .fn()
-      .mockReturnValue(of({ streamKey: 'zentic_abc123', rtmpUrl: 'rtmps://test.com/live' })),
+    getCredentials: vi.fn().mockReturnValue(
+      of({
+        streamKey: 'zent••••c123',
+        rtmpUrl: 'rtmps://test.com/live',
+        revealed: false,
+      }),
+    ),
+    revealCredentials: vi.fn().mockReturnValue(
+      of({
+        streamKey: 'zentic_abc123',
+        rtmpUrl: 'rtmps://test.com/live',
+        revealed: true,
+      }),
+    ),
+    rotateStreamKey: vi.fn().mockReturnValue(
+      of({
+        streamKey: 'zentic_rotated',
+        rtmpUrl: 'rtmps://test.com/live',
+        revealed: true,
+      }),
+    ),
+    auditStreamKeyCopy: vi.fn().mockReturnValue(of({ recorded: true })),
     startStream: vi.fn().mockReturnValue(of(mockEvent)),
     stopStream: vi.fn().mockReturnValue(of(mockEvent)),
     getMessages: vi.fn().mockReturnValue(of(mockMessages)),

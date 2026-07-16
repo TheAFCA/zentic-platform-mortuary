@@ -62,6 +62,7 @@ describe('StreamingApiService', () => {
     startedAt: null,
     finishedAt: null,
     recordingUrl: null,
+    playbackUrl: null,
     isPublic: true,
     viewerCount: 0,
     deceased: {
@@ -150,6 +151,7 @@ describe('StreamingApiService', () => {
       const credentials = {
         streamKey: 'stream-secret',
         rtmpUrl: 'rtmps://example.com/live',
+        revealed: false,
       };
 
       service.getCredentials('event-1').subscribe((result) => {
@@ -162,6 +164,32 @@ describe('StreamingApiService', () => {
     });
   });
 
+  describe('credential actions', () => {
+    it('reveals credentials through an explicit POST', () => {
+      service.revealCredentials('event-1').subscribe();
+
+      const req = httpMock.expectOne(`${baseUrl}/events/event-1/credentials/reveal`);
+      expect(req.request.method).toBe('POST');
+      req.flush({ streamKey: 'secret', rtmpUrl: 'rtmps://example', revealed: true });
+    });
+
+    it('rotates credentials through an explicit POST', () => {
+      service.rotateStreamKey('event-1').subscribe();
+
+      const req = httpMock.expectOne(`${baseUrl}/events/event-1/credentials/rotate`);
+      expect(req.request.method).toBe('POST');
+      req.flush({ streamKey: 'new-secret', rtmpUrl: 'rtmps://example', revealed: true });
+    });
+
+    it('audits stream key copies', () => {
+      service.auditStreamKeyCopy('event-1').subscribe();
+
+      const req = httpMock.expectOne(`${baseUrl}/events/event-1/credentials/audit-copy`);
+      expect(req.request.method).toBe('POST');
+      req.flush({ recorded: true });
+    });
+  });
+
   describe('findPublic', () => {
     it('should perform a GET against /events/{slug}/public and return public event', () => {
       service.findPublic('test-event').subscribe((event) => {
@@ -171,6 +199,18 @@ describe('StreamingApiService', () => {
       const req = httpMock.expectOne(`${baseUrl}/events/test-event/public`);
       expect(req.request.method).toBe('GET');
       req.flush(mockPublicEvent);
+    });
+  });
+
+  describe('getPlayback', () => {
+    it('requests a fresh playback URL for the current viewer', () => {
+      service.getPlayback('test-event').subscribe((result) => {
+        expect(result.url).toContain('stream.mux.com');
+      });
+
+      const req = httpMock.expectOne(`${baseUrl}/events/test-event/playback`);
+      expect(req.request.method).toBe('GET');
+      req.flush({ url: 'https://stream.mux.com/id.m3u8?token=jwt' });
     });
   });
 
