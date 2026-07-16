@@ -64,6 +64,7 @@ describe('StreamingApiService', () => {
     finishedAt: null,
     recordingUrl: null,
     playbackUrl: null,
+    recordingReady: false,
     isPublic: true,
     viewerCount: 0,
     deceased: {

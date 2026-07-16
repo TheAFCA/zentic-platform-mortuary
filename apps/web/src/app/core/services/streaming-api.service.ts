@@ -62,6 +62,7 @@ export interface PublicEvent {
   finishedAt: string | null;
   recordingUrl: string | null;
   playbackUrl: string | null;
+  recordingReady: boolean;
   isPublic: boolean;
   viewerCount: number;
   deceased: {

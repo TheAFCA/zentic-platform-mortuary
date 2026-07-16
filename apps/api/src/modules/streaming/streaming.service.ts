@@ -214,6 +214,7 @@ export class StreamingService {
       recordingUrl:
         hasAccess && event.status === 'FINISHED' ? playbackUrl : null,
       playbackUrl,
+      recordingReady: event.recordingReady,
       isPublic: event.isPublic,
       viewerCount: event.viewerCount,
       deceased: hasAccess ? event.deceased : null,
@@ -890,6 +891,7 @@ export class StreamingService {
       recordingUrl: event.recordingUrl ?? undefined,
       playbackId: event.playbackId,
       playbackPolicy: event.playbackPolicy,
+      recordingReady: true,
       recordingExpiry,
     });
   }

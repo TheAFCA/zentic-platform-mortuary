@@ -102,14 +102,14 @@ La escritura final debe incluir la frontera de tenant; no es suficiente consulta
 - [x] **PLAY-02:** Añadir al modelo los campos necesarios para reproducción en vivo (`playbackId`, `playbackPolicy`).
 - [x] **PLAY-03:** Guardar `playbackId`, `playbackPolicy` y `playbackUrl` al crear el recurso remoto.
 - [x] **PLAY-04:** Implementar la obtención de HLS para Mux (via `getPlaybackUrl`).
-- [ ] **PLAY-05:** Mantener el contrato de reproducción preparado para futuros proveedores sin añadir otra integración en esta fase.
+- [x] **PLAY-05:** Mantener el contrato de reproducción preparado para futuros proveedores sin añadir otra integración en esta fase.
 - [x] **PLAY-06:** Usar `playbackUrl` resuelto como `src` del video (tanto admin como público).
 - [x] **PLAY-07:** Integrar `hls.js` con recuperación de errores, fallback HLS nativo y limpieza al cambiar/quitar la fuente o destruir el componente.
 - [x] **PLAY-08:** Mostrar estados: conectando/live/sin-señal/reconectando/finalizado/error + modo live vs recording.
 - [x] **PLAY-09:** Probar de forma automatizada la selección HLS nativa y `hls.js`, la limpieza de recursos, fuentes reemplazadas y recuperación de errores.
 - [ ] **PLAY-10:** Validar el flujo completo con OBS, cuentas reales de Mux, Safari y un navegador basado en Chromium.
 
-**Avance:** 8/10 tareas implementadas. PLAY-05 queda reservado como base para futuros proveedores y PLAY-10 permanece pendiente porque necesita infraestructura y navegadores reales.
+**Avance:** 9/10 tareas implementadas. PLAY-10 permanece pendiente porque necesita infraestructura y navegadores reales; se trata de una validación externa, no de una deuda de implementación dentro de la fase.
 
 **Criterio de salida:** OBS emite, el proveedor recibe la señal y un espectador autorizado puede reproducirla desde la página del evento.
 

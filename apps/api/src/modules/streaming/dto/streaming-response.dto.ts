@@ -7,7 +7,6 @@ export class EventListItemResponseDto {
   @ApiProperty() status: string;
   @ApiProperty() isPublic: boolean;
   @ApiProperty() scheduledAt: Date;
-  @ApiPropertyOptional({ nullable: true }) playbackUrl: string | null;
 }
 
 export class EventDetailResponseDto extends EventListItemResponseDto {
@@ -23,8 +22,20 @@ export class PublicEventResponseDto {
   @ApiProperty() status: string;
   @ApiProperty() isPublic: boolean;
   @ApiPropertyOptional({ nullable: true }) playbackUrl: string | null;
+  @ApiProperty() recordingReady: boolean;
   @ApiPropertyOptional({ nullable: true })
   deceased: Record<string, unknown> | null;
+  @ApiPropertyOptional({ nullable: true })
+  tenant: {
+    name: string;
+    brandConfig: {
+      logoUrl: string | null;
+      primaryColor: string;
+      secondaryColor: string;
+      textColor: string;
+      backgroundColor: string;
+    } | null;
+  };
 }
 
 export class StreamCredentialsResponseDto {

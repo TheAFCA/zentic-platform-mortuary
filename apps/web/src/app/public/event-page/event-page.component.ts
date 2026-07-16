@@ -439,11 +439,7 @@ export class EventPageComponent {
           this.connectSocket();
         }
 
-        if (
-          (ev.status as string) === 'FINISHED' &&
-          (!ev.recordingUrl ||
-            this.stripUrlParams(ev.recordingUrl) === this.stripUrlParams(ev.playbackUrl))
-        ) {
+        if ((ev.status as string) === 'FINISHED' && !ev.recordingReady) {
           this.pollRecordingUrl();
         }
       },
@@ -482,17 +478,12 @@ export class EventPageComponent {
   }
 
   private pollAttempts = 0;
-  private livePlaybackUrl: string | null = null;
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
 
   private pollRecordingUrl(): void {
-    this.livePlaybackUrl = this.stripUrlParams(this.evt()?.playbackUrl);
+    this.cancelPoll();
     this.pollAttempts = 0;
     this.schedulePoll();
-  }
-
-  private stripUrlParams(url: string | null): string | null {
-    return url ? url.split('?')[0] : null;
   }
 
   private schedulePoll(): void {
@@ -501,11 +492,7 @@ export class EventPageComponent {
       this.pollTimer = null;
       this.api.findPublic(this.slug).subscribe({
         next: (ev) => {
-          const hasRecording =
-            ev.recordingUrl &&
-            this.stripUrlParams(ev.recordingUrl) !== this.livePlaybackUrl &&
-            (ev.status as string) === 'FINISHED';
-          if (hasRecording) {
+          if (ev.recordingReady) {
             this.evt.set(ev);
             this.pollAttempts = 0;
             return;

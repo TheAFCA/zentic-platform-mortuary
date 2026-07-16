@@ -326,6 +326,7 @@ model Event {
   status           EventStatus    @default(SCHEDULED)
   moderationMode   ModerationMode @default(AUTO)
   recordingUrl     String?
+  recordingReady   Boolean        @default(false)
   recordingExpiry  DateTime?
   viewerCount      Int            @default(0)
   isPublic         Boolean        @default(true)

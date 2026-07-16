@@ -56,6 +56,7 @@ describe('StreamingService', () => {
     startedAt: null as Date | null,
     finishedAt: null as Date | null,
     recordingUrl: null as string | null,
+    recordingReady: false,
     playbackId: null as string | null,
     playbackPolicy: null as string | null,
     isPublic: true,
@@ -340,6 +341,7 @@ describe('StreamingService', () => {
         finishedAt: baseEvent.finishedAt,
         recordingUrl: null,
         playbackUrl: null,
+        recordingReady: false,
         isPublic: baseEvent.isPublic,
         viewerCount: baseEvent.viewerCount,
         deceased: mockEventFindBySlug.deceased,
@@ -1745,6 +1747,7 @@ describe('StreamingService', () => {
         recordingUrl: 'https://stream.mux.com/abc.m3u8',
         playbackId: undefined,
         playbackPolicy: undefined,
+        recordingReady: true,
         recordingExpiry: expect.any(Date),
       });
     });
@@ -1767,6 +1770,7 @@ describe('StreamingService', () => {
         recordingUrl: 'https://videodelivery.net/abc/manifest/video.m3u8',
         playbackId: undefined,
         playbackPolicy: undefined,
+        recordingReady: true,
         recordingExpiry: null,
       });
     });
