@@ -52,6 +52,18 @@ export enum ObituaryStatus {
   ARCHIVED = 'ARCHIVED',
 }
 
+export enum InvitationTemplate {
+  CLASSIC = 'CLASSIC',
+  MODERN = 'MODERN',
+  MINIMALIST = 'MINIMALIST',
+}
+
+export enum InvitationStatus {
+  DRAFT = 'DRAFT',
+  PUBLISHED = 'PUBLISHED',
+  ARCHIVED = 'ARCHIVED',
+}
+
 export enum LeadStatus {
   NEW = 'NEW',
   CONTACTED = 'CONTACTED',
@@ -677,6 +689,77 @@ export interface PublicObituary {
   event: PublicObituaryEvent | null;
   streamingAction: 'LIVE' | 'RECORDING' | null;
   approvedMessages: ObituaryMessage[];
+}
+
+// ---------- Invitaciones digitales (Módulo 09) --------------------------------
+
+export interface Invitation {
+  id: string;
+  tenantId: string;
+  eventId: string;
+  template: InvitationTemplate;
+  status: InvitationStatus;
+  message: string | null;
+  publicUrl: string | null;
+  imageUrl: string | null;
+  /** Texto plano ingresado por el operador, solo para mostrarlo — nunca se usa para autenticar. */
+  accessCodeDisplay: string | null;
+  publishedAt: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateInvitationInput {
+  eventId: string;
+  template?: InvitationTemplate;
+  message?: string;
+  accessCodeDisplay?: string;
+}
+
+export interface UpdateInvitationInput {
+  template?: InvitationTemplate;
+  message?: string;
+  accessCodeDisplay?: string;
+}
+
+export interface PublicInvitationPlace {
+  venueName: string;
+  roomName: string;
+  /** null → el frontend muestra "Dirección por confirmar". */
+  address: string | null;
+}
+
+/** Evento vinculado, forma reducida para la vista pública de la invitación. */
+export interface PublicInvitationEvent {
+  slug: string;
+  title: string;
+  status: EventStatus;
+  scheduledAt: string;
+  ceremonyType: string;
+  hasAccessCode: boolean;
+  place: PublicInvitationPlace | null;
+}
+
+/** Respuesta de GET /invitations/:publicUrl/public — sin datos internos del tenant. */
+export interface PublicInvitation {
+  publicUrl: string;
+  status: InvitationStatus;
+  template: InvitationTemplate;
+  message: string | null;
+  imageUrl: string | null;
+  accessCodeDisplay: string | null;
+  publishedAt: string | null;
+  deceased: {
+    firstName: string;
+    lastName: string;
+    photoUrl: string | null;
+  };
+  event: PublicInvitationEvent;
+  tenant: {
+    name: string;
+    brandConfig: TenantBrandConfig | null;
+  };
 }
 
 // ---------- Sedes / Salas (Módulo 05) -----------------------------------------
