@@ -9,7 +9,7 @@ describe('ShareButtonsComponent', () => {
     fixture.componentInstance.shareMessage =
       'Nos unimos en memoria de María Fernanda López Rodríguez. Puedes ver el obituario y la transmisión aquí: https://demo.zentic.pro/o/maria-lopez-a1b2';
     fixture.componentInstance.pageUrl = 'https://demo.zentic.pro/o/maria-lopez-a1b2';
-    fixture.componentInstance.deceasedFullName = 'María Fernanda López Rodríguez';
+    fixture.componentInstance.title = 'María Fernanda López Rodríguez';
     fixture.detectChanges();
     return fixture;
   }
@@ -22,7 +22,7 @@ describe('ShareButtonsComponent', () => {
     expect(url.searchParams.get('text')).toBe(fixture.componentInstance.shareMessage);
   });
 
-  it('builds a mailto URL with a subject referencing the deceased', () => {
+  it('builds a mailto URL with a subject referencing the title', () => {
     const fixture = createFixture();
     expect(fixture.componentInstance.mailtoUrl).toContain(
       encodeURIComponent('En memoria de María Fernanda López Rodríguez'),
@@ -38,5 +38,21 @@ describe('ShareButtonsComponent', () => {
 
     expect(writeText).toHaveBeenCalledWith('https://demo.zentic.pro/o/maria-lopez-a1b2');
     expect(fixture.componentInstance.copied()).toBe(true);
+  });
+
+  it('builds a WhatsApp share message usable for an invitation title (HU-INV-001)', () => {
+    TestBed.configureTestingModule({ imports: [ShareButtonsComponent] });
+    const fixture = TestBed.createComponent(ShareButtonsComponent);
+    fixture.componentInstance.shareMessage =
+      'Te invitamos a acompañarnos en memoria de María Fernanda López Rodríguez.\n📅 Sábado 05 de Julio, 2:00 PM\n📍 Sala A - Funeraria XYZ, Calle 45 #23-10\n🔗 https://demo.zentic.pro/i/invitacion-maria-lopez-x7k2';
+    fixture.componentInstance.pageUrl = 'https://demo.zentic.pro/i/invitacion-maria-lopez-x7k2';
+    fixture.componentInstance.title = 'María Fernanda López Rodríguez';
+    fixture.detectChanges();
+
+    const url = new URL(fixture.componentInstance.whatsappUrl);
+    expect(decodeURIComponent(url.search)).toContain('📅');
+    expect(decodeURIComponent(url.search)).toContain(
+      'https://demo.zentic.pro/i/invitacion-maria-lopez-x7k2',
+    );
   });
 });
