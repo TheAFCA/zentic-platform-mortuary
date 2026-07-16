@@ -46,6 +46,14 @@ export enum MessageStatus {
   REJECTED = 'REJECTED',
 }
 
+export type MessageOrigin = 'STREAMING' | 'OBITUARY';
+
+export enum TributeBookStatus {
+  PROCESSING = 'PROCESSING',
+  READY = 'READY',
+  ERROR = 'ERROR',
+}
+
 export enum ObituaryStatus {
   DRAFT = 'DRAFT',
   PUBLISHED = 'PUBLISHED',
@@ -667,6 +675,61 @@ export interface ObituaryMessage {
   createdAt: string;
 }
 
+// ---------- Libro de Homenajes (Módulo 10) -----------------------------------
+
+/** Forma normalizada de un mensaje (Message de streaming u ObituaryMessage) para la vista centralizada. */
+export interface TributeMessage {
+  id: string;
+  origin: MessageOrigin;
+  tenantId: string;
+  eventId: string | null;
+  obituaryId: string | null;
+  authorName: string;
+  content: string;
+  iconType: string | null;
+  status: MessageStatus;
+  rejectedReason: string | null;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  createdAt: string;
+  deletedAt: string | null;
+}
+
+export interface ListTributeMessagesQuery extends PaginationQuery {
+  status?: MessageStatus;
+  origin?: MessageOrigin;
+  eventId?: string;
+  obituaryId?: string;
+  /** true → papelera (mensajes con soft delete dentro de la ventana de 30 días, RN-TRIB-003). */
+  trashed?: boolean;
+}
+
+export interface BulkApproveTributeMessagesInput {
+  items: { id: string; origin: MessageOrigin }[];
+}
+
+/** Exactamente uno de eventId/obituaryId es requerido (RF-TRIB-005). */
+export interface GenerateTributeBookInput {
+  eventId?: string;
+  obituaryId?: string;
+  includeStreamingMessages?: boolean;
+  includeObituaryMessages?: boolean;
+}
+
+export interface TributeBookGeneration {
+  id: string;
+  tenantId: string;
+  eventId: string | null;
+  obituaryId: string | null;
+  generatedBy: string;
+  status: TributeBookStatus;
+  pdfUrl: string | null;
+  errorMessage: string | null;
+  expiresAt: string | null;
+  messageCount: number;
+  createdAt: string;
+}
+
 /** Evento de streaming vinculado, forma reducida para la vista pública del obituario. */
 export interface PublicObituaryEvent {
   slug: string;
@@ -888,6 +951,21 @@ export interface WsReaction extends WsEventPayload {
   reaction: {
     type: string;
     count: number;
+  };
+}
+
+export interface WsObituaryEventPayload {
+  obituaryId: string;
+  tenantId: string;
+}
+
+export interface WsObituaryMessage extends WsObituaryEventPayload {
+  message: {
+    id: string;
+    authorName: string;
+    content: string;
+    iconType: string | null;
+    createdAt: string;
   };
 }
 
