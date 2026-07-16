@@ -25,6 +25,15 @@ export const routes: Routes = [
       import('./public/obituary-page/obituary-page.component').then((m) => m.ObituaryPageComponent),
   },
 
+  // Public invitation page (no auth required)
+  {
+    path: 'i/:slug',
+    loadComponent: () =>
+      import('./public/invitation-page/invitation-page.component').then(
+        (m) => m.InvitationPageComponent,
+      ),
+  },
+
   // Auth module (no layout wrapper needed)
   {
     path: 'auth',
