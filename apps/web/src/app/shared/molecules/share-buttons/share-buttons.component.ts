@@ -11,7 +11,8 @@ import { Component, Input, signal } from '@angular/core';
 export class ShareButtonsComponent {
   @Input({ required: true }) shareMessage!: string;
   @Input({ required: true }) pageUrl!: string;
-  @Input({ required: true }) deceasedFullName!: string;
+  /** Usado en el subject del mailto, ej. nombre del difunto o título del evento. */
+  @Input({ required: true }) title!: string;
 
   readonly copied = signal(false);
 
@@ -20,7 +21,7 @@ export class ShareButtonsComponent {
   }
 
   get mailtoUrl(): string {
-    const subject = encodeURIComponent(`En memoria de ${this.deceasedFullName}`);
+    const subject = encodeURIComponent(`En memoria de ${this.title}`);
     const body = encodeURIComponent(this.shareMessage);
     return `mailto:?subject=${subject}&body=${body}`;
   }

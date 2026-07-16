@@ -1,0 +1,28 @@
+<div class="invitation-preview" [class]="templateClass" [ngStyle]="brandStyle">
+  <div class="invitation-preview__photo">
+    <img *ngIf="photoUrl" [src]="photoUrl" alt="" class="invitation-preview__photo-img" />
+    <app-initials-avatar
+      *ngIf="!photoUrl"
+      [firstName]="firstName"
+      [lastName]="lastName"
+      [sizePx]="88"
+    />
+  </div>
+
+  <h3 class="invitation-preview__name">
+    {{ firstName || lastName ? firstName + ' ' + lastName : 'Nombre del difunto' }}
+  </h3>
+
+  <p class="invitation-preview__datetime" *ngIf="scheduledAt">
+    {{ scheduledAt | date: "EEEE d 'de' MMMM, y" }} · {{ scheduledAt | date: 'shortTime' }}
+  </p>
+
+  <p class="invitation-preview__place">{{ placeLabel || 'Lugar por definir' }}</p>
+  <p class="invitation-preview__address">{{ addressLabel }}</p>
+
+  <p class="invitation-preview__message" *ngIf="message">{{ message }}</p>
+
+  <p class="invitation-preview__access-code" *ngIf="accessCodeDisplay" data-testid="preview-access-code">
+    Código de acceso: {{ accessCodeDisplay }}
+  </p>
+</div>

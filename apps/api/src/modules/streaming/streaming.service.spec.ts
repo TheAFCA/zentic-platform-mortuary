@@ -11,6 +11,7 @@ import { EventStatus, ModerationMode } from '@zentic/shared-types';
 import { StreamingService } from './streaming.service';
 import { StreamingRepository } from './streaming.repository';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { InvitationsService } from '../invitations/invitations.service';
 import {
   CreateEventDto,
   SendMessageDto,
@@ -25,6 +26,7 @@ describe('StreamingService', () => {
     server: { to: jest.Mock; emit: jest.Mock };
   };
   let mockConfig: jest.Mocked<ConfigService>;
+  let mockInvitationsService: jest.Mocked<InvitationsService>;
   let randomBytesSpy: jest.SpyInstance;
 
   const tenantId = 'tenant-1';
@@ -189,12 +191,17 @@ describe('StreamingService', () => {
       get: jest.fn().mockReturnValue('mux'),
     } as unknown as jest.Mocked<ConfigService>;
 
+    mockInvitationsService = {
+      archiveByEventId: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<InvitationsService>;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StreamingService,
         { provide: StreamingRepository, useValue: mockRepo },
         { provide: NotificationsGateway, useValue: mockGateway },
         { provide: ConfigService, useValue: mockConfig },
+        { provide: InvitationsService, useValue: mockInvitationsService },
       ],
     }).compile();
 
@@ -579,6 +586,38 @@ describe('StreamingService', () => {
         NotFoundException,
       );
       expect(mockRepo.softDelete).not.toHaveBeenCalled();
+    });
+
+    it('should archive the event invitations (RN-INV-002)', async () => {
+      mockRepo.findById.mockResolvedValue(mockEventFindById as any);
+      mockRepo.softDelete.mockResolvedValue({
+        ...mockEventFindById,
+        deletedAt: new Date(),
+        status: 'CANCELLED',
+      } as any);
+
+      await service.remove(tenantId, eventId);
+
+      expect(mockInvitationsService.archiveByEventId).toHaveBeenCalledWith(
+        tenantId,
+        eventId,
+      );
+    });
+
+    it('should still cancel the event when archiving invitations fails', async () => {
+      mockRepo.findById.mockResolvedValue(mockEventFindById as any);
+      mockRepo.softDelete.mockResolvedValue({
+        ...mockEventFindById,
+        deletedAt: new Date(),
+        status: 'CANCELLED',
+      } as any);
+      mockInvitationsService.archiveByEventId.mockRejectedValue(
+        new Error('db down'),
+      );
+
+      const result = await service.remove(tenantId, eventId);
+
+      expect(result.status).toBe('CANCELLED');
     });
   });
 

@@ -1,0 +1,98 @@
+.invitation-preview {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 2rem 1.5rem;
+  border-radius: 1rem;
+  text-align: center;
+  max-width: 24rem;
+  margin: 0 auto;
+}
+
+.invitation-preview__photo {
+  margin-bottom: 0.5rem;
+}
+
+.invitation-preview__photo-img {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.invitation-preview__name {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.invitation-preview__datetime {
+  margin: 0;
+  font-weight: 600;
+}
+
+.invitation-preview__place,
+.invitation-preview__address {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.invitation-preview__message {
+  margin: 0.5rem 0 0;
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.invitation-preview__access-code {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+// Clásica — fondo crema, tipografía serif, tonos tierra.
+.invitation-preview--classic {
+  background: #f4ede0;
+  font-family: Georgia, 'Times New Roman', serif;
+  color: var(--invitation-text);
+  border: 2px solid var(--invitation-primary);
+
+  .invitation-preview__datetime {
+    color: var(--invitation-primary);
+  }
+}
+
+// Moderna — fondo oscuro, tipografía sans, acento en color primario del tenant.
+.invitation-preview--modern {
+  background: var(--invitation-secondary);
+  font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+  color: #ffffff;
+  border-top: 6px solid var(--invitation-primary);
+
+  .invitation-preview__datetime {
+    color: var(--invitation-primary);
+  }
+
+  .invitation-preview__place,
+  .invitation-preview__address,
+  .invitation-preview__message {
+    color: #e4e4e8;
+  }
+}
+
+// Minimalista — fondo blanco, líneas simples, texto centrado.
+.invitation-preview--minimalist {
+  background: #ffffff;
+  font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+  font-weight: 300;
+  color: var(--invitation-text);
+
+  .invitation-preview__name {
+    font-weight: 300;
+    letter-spacing: 0.03em;
+  }
+
+  .invitation-preview__datetime {
+    color: var(--invitation-primary);
+    font-weight: 400;
+  }
+}

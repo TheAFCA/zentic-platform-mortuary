@@ -1,0 +1,56 @@
+@use '../../../shared/styles/panel' as panel;
+
+.invitation-form-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  gap: 1.5rem;
+  align-items: start;
+
+  @media (max-width: 860px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.invitation-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.invitation-form__error {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
+
+.invitation-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.btn-ghost {
+  @include panel.ghost-button;
+}
+
+.btn-primary {
+  @include panel.primary-button;
+}
+
+.invitation-form__preview {
+  position: sticky;
+  top: 1rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.invitation-form__preview-label {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: panel.$muted;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

@@ -23,6 +23,11 @@ export const ADMIN_ROUTES: Routes = [
         loadChildren: () => import('../obituary/obituary.routes').then((m) => m.OBITUARY_ROUTES),
       },
       {
+        path: 'invitations',
+        loadChildren: () =>
+          import('../invitations/invitations.routes').then((m) => m.INVITATIONS_ROUTES),
+      },
+      {
         path: 'leads',
         loadChildren: () => import('../leads/leads.routes').then((m) => m.LEADS_ROUTES),
       },

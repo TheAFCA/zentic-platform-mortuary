@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { randomBytes, createHash } from 'crypto';
 import { StreamingRepository } from './streaming.repository';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { InvitationsService } from '../invitations/invitations.service';
 import {
   CreateEventDto,
   UpdateEventDto,
@@ -45,6 +46,7 @@ export class StreamingService {
     private readonly repo: StreamingRepository,
     private readonly gateway: NotificationsGateway,
     private readonly config: ConfigService<Env>,
+    private readonly invitationsService: InvitationsService,
   ) {}
 
   // ── CRUD Events ────────────────────────────────────────────────────
@@ -271,7 +273,20 @@ export class StreamingService {
    */
   async remove(tenantId: string, id: string) {
     await this.findOne(tenantId, id);
-    return this.repo.softDelete(tenantId, id);
+    const cancelled = await this.repo.softDelete(tenantId, id);
+
+    // RN-INV-002: al cancelar/eliminar un evento, sus invitaciones se archivan (no se borran).
+    // Best-effort — nunca debe bloquear la cancelación del evento, que es la operación
+    // principal solicitada por el operador.
+    try {
+      await this.invitationsService.archiveByEventId(tenantId, id);
+    } catch (error) {
+      this.logger.warn(
+        `No se pudieron archivar las invitaciones del evento ${id}: ${error}`,
+      );
+    }
+
+    return cancelled;
   }
 
   // ── Stream lifecycle ────────────────────────────────────────────────

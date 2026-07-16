@@ -1,0 +1,69 @@
+<div class="invitation-page" *ngIf="!loading(); else loadingState">
+  <ng-container *ngIf="invitation() as invitation; else notAvailableState">
+    <p class="invitation-page__banner" *ngIf="invitation.event.status === 'CANCELLED'" data-testid="cancelled-banner">
+      Este evento ha sido cancelado
+    </p>
+
+    <header class="invitation-page__hero">
+      <app-initials-avatar
+        *ngIf="!invitation.deceased.photoUrl"
+        [firstName]="invitation.deceased.firstName"
+        [lastName]="invitation.deceased.lastName"
+        [sizePx]="140"
+      />
+      <img
+        *ngIf="invitation.deceased.photoUrl"
+        [src]="invitation.deceased.photoUrl"
+        class="invitation-page__photo"
+        alt=""
+      />
+
+      <h1 class="invitation-page__name">{{ fullName }}</h1>
+
+      <p class="invitation-page__datetime">
+        {{ invitation.event.scheduledAt | date: "EEEE d 'de' MMMM, y" }} ·
+        {{ invitation.event.scheduledAt | date: 'shortTime' }}
+      </p>
+
+      <p class="invitation-page__place" *ngIf="invitation.event.place">
+        {{ invitation.event.place.venueName }} — {{ invitation.event.place.roomName }}
+      </p>
+      <p class="invitation-page__address">{{ addressLabel }}</p>
+
+      <p class="invitation-page__message" *ngIf="invitation.message">{{ invitation.message }}</p>
+
+      <div class="invitation-page__access-code" *ngIf="invitation.event.hasAccessCode" data-testid="access-code-block">
+        <ng-container *ngIf="invitation.accessCodeDisplay; else genericAccessNotice">
+          Código de acceso: <strong>{{ invitation.accessCodeDisplay }}</strong>
+        </ng-container>
+        <ng-template #genericAccessNotice>
+          Este evento requiere código de acceso — solicítalo a la funeraria.
+        </ng-template>
+        <p class="invitation-page__access-hint">
+          Tendrás que ingresar este código para acceder al streaming.
+        </p>
+      </div>
+
+      <a
+        class="invitation-page__stream-link"
+        [routerLink]="['/e', invitation.event.slug]"
+        data-testid="streaming-link"
+      >
+        Ver obituario y transmisión
+      </a>
+    </header>
+
+    <app-share-buttons [shareMessage]="shareMessage" [pageUrl]="currentUrl" [title]="fullName" />
+  </ng-container>
+
+  <ng-template #notAvailableState>
+    <div class="invitation-page__not-available" data-testid="invitation-not-available">
+      <h1>Esta invitación no está disponible</h1>
+      <p>El enlace que buscas no existe o ya no está publicado.</p>
+    </div>
+  </ng-template>
+</div>
+
+<ng-template #loadingState>
+  <p class="invitation-page__loading">Cargando...</p>
+</ng-template>

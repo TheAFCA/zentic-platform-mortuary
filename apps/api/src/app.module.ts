@@ -5,6 +5,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { StreamingModule } from './modules/streaming/streaming.module';
 import { ObituaryModule } from './modules/obituary/obituary.module';
+import { InvitationsModule } from './modules/invitations/invitations.module';
 import { LeadsModule } from './modules/leads/leads.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
@@ -42,6 +43,7 @@ import { AppService } from './app.service';
     AuthModule,
     StreamingModule,
     ObituaryModule,
+    InvitationsModule,
     LeadsModule,
     PermissionsModule,
     AdminModule,
