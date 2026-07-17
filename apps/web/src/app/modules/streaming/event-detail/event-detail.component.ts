@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DomSanitizer } from '@angular/platform-browser';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -21,6 +21,7 @@ import {
   Message,
 } from '../../../core/services/streaming-api.service';
 import { StreamingSocketService } from '../../../core/services/streaming-socket.service';
+import { InvitationsApiService } from '../../../core/services/invitations-api.service';
 import { EventStatus } from '@zentic/shared-types';
 import { AuthStateService } from '../../../core/services/auth-state.service';
 import { HlsPlayerComponent } from '../../../shared/molecules/hls-player/hls-player.component';
@@ -636,6 +637,14 @@ import { HlsPlayerComponent } from '../../../shared/molecules/hls-player/hls-pla
                   Finalizar transmisión
                 </button>
               }
+              <button
+                mat-stroked-button
+                (click)="generateInvitation()"
+                [disabled]="generatingInvitation()"
+              >
+                <mat-icon>mail</mat-icon>
+                {{ generatingInvitation() ? 'Generando…' : 'Generar Invitación' }}
+              </button>
             </div>
             @if (ev.status === 'LIVE') {
               <div class="control-bar__status">
@@ -892,6 +901,7 @@ import { HlsPlayerComponent } from '../../../shared/molecules/hls-player/hls-pla
 })
 export class EventDetailComponent {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly api = inject(StreamingApiService);
   private readonly socket = inject(StreamingSocketService);
   private readonly snackBar = inject(MatSnackBar);
@@ -905,6 +915,7 @@ export class EventDetailComponent {
   readonly pendingCount = signal(0);
   readonly messagesLoading = signal(false);
   readonly streamLoading = signal(false);
+  readonly generatingInvitation = signal(false);
   readonly viewerCount = signal(0);
   readonly activeTab = signal('messages');
   readonly showingPending = signal(false);
@@ -987,6 +998,22 @@ export class EventDetailComponent {
 
   statusLabel(status: string): string {
     return this.statusLabels[status] ?? status;
+  }
+
+  // RF-INV-001: genera un borrador de invitación prellenado con los datos del evento — no hay
+  // trigger automático al crear el evento, el operador lo dispara desde aquí.
+  generateInvitation(): void {
+    this.generatingInvitation.set(true);
+    this.invitationsApi.create({ eventId: this.eventId }).subscribe({
+      next: (invitation) => {
+        this.generatingInvitation.set(false);
+        void this.router.navigate(['/admin/invitations', invitation.id]);
+      },
+      error: () => {
+        this.generatingInvitation.set(false);
+        this.snackBar.open('No se pudo generar la invitación', 'Cerrar', { duration: 3000 });
+      },
+    });
   }
 
   getPublicUrl(): string {

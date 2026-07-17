@@ -85,6 +85,12 @@ export class DashboardLayoutComponent {
           permission: 'obituary:read',
         },
         {
+          path: '/admin/invitations',
+          label: 'Invitaciones',
+          icon: 'mail',
+          permission: 'invitations:read',
+        },
+        {
           path: '/admin/clientes',
           label: 'Clientes',
           icon: 'people',

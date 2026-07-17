@@ -1,0 +1,67 @@
+<div class="invitations-page">
+  <header class="invitations-page__header">
+    <p class="invitations-page__eyebrow">Invitaciones</p>
+    <h1 class="invitations-page__title">Invitaciones digitales</h1>
+    <p class="invitations-page__subtitle">Genera y comparte invitaciones para cada ceremonia</p>
+  </header>
+
+  <section class="panel-card" *ngIf="showForm()">
+    <div class="panel-card__header">
+      <h2>Nueva invitación</h2>
+    </div>
+    <div class="panel-card__body">
+      <app-invitation-form
+        [eventOptions]="eventOptions()"
+        [errorMessage]="formError()"
+        (save)="onSave($event)"
+        (cancel)="closeForm()"
+      />
+    </div>
+  </section>
+
+  <section class="panel-card">
+    <div class="panel-card__header panel-card__header--split">
+      <div>
+        <h2>Invitaciones</h2>
+        <p class="panel-card__count">{{ total() }} invitación(es)</p>
+      </div>
+      <div class="invitations-page__actions">
+        <select
+          class="invitations-page__filter"
+          [ngModel]="statusFilter()"
+          (ngModelChange)="onStatusFilterChange($event)"
+          [ngModelOptions]="{ standalone: true }"
+        >
+          <option value="">Todos los estados</option>
+          <option *ngFor="let status of statuses" [value]="status">{{ status }}</option>
+        </select>
+        <button
+          *appHasPermission="'invitations:manage'"
+          type="button"
+          class="btn-primary"
+          (click)="openCreate()"
+        >
+          <mat-icon>add</mat-icon>
+          <span>Nueva invitación</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="panel-card__body panel-card__body--flush">
+      <app-data-table
+        [columns]="columns"
+        [rows]="invitations()"
+        emptyMessage="No hay invitaciones registradas"
+      >
+        <ng-template #rowActions let-invitation>
+          <div class="invitations-table__actions">
+            <app-badge [color]="statusBadgeColor(invitation.status)">{{ invitation.status }}</app-badge>
+            <button type="button" class="btn-ghost btn-ghost--sm" (click)="openDetail(invitation)">
+              Ver detalle
+            </button>
+          </div>
+        </ng-template>
+      </app-data-table>
+    </div>
+  </section>
+</div>

@@ -1,0 +1,107 @@
+<div class="invitation-detail" *ngIf="!loading(); else loadingState">
+  <ng-container *ngIf="invitation() as invitation">
+    <header class="invitation-detail__header">
+      <button type="button" class="btn-ghost btn-ghost--sm" (click)="goBack()">
+        <mat-icon>arrow_back</mat-icon>
+        <span>Volver</span>
+      </button>
+      <app-badge [color]="statusBadgeColor(invitation.status)">{{ invitation.status }}</app-badge>
+    </header>
+
+    <p class="invitation-detail__error" *ngIf="actionError()">{{ actionError() }}</p>
+
+    <section class="panel-card" *ngIf="!editing()">
+      <div class="panel-card__body invitation-detail__summary" *ngIf="event() as event">
+        <h1 class="invitation-detail__name">
+          {{ event.deceased.firstName }} {{ event.deceased.lastName }}
+        </h1>
+        <p class="invitation-detail__meta">{{ event.scheduledAt | date: 'medium' }}</p>
+        <p class="invitation-detail__meta" *ngIf="event.room">
+          {{ event.room.venue.name }} — {{ event.room.name }}
+        </p>
+        <p class="invitation-detail__message" *ngIf="invitation.message">{{ invitation.message }}</p>
+      </div>
+
+      <div class="panel-card__body invitation-detail__actions">
+        <button
+          *appHasPermission="'invitations:manage'"
+          type="button"
+          class="btn-ghost"
+          (click)="openEdit()"
+        >
+          <mat-icon>edit</mat-icon>
+          <span>Editar</span>
+        </button>
+
+        <button
+          *appHasPermission="'invitations:manage'"
+          type="button"
+          class="btn-primary"
+          [disabled]="invitation.status === 'ARCHIVED'"
+          (click)="requestPublish()"
+        >
+          <mat-icon>public</mat-icon>
+          <span>{{ invitation.status === 'PUBLISHED' ? 'Publicada' : 'Publicar' }}</span>
+        </button>
+
+        <button
+          *appHasPermission="'invitations:manage'"
+          type="button"
+          class="btn-ghost"
+          [disabled]="generatingImage()"
+          (click)="downloadImage()"
+        >
+          <mat-icon>image</mat-icon>
+          <span>{{ generatingImage() ? 'Generando…' : 'Descargar imagen' }}</span>
+        </button>
+      </div>
+
+      <p class="invitation-detail__error" *ngIf="imageError()">{{ imageError() }}</p>
+
+      <div class="panel-card__body invitation-detail__share" *ngIf="invitation.status !== 'DRAFT'">
+        <label class="invitation-detail__share-label">Enlace público</label>
+        <div class="invitation-detail__share-row">
+          <input class="invitation-detail__share-input" type="text" readonly [value]="publicUrl" />
+          <button type="button" class="btn-ghost btn-ghost--sm" (click)="copyPublicUrl()">
+            {{ copied() ? '¡Copiado!' : 'Copiar' }}
+          </button>
+        </div>
+
+        <app-share-buttons
+          *ngIf="event() as event"
+          [shareMessage]="shareMessage"
+          [pageUrl]="publicUrl"
+          [title]="event.deceased.firstName + ' ' + event.deceased.lastName"
+        />
+      </div>
+    </section>
+
+    <section class="panel-card" *ngIf="editing()">
+      <div class="panel-card__header">
+        <h2>Editar invitación</h2>
+      </div>
+      <div class="panel-card__body">
+        <app-invitation-form
+          [initialValue]="editingFormValue()"
+          [eventOptions]="eventOptions()"
+          [errorMessage]="formError()"
+          (save)="onSave($event)"
+          (cancel)="closeEdit()"
+        />
+      </div>
+    </section>
+  </ng-container>
+</div>
+
+<ng-template #loadingState>
+  <p class="invitation-detail__loading">Cargando invitación...</p>
+</ng-template>
+
+<app-confirm-dialog
+  [open]="confirmPublish()"
+  title="Publicar invitación"
+  message="La invitación quedará disponible en un enlace público. Verifica que el evento tenga una sala/lugar asignado."
+  confirmLabel="Publicar"
+  (confirm)="confirmPublishAction()"
+  (cancel)="cancelPublish()"
+/>

@@ -8,7 +8,7 @@ import { PublicObituary } from '@zentic/shared-types';
 import { ObituariesApiService } from '../../core/services/obituaries-api.service';
 import { InitialsAvatarComponent } from '../../shared/atoms/initials-avatar/initials-avatar.component';
 import { CondolenceFormComponent } from './condolence-form/condolence-form.component';
-import { ShareButtonsComponent } from './share-buttons/share-buttons.component';
+import { ShareButtonsComponent } from '../../shared/molecules/share-buttons/share-buttons.component';
 
 @Component({
   selector: 'app-obituary-page',

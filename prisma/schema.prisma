@@ -64,6 +64,18 @@ enum ObituaryStatus {
   ARCHIVED
 }
 
+enum InvitationTemplate {
+  CLASSIC
+  MODERN
+  MINIMALIST
+}
+
+enum InvitationStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 enum LeadStatus {
   NEW
   CONTACTED
@@ -107,6 +119,7 @@ model Tenant {
   users               User[]
   events              Event[]
   obituaries          Obituary[]
+  invitations         Invitation[]
   leads               Lead[]
   leadNotes           LeadNote[]
   clients             Client[]
@@ -304,21 +317,21 @@ model Deceased {
 // =============================================================================
 
 model Event {
-  id               String         @id @default(cuid())
-  tenantId         String
-  tenant           Tenant         @relation(fields: [tenantId], references: [id])
-  deceasedId       String
-  deceased         Deceased       @relation(fields: [deceasedId], references: [id])
-  roomId           String?
-  room             Room?          @relation(fields: [roomId], references: [id])
-  clientId         String?
-  client           Client?        @relation(fields: [clientId], references: [id])
-  assignedToId     String?
-  assignedTo       User?          @relation(fields: [assignedToId], references: [id])
-  title            String
-  slug             String         @unique
-  description      String?        @db.Text
-  ceremonyType     String         @default("VELATORIO")
+  id                String         @id @default(cuid())
+  tenantId          String
+  tenant            Tenant         @relation(fields: [tenantId], references: [id])
+  deceasedId        String
+  deceased          Deceased       @relation(fields: [deceasedId], references: [id])
+  roomId            String?
+  room              Room?          @relation(fields: [roomId], references: [id])
+  clientId          String?
+  client            Client?        @relation(fields: [clientId], references: [id])
+  assignedToId      String?
+  assignedTo        User?          @relation(fields: [assignedToId], references: [id])
+  title             String
+  slug              String         @unique
+  description       String?        @db.Text
+  ceremonyType      String         @default("VELATORIO")
   estimatedDuration Int?
   streamKey        String?
   rtmpUrl          String?
@@ -439,6 +452,35 @@ model ObituaryMessage {
   @@index([obituaryId])
   @@index([obituaryId, status])
   @@index([tenantId])
+}
+
+// =============================================================================
+// INVITACIONES DIGITALES
+// =============================================================================
+
+model Invitation {
+  id                String             @id @default(cuid())
+  tenantId          String
+  tenant            Tenant             @relation(fields: [tenantId], references: [id])
+  eventId           String
+  event             Event              @relation(fields: [eventId], references: [id])
+  template          InvitationTemplate @default(CLASSIC)
+  status            InvitationStatus   @default(DRAFT)
+  message           String?            @db.VarChar(200)
+  publicUrl         String?            @unique
+  imageUrl          String?
+  // Copia en texto plano ingresada manualmente por el operador para mostrarla en la invitación.
+  // Event.accessCode se guarda hasheado (SHA-256) y no puede recuperarse — este campo NUNCA
+  // se usa para autenticar el acceso al streaming, solo para RN-INV-004 (mostrar el código).
+  accessCodeDisplay String?            @db.VarChar(50)
+  publishedAt       DateTime?
+  createdBy         String
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([tenantId])
+  @@index([eventId])
+  @@index([tenantId, status])
 }
 
 // =============================================================================

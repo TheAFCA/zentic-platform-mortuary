@@ -1,0 +1,109 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: #f5f5f5;
+  padding: 2.5rem 1rem 4rem;
+}
+
+.invitation-page {
+  max-width: 42rem;
+  margin: 0 auto;
+  display: grid;
+  gap: 2rem;
+}
+
+.invitation-page__banner {
+  margin: 0;
+  padding: 0.85rem 1.1rem;
+  border-radius: 0.85rem;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-weight: 600;
+  text-align: center;
+}
+
+.invitation-page__hero {
+  display: grid;
+  justify-items: center;
+  gap: 0.6rem;
+  text-align: center;
+  background: #fff;
+  border-radius: 1.25rem;
+  padding: 2rem 1.5rem;
+  box-shadow: 0 12px 32px rgba(17, 24, 39, 0.06);
+}
+
+.invitation-page__photo {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid #fff;
+  box-shadow: 0 12px 32px rgba(17, 24, 39, 0.12);
+}
+
+.invitation-page__name {
+  margin: 0.5rem 0 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.invitation-page__datetime {
+  margin: 0;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.invitation-page__place,
+.invitation-page__address {
+  margin: 0;
+  color: #6b7280;
+}
+
+.invitation-page__message {
+  margin: 0.5rem 0 0;
+  font-style: italic;
+  color: #374151;
+}
+
+.invitation-page__access-code {
+  margin-top: 0.75rem;
+  padding: 0.85rem 1.1rem;
+  border-radius: 0.85rem;
+  background: #f0fdf4;
+  color: #166534;
+  font-weight: 600;
+}
+
+.invitation-page__access-hint {
+  margin: 0.25rem 0 0;
+  font-weight: 400;
+  font-size: 0.85rem;
+}
+
+.invitation-page__stream-link {
+  margin-top: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  border: 0;
+  border-radius: 0.85rem;
+  padding: 0.65rem 1.4rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  text-decoration: none;
+}
+
+.invitation-page__not-available {
+  text-align: center;
+  padding: 4rem 1rem;
+  color: #374151;
+}
+
+.invitation-page__loading {
+  text-align: center;
+  color: #6b7280;
+  padding: 4rem 1rem;
+}
