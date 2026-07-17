@@ -1,8 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { StreamProvider, STREAM_PROVIDER_TOKEN } from '../providers/stream-provider.interface';
+import {
+  resolveProviderForEvent,
+  StreamProvider,
+  STREAM_PROVIDER_TOKEN,
+} from '../providers/stream-provider.interface';
 import { Inject } from '@nestjs/common';
+import { MuxStreamProvider } from '../providers/mux-stream.provider';
+import { CloudflareStreamProvider } from '../providers/cloudflare-stream.provider';
 
 @Injectable()
 export class ReconciliationTaskService {
@@ -11,6 +17,8 @@ export class ReconciliationTaskService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(STREAM_PROVIDER_TOKEN) private readonly provider: StreamProvider,
+    private readonly muxProvider: MuxStreamProvider,
+    private readonly cloudflareProvider: CloudflareStreamProvider,
   ) {}
 
   /**
@@ -35,7 +43,9 @@ export class ReconciliationTaskService {
     });
 
     for (const event of stuckProvisioning) {
-      this.logger.warn(`Evento ${event.id} atascado en PROVISIONING desde antes de ${threshold}`);
+      this.logger.warn(
+        `Evento ${event.id} atascado en PROVISIONING desde antes de ${threshold.toISOString()}`,
+      );
 
       await this.prisma.event.update({
         where: { id: event.id },
@@ -51,7 +61,9 @@ export class ReconciliationTaskService {
           toStatus: 'PROVISION_FAILED',
           trigger: 'reconciliation',
           source: 'reconciliation',
-          metadata: { reason: 'Stuck in PROVISIONING for more than 30 minutes' },
+          metadata: {
+            reason: 'Stuck in PROVISIONING for more than 30 minutes',
+          },
         },
       });
     }
@@ -63,22 +75,39 @@ export class ReconciliationTaskService {
         updatedAt: { lt: new Date(Date.now() - 2 * 60 * 60 * 1000) },
         deletedAt: null,
       },
-      select: { id: true, providerStreamId: true, status: true },
+      select: {
+        id: true,
+        tenantId: true,
+        provider: true,
+        providerStreamId: true,
+        status: true,
+      },
     });
 
     for (const event of orphanRemote) {
       if (!event.providerStreamId) continue;
 
       try {
-        const remoteStatus = await this.provider.getStreamStatus(event.providerStreamId);
-        if (remoteStatus === 'idle' && (event.status === 'LIVE' || event.status === 'PAUSED')) {
+        const eventProvider = resolveProviderForEvent(
+          event,
+          this.muxProvider,
+          this.cloudflareProvider,
+          this.provider,
+        );
+        const remoteStatus = await eventProvider.getStreamStatus(
+          event.providerStreamId,
+        );
+        if (
+          remoteStatus === 'idle' &&
+          (event.status === 'LIVE' || event.status === 'PAUSED')
+        ) {
           this.logger.warn(
-            `Evento ${event.id} marcado como ${event.status} pero el proveedor reporta idle. Finalizando...`,
+            `Evento ${event.id} marcado como ${event.status} pero el proveedor reporta idle. Interrumpiendo...`,
           );
 
           await this.prisma.event.update({
             where: { id: event.id },
-            data: { status: 'INTERRUPTED', finishedAt: new Date() },
+            data: { status: 'INTERRUPTED' },
           });
 
           await this.prisma.eventStateTransition.create({
@@ -90,12 +119,16 @@ export class ReconciliationTaskService {
               toStatus: 'INTERRUPTED',
               trigger: 'signal_lost',
               source: 'reconciliation',
-              metadata: { reason: 'Provider reports idle while local status is active' },
+              metadata: {
+                reason: 'Provider reports idle while local status is active',
+              },
             },
           });
         }
       } catch (error) {
-        this.logger.error(`Error consultando proveedor para evento ${event.id}: ${error}`);
+        this.logger.error(
+          `Error consultando proveedor para evento ${event.id}: ${error}`,
+        );
       }
     }
 

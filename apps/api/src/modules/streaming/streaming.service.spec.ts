@@ -361,7 +361,13 @@ describe('StreamingService', () => {
         { provide: EmailService, useValue: mockEmailService },
         { provide: StreamAccessService, useValue: mockStreamAccess },
         { provide: EventStateMachineService, useValue: mockStateMachine },
-        { provide: ProvisioningSagaService, useValue: { provisionEvent: jest.fn().mockResolvedValue(undefined), retryProvision: jest.fn().mockResolvedValue(undefined) } },
+        {
+          provide: ProvisioningSagaService,
+          useValue: {
+            provisionEvent: jest.fn().mockResolvedValue(undefined),
+            retryProvision: jest.fn().mockResolvedValue(undefined),
+          },
+        },
         { provide: PrismaService, useValue: mockPrisma },
       ],
     }).compile();
@@ -904,6 +910,65 @@ describe('StreamingService', () => {
       const createCallArgs = mockRepo.create.mock.calls[0][0] as any;
       expect(createCallArgs.accessCode).toBeUndefined();
     });
+
+    // ── SCHED-07: Pruebas de solapamiento de salas ──────────────────
+    describe('room overlap scenarios', () => {
+      const roomDto = {
+        ...createDto,
+        deceasedId,
+        roomId: 'room-1',
+      } as unknown as CreateEventDto;
+
+      beforeEach(() => {
+        mockRepo.findDeceasedByTenant.mockResolvedValue(mockDeceased as any);
+        mockRepo.findRoomByTenant.mockResolvedValue({
+          id: 'room-1',
+          tenantId,
+        } as any);
+        mockRepo.create.mockImplementation((data: any) =>
+          Promise.resolve({ ...data, id: 'new-id' }),
+        );
+      });
+
+      it('should reject when an event starts before existing ends (concurrente)', async () => {
+        mockRepo.findOverlappingByRoomAndTimeRange.mockResolvedValue({
+          id: 'existing-event',
+        } as any);
+        await expect(service.create(tenantId, roomDto)).rejects.toThrow(
+          ConflictException,
+        );
+      });
+
+      it('should allow when events are adjacent (one ends before other starts)', async () => {
+        mockRepo.findOverlappingByRoomAndTimeRange.mockResolvedValue(null);
+        await expect(service.create(tenantId, roomDto)).resolves.toBeDefined();
+      });
+
+      it('should allow events in different rooms at the same time', async () => {
+        const otherRoomDto = {
+          ...roomDto,
+          roomId: 'room-2',
+        } as unknown as CreateEventDto;
+        mockRepo.findRoomByTenant.mockResolvedValue({
+          id: 'room-2',
+          tenantId,
+        } as any);
+        mockRepo.findOverlappingByRoomAndTimeRange.mockResolvedValue(null);
+        await expect(
+          service.create(tenantId, otherRoomDto),
+        ).resolves.toBeDefined();
+      });
+
+      it('should allow event creation without roomId (no overlap check needed)', async () => {
+        const noRoomDto = {
+          ...createDto,
+          deceasedId,
+        } as unknown as CreateEventDto;
+        await expect(
+          service.create(tenantId, noRoomDto),
+        ).resolves.toBeDefined();
+      });
+    });
   });
 
   describe('update', () => {
@@ -920,11 +985,16 @@ describe('StreamingService', () => {
         estimatedDuration: 150,
       });
 
-      expect(mockRepo.update).toHaveBeenCalledWith(tenantId, eventId, {
-        title: 'Updated Title',
-        description: 'Updated description',
-        estimatedDuration: 150,
-      });
+      expect(mockRepo.update).toHaveBeenCalledWith(
+        tenantId,
+        eventId,
+        {
+          title: 'Updated Title',
+          description: 'Updated description',
+          estimatedDuration: 150,
+        },
+        expect.anything(),
+      );
       expect(result.title).toBe('Updated Title');
     });
 
@@ -1099,7 +1169,11 @@ describe('StreamingService', () => {
     it('should start a stream and broadcast', async () => {
       mockRepo.findById
         .mockResolvedValueOnce(mockEventFindById as any)
-        .mockResolvedValueOnce({ ...mockEventFindById, status: 'LIVE', startedAt: new Date() } as any);
+        .mockResolvedValueOnce({
+          ...mockEventFindById,
+          status: 'LIVE',
+          startedAt: new Date(),
+        } as any);
 
       const result = await service.startStream(tenantId, eventId);
 
@@ -1138,6 +1212,7 @@ describe('StreamingService', () => {
       expect(mockMuxProvider.getStreamStatus).toHaveBeenCalledWith(
         'mux-live-stream-1',
       );
+      expect(mockStateMachine.transitionIdempotent).not.toHaveBeenCalled();
     });
 
     it('should start the stream when the provider reports an active signal', async () => {
@@ -1346,7 +1421,10 @@ describe('StreamingService', () => {
     };
 
     it('should create a message with AUTO moderation and broadcast', async () => {
-      mockRepo.findBySlug.mockResolvedValue({ ...mockEventFindBySlug, status: 'LIVE' } as any);
+      mockRepo.findBySlug.mockResolvedValue({
+        ...mockEventFindBySlug,
+        status: 'LIVE',
+      } as any);
       const createdMessage = {
         ...mockMessage,
         id: 'msg-new',
@@ -1586,7 +1664,10 @@ describe('StreamingService', () => {
     const clientIp = '192.168.1.1';
 
     beforeEach(() => {
-      mockRepo.findBySlug.mockResolvedValue({ ...mockEventFindBySlug, status: 'LIVE' } as any);
+      mockRepo.findBySlug.mockResolvedValue({
+        ...mockEventFindBySlug,
+        status: 'LIVE',
+      } as any);
     });
 
     it('should send a reaction without IP', async () => {

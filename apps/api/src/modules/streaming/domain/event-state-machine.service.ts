@@ -1,6 +1,12 @@
-import { Injectable, Logger, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { EventStatus } from '@prisma/client';
+import { isValidTransition } from './event-state-machine';
 import { randomUUID } from 'crypto';
 
 export interface TransitionContext {
@@ -26,7 +32,7 @@ export class EventStateMachineService {
 
   private readonly allowedTransitions: Record<string, string[]> = {
     SCHEDULED: ['LIVE', 'CANCELLED', 'PROVISIONING', 'FINISHED'],
-    PROVISIONING: ['LIVE', 'PROVISION_FAILED'],
+    PROVISIONING: ['SCHEDULED', 'PROVISION_FAILED'],
     PROVISION_FAILED: ['SCHEDULED'],
     LIVE: ['PAUSED', 'FINISHED', 'INTERRUPTED'],
     PAUSED: ['LIVE', 'FINISHED', 'INTERRUPTED'],
@@ -37,7 +43,18 @@ export class EventStateMachineService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  canTransition(fromStatus: string, toStatus: string): boolean {
+  canTransition(
+    fromStatus: string,
+    toStatus: string,
+    trigger?: string,
+  ): boolean {
+    if (trigger) {
+      return isValidTransition(
+        fromStatus as EventStatus,
+        toStatus as EventStatus,
+        trigger,
+      );
+    }
     const allowed = this.allowedTransitions[fromStatus] || [];
     return allowed.includes(toStatus);
   }
@@ -60,7 +77,7 @@ export class EventStateMachineService {
     trigger: string,
     context: TransitionContext,
   ): Promise<TransitionResult> {
-    if (!this.canTransition(fromStatus, toStatus)) {
+    if (!this.canTransition(fromStatus, toStatus, trigger)) {
       throw new BadRequestException(
         `Transición inválida de ${fromStatus} a ${toStatus}`,
       );
@@ -86,10 +103,12 @@ export class EventStateMachineService {
         }
 
         const updated = await tx.event.updateMany({
-          where: { id: eventId, tenantId, status: fromStatus as EventStatus },
+          where: { id: eventId, tenantId, status: fromStatus },
           data: {
             status: toStatus as EventStatus,
-            ...(toStatus === 'LIVE' && fromStatus !== 'PAUSED' ? { startedAt: new Date() } : {}),
+            ...(toStatus === 'LIVE' && fromStatus !== 'PAUSED'
+              ? { startedAt: new Date() }
+              : {}),
             ...(toStatus === 'FINISHED' || toStatus === 'CANCELLED'
               ? { finishedAt: new Date() }
               : {}),
@@ -107,7 +126,7 @@ export class EventStateMachineService {
             id: randomUUID(),
             tenantId,
             eventId,
-            fromStatus: fromStatus as EventStatus,
+            fromStatus,
             toStatus: toStatus as EventStatus,
             trigger,
             actorId: context.actorId,
@@ -117,7 +136,9 @@ export class EventStateMachineService {
         });
       });
 
-      this.logger.log(`Transición exitosa: ${fromStatus} -> ${toStatus} (${trigger}) [${eventId}]`);
+      this.logger.log(
+        `Transición exitosa: ${fromStatus} -> ${toStatus} (${trigger}) [${eventId}]`,
+      );
 
       return {
         success: true,
@@ -126,7 +147,10 @@ export class EventStateMachineService {
         transitionId,
       };
     } catch (error) {
-      if (error instanceof ConflictException || error instanceof BadRequestException) {
+      if (
+        error instanceof ConflictException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
       this.logger.error(`Error en transición de estado: ${error}`);
@@ -160,7 +184,9 @@ export class EventStateMachineService {
     }
 
     if (current.status === toStatus) {
-      this.logger.log(`Transición idempotente ignorada: ya en ${toStatus} [${eventId}]`);
+      this.logger.log(
+        `Transición idempotente ignorada: ya en ${toStatus} [${eventId}]`,
+      );
       return {
         success: true,
         previousStatus: fromStatus,
@@ -168,7 +194,14 @@ export class EventStateMachineService {
       };
     }
 
-    return this.transition(tenantId, eventId, current.status, toStatus, trigger, context);
+    return this.transition(
+      tenantId,
+      eventId,
+      current.status,
+      toStatus,
+      trigger,
+      context,
+    );
   }
 
   async getTransitionHistory(tenantId: string, eventId: string) {

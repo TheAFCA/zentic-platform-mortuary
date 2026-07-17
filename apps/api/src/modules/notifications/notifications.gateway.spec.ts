@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { UserRole } from '@zentic/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
+import { DistributedRateLimiterService } from '../streaming/services/distributed-rate-limiter.service';
+import { REDIS_CLIENT } from '../redis/redis.module';
 import { NotificationsGateway } from './notifications.gateway';
 
 describe('NotificationsGateway', () => {
@@ -42,6 +44,8 @@ describe('NotificationsGateway', () => {
           useValue: { getOrThrow: jest.fn().mockReturnValue('jwt-secret') },
         },
         { provide: PrismaService, useValue: prisma },
+        { provide: DistributedRateLimiterService, useValue: { checkRateLimit: jest.fn().mockResolvedValue(true), buildKey: jest.fn().mockReturnValue('test-key') } },
+        { provide: REDIS_CLIENT, useValue: { sadd: jest.fn().mockResolvedValue(1), srem: jest.fn().mockResolvedValue(1), scard: jest.fn().mockResolvedValue(0), expire: jest.fn().mockResolvedValue(1), duplicate: () => ({ sadd: jest.fn().mockResolvedValue(1), srem: jest.fn().mockResolvedValue(1), scard: jest.fn().mockResolvedValue(0), expire: jest.fn().mockResolvedValue(1), subscribe: jest.fn(), on: jest.fn(), psubscribe: jest.fn() }) } },
       ],
     }).compile();
 
@@ -147,7 +151,7 @@ describe('NotificationsGateway', () => {
       const client = makeSocket('socket-1');
       await gateway.handleJoinEvent(client as any, { eventId: 'event-1' });
 
-      gateway.handleDisconnect(client as any);
+      await gateway.handleDisconnect(client as any);
 
       expect(emit).toHaveBeenLastCalledWith('viewer-count', {
         eventId: 'event-1',
@@ -156,8 +160,8 @@ describe('NotificationsGateway', () => {
       });
     });
 
-    it('does not broadcast on disconnect if the socket never joined an event', () => {
-      gateway.handleDisconnect(makeSocket('socket-unknown') as any);
+    it('does not broadcast on disconnect if the socket never joined an event', async () => {
+      await gateway.handleDisconnect(makeSocket('socket-unknown') as any);
 
       expect(emit).not.toHaveBeenCalled();
     });

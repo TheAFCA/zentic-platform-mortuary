@@ -14,6 +14,7 @@ import { StreamAccessService } from './stream-access.service';
 import { EventStateDomainModule } from './domain/event-state-domain.module';
 import { ProvisioningSagaService } from './domain/provisioning-saga.service';
 import { ReconciliationTaskService } from './domain/reconciliation-task.service';
+import { RecordingService } from './services/recording.service';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { ReconciliationTaskService } from './domain/reconciliation-task.service'
     StreamAccessService,
     ProvisioningSagaService,
     ReconciliationTaskService,
+    RecordingService,
   ],
   exports: [StreamingService],
 })

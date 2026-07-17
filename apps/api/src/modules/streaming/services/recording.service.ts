@@ -1,7 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { StreamProvider, STREAM_PROVIDER_TOKEN, resolveProviderForEvent } from '../providers/stream-provider.interface';
+import {
+  StreamProvider,
+  STREAM_PROVIDER_TOKEN,
+  resolveProviderForEvent,
+} from '../providers/stream-provider.interface';
 import { Inject } from '@nestjs/common';
 import { MuxStreamProvider } from '../providers/mux-stream.provider';
 import { CloudflareStreamProvider } from '../providers/cloudflare-stream.provider';
@@ -20,7 +24,10 @@ export class RecordingService {
   /**
    * Genera una URL firmada bajo demanda para una grabación (REC-02).
    */
-  async getSignedRecordingUrl(eventId: string, tenantId: string): Promise<string | null> {
+  async getSignedRecordingUrl(
+    eventId: string,
+    tenantId: string,
+  ): Promise<string | null> {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId, tenantId },
       select: {
@@ -35,7 +42,7 @@ export class RecordingService {
     if (!event || !event.playbackId) return null;
 
     const eventProvider = resolveProviderForEvent(
-      event as { provider: string | null },
+      event,
       this.muxProvider,
       this.cloudflareProvider,
       this.provider,
@@ -52,7 +59,10 @@ export class RecordingService {
    * Aplica realmente `recordingExpiry` (REC-03).
    * Genera URLs firmadas de corta duración para contenido privado.
    */
-  async getPlaybackUrl(eventId: string, tenantId: string): Promise<string | null> {
+  async getPlaybackUrl(
+    eventId: string,
+    tenantId: string,
+  ): Promise<string | null> {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId, tenantId },
       select: { recordingUrl: true, playbackId: true },
@@ -95,7 +105,7 @@ export class RecordingService {
       try {
         if (event.providerStreamId) {
           const eventProvider = resolveProviderForEvent(
-            event as { provider: string | null },
+            event,
             this.muxProvider,
             this.cloudflareProvider,
             this.provider,
@@ -115,7 +125,9 @@ export class RecordingService {
 
         this.logger.log(`Grabación expirada eliminada para evento ${event.id}`);
       } catch (error) {
-        this.logger.error(`Error eliminando grabación expirada ${event.id}: ${error}`);
+        this.logger.error(
+          `Error eliminando grabación expirada ${event.id}: ${error}`,
+        );
 
         await this.prisma.auditLog.create({
           data: {
@@ -135,7 +147,10 @@ export class RecordingService {
   /**
    * Permite conservación o eliminación manual según permisos y plan (REC-08).
    */
-  async manuallyDeleteRecording(eventId: string, tenantId: string): Promise<void> {
+  async manuallyDeleteRecording(
+    eventId: string,
+    tenantId: string,
+  ): Promise<void> {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId, tenantId },
       select: { providerStreamId: true, recordingUrl: true },

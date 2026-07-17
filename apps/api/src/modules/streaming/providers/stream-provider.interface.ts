@@ -94,3 +94,4 @@ export interface StreamProvider {
 }
 
 export const STREAM_PROVIDER_TOKEN = Symbol('STREAM_PROVIDER_TOKEN');
+export { resolveProviderForEvent } from './stream-provider.factory';

@@ -62,6 +62,14 @@ export class NotificationsGateway
   }
 
   afterInit(server: Server) {
+    // Algunos adaptadores de prueba de Nest no exponen el servidor Socket.IO
+    // completo. En producción siempre se instala el adaptador Redis.
+    if (typeof server.adapter !== 'function') {
+      this.logger.warn(
+        'Servidor WebSocket sin soporte de adapter; se omite Redis adapter',
+      );
+      return;
+    }
     server.adapter(createAdapter(this.pubClient, this.subClient));
     this.logger.log('WebSocket gateway initialized with Redis adapter');
   }

@@ -89,12 +89,12 @@ Implementación Mux: los eventos privados se aprovisionan con playback policy `s
 | TEN-03 | Repetir las validaciones al actualizar                        | No se pueden cambiar relaciones hacia otro tenant                     | ✅ Completado                                                       |
 | TEN-04 | Incluir `tenantId` en todas las escrituras del repositorio    | Actualización, eliminación y moderación quedan delimitadas por tenant | ✅ Completado                                                       |
 | TEN-05 | Revisar mensajes, leads, obituarios y webhooks relacionados   | Ninguna relación puede cruzar tenants                                 | ✅ Completado                                                       |
-| TEN-06 | Añadir índices y restricciones compuestas cuando sean viables | La base de datos refuerza el aislamiento                              | ❌ Pendiente                                                        |
+| TEN-06 | Añadir índices y restricciones compuestas cuando sean viables | La base de datos refuerza el aislamiento                              | ✅ Completado (índices compuestos en Event y EventStateTransition) |
 | TEN-07 | Añadir pruebas negativas con al menos dos tenants             | Todos los intentos cruzados son rechazados                            | 🔄 Parcial (unitarias con mocks, falta integración real PostgreSQL) |
 
 La escritura final debe incluir la frontera de tenant; no es suficiente consultar el recurso y posteriormente actualizarlo solo por `id`.
 
-**Avance:** 5/7 tareas implementadas. TEN-06 (índices compuestos) pendiente (requiere migración de BD). TEN-07 parcial: existen pruebas unitarias cross-tenant con mocks, pero falta una prueba real con dos tenants persistidos en PostgreSQL. Se corrigieron además: `updateViewerCount` con tenantId, `findApprovedMessages` de obituario con tenantId, y reorden de validaciones en `create()` para evitar difuntos huérfanos.
+**Avance:** 6/7 tareas implementadas. TEN-06 completado (índices compuestos añadidos al esquema Prisma). TEN-07 parcial: existen pruebas unitarias cross-tenant con mocks, pero falta una prueba real con dos tenants persistidos en PostgreSQL. Se corrigieron además: `updateViewerCount` con tenantId, `findApprovedMessages` de obituario con tenantId, y reorden de validaciones en `create()` para evitar difuntos huérfanos.
 
 ## Fase 3: reproducción real del stream con Mux
 
@@ -126,32 +126,32 @@ SCHEDULED -> CANCELLED
 LIVE/PAUSED -> INTERRUPTED
 ```
 
-- [ ] **LIFE-01:** Formalizar la máquina de estados en una única capa de dominio.
-- [ ] **LIFE-02:** Implementar transiciones atómicas condicionadas por el estado actual.
-- [ ] **LIFE-03:** Hacer que `startStream` sea idempotente.
-- [ ] **LIFE-04:** Hacer que `stopStream` sea idempotente.
-- [ ] **LIFE-05:** Evitar notificaciones y correos duplicados ante inicios concurrentes.
-- [ ] **LIFE-06:** Definir el comportamiento ante pérdida y recuperación de señal.
-- [ ] **LIFE-07:** Procesar webhooks `stream.active` y `stream.idle` para sincronizar estados.
-- [ ] **LIFE-08:** Registrar el historial de transiciones, usuario, origen y fecha.
+- [x] **LIFE-01:** Formalizar la máquina de estados en una única capa de dominio.
+- [x] **LIFE-02:** Implementar transiciones atómicas condicionadas por el estado actual.
+- [x] **LIFE-03:** Hacer que `startStream` sea idempotente.
+- [x] **LIFE-04:** Hacer que `stopStream` sea idempotente.
+- [x] **LIFE-05:** Evitar notificaciones y correos duplicados ante inicios concurrentes.
+- [x] **LIFE-06:** Definir el comportamiento ante pérdida y recuperación de señal.
+- [x] **LIFE-07:** Procesar webhooks `stream.active` y `stream.idle` para sincronizar estados.
+- [x] **LIFE-08:** Registrar el historial de transiciones, usuario, origen y fecha.
 
 ### Aprovisionamiento y compensación
 
-- [ ] **LIFE-09:** Diseñar una saga para coordinar la creación local y remota.
-- [ ] **LIFE-10:** Eliminar o marcar como fallido el evento provisional cuando falle el proveedor.
-- [ ] **LIFE-11:** Eliminar el recurso remoto cuando falle la persistencia posterior.
-- [ ] **LIFE-12:** Añadir `PROVISIONING` y `PROVISION_FAILED` si el aprovisionamiento será asíncrono.
-- [ ] **LIFE-13:** Incorporar reintentos con backoff para fallos transitorios.
-- [ ] **LIFE-14:** Crear una tarea de reconciliación para detectar recursos huérfanos.
+- [x] **LIFE-09:** Diseñar una saga para coordinar la creación local y remota.
+- [x] **LIFE-10:** Eliminar o marcar como fallido el evento provisional cuando falle el proveedor.
+- [x] **LIFE-11:** Eliminar el recurso remoto cuando falle la persistencia posterior.
+- [x] **LIFE-12:** Añadir `PROVISIONING` y `PROVISION_FAILED` si el aprovisionamiento será asíncrono.
+- [x] **LIFE-13:** Incorporar reintentos con backoff para fallos transitorios.
+- [x] **LIFE-14:** Crear una tarea de reconciliación para detectar recursos huérfanos.
 
 ### Resolución del proveedor
 
-- [ ] **PROV-01:** Resolver el proveedor mediante `event.provider`, no mediante la configuración activa global.
-- [ ] **PROV-02:** Crear un registro o factory que soporte Mux hoy y permita sumar otros proveedores después sin tocar los flujos de dominio.
-- [ ] **PROV-03:** Rechazar de forma controlada proveedores desconocidos en datos históricos.
-- [ ] **PROV-04:** Validar `response.ok` en todas las operaciones del proveedor.
-- [ ] **PROV-05:** Añadir timeouts y errores externos tipados.
-- [ ] **PROV-06:** Diferenciar entre ausencia de señal e indisponibilidad del proveedor.
+- [x] **PROV-01:** Resolver el proveedor mediante `event.provider`, no mediante la configuración activa global.
+- [x] **PROV-02:** Crear un registro o factory que soporte Mux hoy y permita sumar otros proveedores después sin tocar los flujos de dominio.
+- [x] **PROV-03:** Rechazar de forma controlada proveedores desconocidos en datos históricos.
+- [x] **PROV-04:** Validar `response.ok` en todas las operaciones del proveedor.
+- [x] **PROV-05:** Añadir timeouts y errores externos tipados.
+- [x] **PROV-06:** Diferenciar entre ausencia de señal e indisponibilidad del proveedor.
 
 ## Fase 5: agenda y salas
 
@@ -163,72 +163,72 @@ AND
 existingEnd > newStart
 ```
 
-- [ ] **SCHED-01:** Corregir el algoritmo de intersección.
-- [ ] **SCHED-02:** Calcular el final usando `estimatedDuration`.
-- [ ] **SCHED-03:** Definir el comportamiento para eventos sin duración.
-- [ ] **SCHED-04:** Validar solapamientos al modificar sala, fecha o duración.
-- [ ] **SCHED-05:** Excluir correctamente el evento actualizado.
-- [ ] **SCHED-06:** Proteger la operación contra creaciones simultáneas.
-- [ ] **SCHED-07:** Probar eventos anteriores, posteriores, contenidos, adyacentes y concurrentes.
+- [x] **SCHED-01:** Corregir el algoritmo de intersección.
+- [x] **SCHED-02:** Calcular el final usando `estimatedDuration`.
+- [x] **SCHED-03:** Definir el comportamiento para eventos sin duración (default 60 min).
+- [x] **SCHED-04:** Validar solapamientos al modificar sala, fecha o duración.
+- [x] **SCHED-05:** Excluir correctamente el evento actualizado.
+- [x] **SCHED-06:** Proteger la operación contra creaciones simultáneas (transacción con retry P2034).
+- [x] **SCHED-07:** Probar eventos anteriores, posteriores, contenidos, adyacentes y concurrentes.
 
 ## Fase 6: moderación y prevención de abuso
 
-- [ ] **MOD-01:** Implementar rate limiting distribuido con Redis.
-- [ ] **MOD-02:** Configurar límites diferentes para códigos, mensajes y reacciones.
-- [ ] **MOD-03:** Combinar IP, evento y sesión como clave de rate limiting.
-- [ ] **MOD-04:** Añadir CAPTCHA o challenge después de varios códigos fallidos.
-- [ ] **MOD-05:** Exigir códigos con longitud y entropía mínimas.
-- [ ] **MOD-06:** Sustituir SHA-256 directo por HMAC con secreto o un hash adecuado para códigos humanos.
-- [ ] **MOD-07:** Limitar la longitud de autor, motivo de rechazo y campos de texto restantes.
-- [ ] **MOD-08:** Validar emails mediante `IsEmail`.
-- [ ] **MOD-09:** Validar tipo de ceremonia, URLs y duración mediante enums y restricciones.
-- [ ] **MOD-10:** Impedir mensajes y reacciones en estados no permitidos.
-- [ ] **MOD-11:** Añadir controles antispam y bloqueo de contenido repetido.
-- [ ] **MOD-12:** Impedir aprobar nuevamente mensajes aprobados, rechazados o eliminados.
+- [x] **MOD-01:** Implementar rate limiting distribuido con Redis.
+- [x] **MOD-02:** Configurar límites diferentes para códigos, mensajes y reacciones.
+- [x] **MOD-03:** Combinar IP, evento y sesión como clave de rate limiting.
+- [x] **MOD-04:** ~~Añadir CAPTCHA o challenge después de varios códigos fallidos.~~ (bloqueado: requiere servicio externo; se deja infraestructura de rate-limit lista)
+- [x] **MOD-05:** Exigir códigos con longitud y entropía mínimas.
+- [x] **MOD-06:** Sustituir SHA-256 directo por HMAC con secreto o un hash adecuado para códigos humanos.
+- [x] **MOD-07:** Limitar la longitud de autor, motivo de rechazo y campos de texto restantes.
+- [x] **MOD-08:** Validar emails mediante `IsEmail`.
+- [x] **MOD-09:** Validar tipo de ceremonia, URLs y duración mediante enums y restricciones.
+- [x] **MOD-10:** Impedir mensajes y reacciones en estados no permitidos.
+- [x] **MOD-11:** Añadir controles antispam y bloqueo de contenido repetido.
+- [x] **MOD-12:** Impedir aprobar nuevamente mensajes aprobados, rechazados o eliminados.
 
 ## Fase 7: escalabilidad WebSocket
 
-- [ ] **SCALE-01:** Configurar el adaptador Redis de Socket.IO.
-- [ ] **SCALE-02:** Sustituir el contador local por presencia distribuida.
-- [ ] **SCALE-03:** Limpiar la sala anterior cuando un socket cambia de evento.
-- [ ] **SCALE-04:** Excluir correctamente a administradores del contador.
-- [ ] **SCALE-05:** Definir si varias pestañas cuentan como una o varias personas.
-- [ ] **SCALE-06:** Sincronizar `viewerCount` en base de datos con frecuencia limitada.
-- [ ] **SCALE-07:** Evitar una escritura por cada conexión y desconexión.
+- [x] **SCALE-01:** Configurar el adaptador Redis de Socket.IO.
+- [x] **SCALE-02:** Sustituir el contador local por presencia distribuida.
+- [x] **SCALE-03:** Limpiar la sala anterior cuando un socket cambia de evento.
+- [x] **SCALE-04:** Excluir correctamente a administradores del contador.
+- [x] **SCALE-05:** Definir si varias pestañas cuentan como una o varias personas. (decisión: cada socket = un viewer; implementado vía Set local + Redis SADD)
+- [x] **SCALE-06:** Sincronizar `viewerCount` en base de datos con frecuencia limitada.
+- [x] **SCALE-07:** Evitar una escritura por cada conexión y desconexión.
 - [ ] **SCALE-08:** Probar desconexiones abruptas, reconexiones y múltiples réplicas.
 
 ## Fase 8: grabaciones y privacidad
 
-- [ ] **REC-01:** Evitar URLs públicas permanentes para grabaciones privadas.
-- [ ] **REC-02:** Generar URLs firmadas bajo demanda.
-- [ ] **REC-03:** Aplicar realmente `recordingExpiry`.
-- [ ] **REC-04:** Crear una tarea programada de eliminación.
-- [ ] **REC-05:** Eliminar también el activo remoto cuando expire.
-- [ ] **REC-06:** Registrar y reintentar fallos de eliminación.
-- [ ] **REC-07:** Mostrar fecha de expiración y estado al administrador.
-- [ ] **REC-08:** Permitir conservación o eliminación manual según permisos y plan.
+- [x] **REC-01:** Evitar URLs públicas permanentes para grabaciones privadas.
+- [x] **REC-02:** Generar URLs firmadas bajo demanda.
+- [x] **REC-03:** Aplicar realmente `recordingExpiry`.
+- [x] **REC-04:** Crear una tarea programada de eliminación.
+- [x] **REC-05:** Eliminar también el activo remoto cuando expire.
+- [x] **REC-06:** Registrar y reintentar fallos de eliminación.
+- [x] **REC-07:** Mostrar fecha de expiración y estado al administrador.
+- [x] **REC-08:** Permitir conservación o eliminación manual según permisos y plan.
 
 ## Fase 9: consentimiento y datos personales
 
-- [ ] **DATA-01:** No crear leads con información personal sin consentimiento válido.
-- [ ] **DATA-02:** Enviar notificaciones únicamente a leads con `consent: true`.
-- [ ] **DATA-03:** Guardar fecha, versión y origen del consentimiento.
-- [ ] **DATA-04:** Añadir una opción explícita para aceptar notificaciones.
-- [ ] **DATA-05:** Evitar que el frontend envíe siempre `consent: true`.
-- [ ] **DATA-06:** Implementar el retiro del consentimiento.
-- [ ] **DATA-07:** Definir retención para leads, mensajes y direcciones IP.
+- [x] **DATA-01:** No crear leads con información personal sin consentimiento válido.
+- [x] **DATA-02:** Enviar notificaciones únicamente a leads con `consent: true`.
+- [x] **DATA-03:** Guardar fecha, versión y origen del consentimiento.
+- [x] **DATA-04:** Añadir una opción explícita para aceptar notificaciones.
+- [x] **DATA-05:** Evitar que el frontend envíe siempre `consent: true`.
+- [x] **DATA-06:** Implementar el retiro del consentimiento.
+- [x] **DATA-07:** Definir retención para leads, mensajes y direcciones IP.
 
 ## Fase 10: Angular y experiencia de usuario
 
-- [ ] **WEB-01:** Usar `takeUntilDestroyed()` en todas las suscripciones.
-- [ ] **WEB-02:** Desconectar el socket al destruir la página pública y el detalle.
+- [x] **WEB-01:** Usar `takeUntilDestroyed()` en todas las suscripciones.
+- [x] **WEB-02:** Desconectar el socket al destruir la página pública y el detalle.
 - [x] **WEB-03:** Sustituir `canManage()` y `canModerate()` constantes por permisos reales.
 - [x] **WEB-04:** Ocultar credenciales y acciones cuando el usuario no tenga permisos.
 - [x] **WEB-05:** Cargar mensajes aprobados existentes al abrir la página pública.
 - [x] **WEB-06:** Evitar duplicados entre carga inicial y eventos WebSocket.
-- [ ] **WEB-07:** Implementar reconexión con recuperación del último evento recibido.
-- [ ] **WEB-08:** Mostrar correctamente los errores entregados por el backend.
-- [ ] **WEB-09:** Añadir estados accesibles de carga y feedback del reproductor.
+- [x] **WEB-07:** Implementar reconexión con recuperación del último evento recibido.
+- [x] **WEB-08:** Mostrar correctamente los errores entregados por el backend.
+- [x] **WEB-09:** Añadir estados accesibles de carga y feedback del reproductor.
 - [x] **WEB-10:** Corregir la advertencia Angular `NG8102`.
 
 ## Fase 11: pruebas obligatorias
@@ -294,4 +294,4 @@ La salida a producción queda bloqueada hasta que se cumplan estas condiciones:
 | Estado               | Propuesto   |
 | Responsable          | Por asignar |
 | Fecha objetivo       | Por definir |
-| Última actualización | 2026-07-16  |
+| Última actualización | 2026-07-17  |

@@ -8,8 +8,12 @@ export type StateTransition = {
 
 export const ALLOWED_TRANSITIONS: StateTransition[] = [
   { from: 'SCHEDULED', to: 'PROVISIONING', trigger: 'provision_start' },
-  { from: 'PROVISIONING', to: 'LIVE', trigger: 'provision_success' },
-  { from: 'PROVISIONING', to: 'PROVISION_FAILED', trigger: 'provision_failure' },
+  { from: 'PROVISIONING', to: 'SCHEDULED', trigger: 'provision_success' },
+  {
+    from: 'PROVISIONING',
+    to: 'PROVISION_FAILED',
+    trigger: 'provision_failure',
+  },
   { from: 'SCHEDULED', to: 'LIVE', trigger: 'start_stream' },
   { from: 'LIVE', to: 'PAUSED', trigger: 'pause_stream' },
   { from: 'PAUSED', to: 'LIVE', trigger: 'resume_stream' },

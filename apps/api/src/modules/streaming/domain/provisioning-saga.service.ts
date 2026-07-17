@@ -1,7 +1,10 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { EventStateMachineService } from './event-state-machine.service';
-import { StreamProvider, STREAM_PROVIDER_TOKEN } from '../providers/stream-provider.interface';
+import {
+  StreamProvider,
+  STREAM_PROVIDER_TOKEN,
+} from '../providers/stream-provider.interface';
 
 @Injectable()
 export class ProvisioningSagaService {
@@ -21,8 +24,14 @@ export class ProvisioningSagaService {
    * 4. Si falla, compensa: marca como PROVISION_FAILED o elimina el evento provisional
    * 5. Si la persistencia falla después del recurso remoto, elimina el recurso remoto
    */
-  async provisionEvent(tenantId: string, eventId: string, isPublic: boolean): Promise<void> {
-    this.logger.log(`Iniciando saga de aprovisionamiento para evento ${eventId}`);
+  async provisionEvent(
+    tenantId: string,
+    eventId: string,
+    isPublic: boolean,
+  ): Promise<void> {
+    this.logger.log(
+      `Iniciando saga de aprovisionamiento para evento ${eventId}`,
+    );
 
     const event = await this.prisma.event.findUnique({
       where: { id: eventId, tenantId },
@@ -43,7 +52,9 @@ export class ProvisioningSagaService {
     );
 
     if (!transitionResult.success) {
-      this.logger.error(`No se pudo iniciar aprovisionamiento para evento ${eventId}`);
+      this.logger.error(
+        `No se pudo iniciar aprovisionamiento para evento ${eventId}`,
+      );
       return;
     }
 
@@ -73,37 +84,50 @@ export class ProvisioningSagaService {
         },
       });
 
-      await this.stateMachine.transition(
+      // Aprovisionar credenciales no equivale a tener señal de video. El
+      // operador inicia LIVE solamente después de que OBS/Mux confirme señal.
+      const completed = await this.stateMachine.transition(
         tenantId,
         eventId,
         'PROVISIONING',
-        'LIVE',
+        'SCHEDULED',
         'provision_success',
         { tenantId, eventId, source: 'provisioning_saga' },
       );
+      if (!completed.success) {
+        throw new Error(
+          completed.error ?? 'No se pudo completar el aprovisionamiento',
+        );
+      }
 
       this.logger.log(`Evento ${eventId} aprovisionado exitosamente`);
     } catch (error) {
-      this.logger.error(`Error en aprovisionamiento del evento ${eventId}: ${error}`);
+      this.logger.error(
+        `Error en aprovisionamiento del evento ${eventId}: ${error}`,
+      );
 
-      await this.stateMachine.transition(
-        tenantId,
-        eventId,
-        'PROVISIONING',
-        'PROVISION_FAILED',
-        'provision_failure',
-        {
+      await this.stateMachine
+        .transition(
           tenantId,
           eventId,
-          source: 'provisioning_saga',
-          metadata: { error: String(error) },
-        },
-      ).catch((e) => this.logger.error(`Error al marcar fallo: ${e}`));
+          'PROVISIONING',
+          'PROVISION_FAILED',
+          'provision_failure',
+          {
+            tenantId,
+            eventId,
+            source: 'provisioning_saga',
+            metadata: { error: String(error) },
+          },
+        )
+        .catch((e) => this.logger.error(`Error al marcar fallo: ${e}`));
 
       if (providerStreamId) {
         try {
           await this.provider.disableLiveStream(providerStreamId);
-          this.logger.log(`Recurso remoto ${providerStreamId} eliminado por compensación`);
+          this.logger.log(
+            `Recurso remoto ${providerStreamId} eliminado por compensación`,
+          );
         } catch (cleanupError) {
           this.logger.error(`Error al limpiar recurso remoto: ${cleanupError}`);
         }

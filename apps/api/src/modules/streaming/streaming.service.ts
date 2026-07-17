@@ -6,7 +6,9 @@ import {
   BadRequestException,
   ForbiddenException,
   Logger,
+  ServiceUnavailableException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes, createHash, createHmac } from 'crypto';
 import { StreamingRepository } from './streaming.repository';
@@ -33,7 +35,6 @@ import {
   AccessCodeDto,
 } from './dto';
 import { EventStatus, JwtPayload } from '@zentic/shared-types';
-import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Env } from '../../config/env.validation';
 import { StreamAccessService } from './stream-access.service';
@@ -297,23 +298,6 @@ export class StreamingService {
         throw new NotFoundException('Usuario asignado no encontrado');
     }
 
-    if (dto.roomId) {
-      const scheduledAt = new Date(dto.scheduledAt);
-      const newEnd = dto.estimatedDuration
-        ? new Date(scheduledAt.getTime() + dto.estimatedDuration * 60000)
-        : new Date(scheduledAt.getTime() + 60 * 60 * 1000);
-
-      const overlapping = await this.repo.findOverlappingByRoomAndTimeRange(
-        tenantId,
-        dto.roomId,
-        scheduledAt,
-        newEnd,
-      );
-      if (overlapping) {
-        throw new ConflictException('La sala está ocupada en ese horario');
-      }
-    }
-
     if (!deceasedId && dto.deceased) {
       const deceased = await this.repo.createDeceased({
         tenantId,
@@ -334,7 +318,9 @@ export class StreamingService {
 
     const slug = this.generateSlug(dto.title);
 
-    const eventData: Prisma.EventCreateInput = {
+    const eventData: Omit<Prisma.EventCreateInput, 'scheduledAt'> & {
+      scheduledAt: Date;
+    } = {
       title: dto.title,
       slug,
       ceremonyType: dto.ceremonyType,
@@ -355,7 +341,15 @@ export class StreamingService {
         : {}),
     };
 
-    const event = await this.repo.create(eventData);
+    // SCHED-06: overlap check + creation en transacción con reintento
+    const event = await this.withOverlapCheck(
+      tenantId,
+      dto.roomId,
+      eventData.scheduledAt,
+      dto.estimatedDuration,
+      undefined,
+      (tx) => this.repo.create(eventData, tx),
+    );
 
     // Iniciar saga de aprovisionamiento asíncrona (LIFE-09, LIFE-10, LIFE-11, LIFE-12)
     this.provisioningSaga
@@ -407,23 +401,6 @@ export class StreamingService {
     const effectiveScheduledAt = dto.scheduledAt
       ? new Date(dto.scheduledAt)
       : event.scheduledAt;
-    const effectiveDuration = dto.estimatedDuration ?? event.estimatedDuration;
-    if (effectiveRoomId && effectiveDuration) {
-      const newEnd = new Date(
-        effectiveScheduledAt.getTime() + effectiveDuration * 60000,
-      );
-      const overlapping = await this.repo.findOverlappingByRoomAndTimeRange(
-        tenantId,
-        effectiveRoomId,
-        effectiveScheduledAt,
-        newEnd,
-        id,
-      );
-      if (overlapping) {
-        throw new ConflictException('La sala está ocupada en ese horario');
-      }
-    }
-
     if (dto.clientId !== undefined && dto.clientId) {
       const existingClient = await this.repo.findClientByTenant(
         tenantId,
@@ -487,7 +464,14 @@ export class StreamingService {
       updateData.deceased = { connect: { id: dto.deceasedId } };
     }
 
-    const updated = await this.repo.update(tenantId, id, updateData);
+    const updated = await this.withOverlapCheck(
+      tenantId,
+      effectiveRoomId,
+      effectiveScheduledAt,
+      dto.estimatedDuration ?? event.estimatedDuration,
+      id,
+      (tx) => this.repo.update(tenantId, id, updateData, tx),
+    );
     return this.withoutStreamingSecrets(updated);
   }
 
@@ -532,6 +516,32 @@ export class StreamingService {
     }
 
     const eventProvider = this.resolveProvider(event);
+    // Nunca persistir LIVE hasta confirmar que el proveedor recibe video.
+    if (event.providerStreamId) {
+      try {
+        const status = await withProviderTimeout(
+          eventProvider,
+          'getStreamStatus',
+          () => eventProvider.getStreamStatus(event.providerStreamId!),
+        );
+        if (status !== 'active') {
+          throw new NoSignalError(event.providerStreamId);
+        }
+      } catch (error) {
+        if (error instanceof NoSignalError) {
+          throw new BadRequestException(
+            'No se detecta señal de video. Verifica la configuración del OBS.',
+          );
+        }
+        this.logger.error(
+          `No se pudo verificar estado del proveedor para evento ${id}: ${error}`,
+        );
+        throw new ServiceUnavailableException(
+          'No se pudo verificar la señal de video. Intenta nuevamente.',
+        );
+      }
+    }
+
     const transitionResult = await this.stateMachine.transitionIdempotent(
       tenantId,
       id,
@@ -550,28 +560,6 @@ export class StreamingService {
       throw new BadRequestException(
         transitionResult.error ?? 'No se pudo iniciar la transmisión',
       );
-    }
-
-    if (event.providerStreamId) {
-      try {
-        const status = await withProviderTimeout(
-          eventProvider,
-          'getStreamStatus',
-          () => eventProvider.getStreamStatus(event.providerStreamId!),
-        );
-        if (status !== 'active') {
-          throw new NoSignalError(event.providerStreamId);
-        }
-      } catch (error) {
-        if (error instanceof NoSignalError) {
-          throw new BadRequestException(
-            'No se detecta señal de video. Verifica la configuración del OBS.',
-          );
-        }
-        this.logger.warn(
-          `No se pudo verificar estado del proveedor para evento ${id}: ${error}`,
-        );
-      }
     }
 
     this.gateway.broadcastStreamStatus(id, {
@@ -642,11 +630,17 @@ export class StreamingService {
     const event = await this.findOneEntity(tenantId, id);
 
     if (event.status === 'FINISHED') {
-      this.logger.log(`stopStream idempotente: evento ${id} ya está en FINISHED`);
+      this.logger.log(
+        `stopStream idempotente: evento ${id} ya está en FINISHED`,
+      );
       return this.withoutStreamingSecrets(event);
     }
 
-    if (event.status !== 'LIVE' && event.status !== 'PAUSED' && event.status !== 'INTERRUPTED') {
+    if (
+      event.status !== 'LIVE' &&
+      event.status !== 'PAUSED' &&
+      event.status !== 'INTERRUPTED'
+    ) {
       throw new BadRequestException(
         `El evento está en estado "${event.status}", no se puede finalizar`,
       );
@@ -675,10 +669,8 @@ export class StreamingService {
 
     if (event.providerStreamId) {
       try {
-        await withProviderTimeout(
-          eventProvider,
-          'disableLiveStream',
-          () => eventProvider.disableLiveStream(event.providerStreamId!),
+        await withProviderTimeout(eventProvider, 'disableLiveStream', () =>
+          eventProvider.disableLiveStream(event.providerStreamId!),
         );
       } catch (error) {
         this.logger.warn(
@@ -1084,22 +1076,32 @@ export class StreamingService {
 
     switch (event.type) {
       case 'stream.active': {
-        if (found.status === 'SCHEDULED' || found.status === 'PAUSED' || found.status === 'INTERRUPTED') {
+        if (
+          found.status === 'SCHEDULED' ||
+          found.status === 'PAUSED' ||
+          found.status === 'INTERRUPTED'
+        ) {
           this.logger.log(
             `Webhook stream.active: sincronizando evento ${found.id} a LIVE`,
           );
-          await this.stateMachine.transitionIdempotent(
-            found.tenantId,
-            found.id,
-            found.status,
-            'LIVE',
-            'signal_recovered',
-            { tenantId: found.tenantId, eventId: found.id, source: 'webhook' },
-          ).catch((err) =>
-            this.logger.warn(
-              `Error sincronizando stream.active para ${found.id}: ${err}`,
-            ),
-          );
+          await this.stateMachine
+            .transitionIdempotent(
+              found.tenantId,
+              found.id,
+              found.status,
+              'LIVE',
+              'signal_recovered',
+              {
+                tenantId: found.tenantId,
+                eventId: found.id,
+                source: 'webhook',
+              },
+            )
+            .catch((err) =>
+              this.logger.warn(
+                `Error sincronizando stream.active para ${found.id}: ${err}`,
+              ),
+            );
         }
         break;
       }
@@ -1109,18 +1111,24 @@ export class StreamingService {
           this.logger.warn(
             `Webhook stream.idle: señal perdida para evento ${found.id}`,
           );
-          await this.stateMachine.transitionIdempotent(
-            found.tenantId,
-            found.id,
-            found.status,
-            'INTERRUPTED',
-            'signal_lost',
-            { tenantId: found.tenantId, eventId: found.id, source: 'webhook' },
-          ).catch((err) =>
-            this.logger.warn(
-              `Error marcando stream.idle para ${found.id}: ${err}`,
-            ),
-          );
+          await this.stateMachine
+            .transitionIdempotent(
+              found.tenantId,
+              found.id,
+              found.status,
+              'INTERRUPTED',
+              'signal_lost',
+              {
+                tenantId: found.tenantId,
+                eventId: found.id,
+                source: 'webhook',
+              },
+            )
+            .catch((err) =>
+              this.logger.warn(
+                `Error marcando stream.idle para ${found.id}: ${err}`,
+              ),
+            );
         }
         break;
       }
@@ -1226,7 +1234,9 @@ export class StreamingService {
    * @returns Hash SHA-256 del código
    */
   private hashAccessCode(code: string): string {
-    const secret = this.config.get<string>('ACCESS_CODE_HMAC_SECRET') ?? 'zentic-access-code-secret';
+    const secret =
+      this.config.get<string>('ACCESS_CODE_HMAC_SECRET') ??
+      'zentic-access-code-secret';
     return createHmac('sha256', secret).update(code).digest('hex');
   }
 
@@ -1310,6 +1320,65 @@ export class StreamingService {
       this.muxProvider,
       this.cloudflareProvider,
       this.provider,
+    );
+  }
+
+  /**
+   * SCHED-06: Ejecuta overlap check + operación en transacción con reintento.
+   * Previene creaciones simultáneas que podrían eludir la validación de sala.
+   */
+  private async withOverlapCheck<T>(
+    tenantId: string,
+    roomId: string | null | undefined,
+    scheduledAt: Date,
+    estimatedDuration: number | null | undefined,
+    excludeId: string | undefined,
+    operation: (tx: Prisma.TransactionClient) => Promise<T>,
+    maxRetries = 3,
+  ): Promise<T> {
+    const duration = estimatedDuration ?? 60;
+    const newEnd = new Date(scheduledAt.getTime() + duration * 60000);
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await this.prisma.$transaction(
+          async (tx) => {
+            if (roomId) {
+              const overlapping =
+                await this.repo.findOverlappingByRoomAndTimeRange(
+                  tenantId,
+                  roomId,
+                  scheduledAt,
+                  newEnd,
+                  excludeId,
+                  tx,
+                );
+              if (overlapping) {
+                throw new ConflictException(
+                  'La sala está ocupada en ese horario',
+                );
+              }
+            }
+            return await operation(tx);
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2034' &&
+          attempt < maxRetries
+        ) {
+          this.logger.warn(
+            `Conflicto de concurrencia (intento ${attempt}/${maxRetries}), reintentando...`,
+          );
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw new ServiceUnavailableException(
+      'No se pudo completar la operación por congestión',
     );
   }
 

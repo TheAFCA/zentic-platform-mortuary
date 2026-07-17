@@ -122,8 +122,11 @@ export class StreamingRepository {
    * @param data - Datos completos del evento (Prisma create input)
    * @returns El evento creado con todos sus campos
    */
-  async create(data: Prisma.EventCreateInput) {
-    return this.prisma.event.create({ data });
+  async create(
+    data: Prisma.EventCreateInput,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    return db.event.create({ data });
   }
 
   /**
@@ -134,8 +137,13 @@ export class StreamingRepository {
    * @param data - Campos a actualizar
    * @returns El evento actualizado
    */
-  async update(tenantId: string, id: string, data: Prisma.EventUpdateInput) {
-    return this.prisma.event.update({
+  async update(
+    tenantId: string,
+    id: string,
+    data: Prisma.EventUpdateInput,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    return db.event.update({
       where: { id, tenantId },
       data,
     });
@@ -222,8 +230,11 @@ export class StreamingRepository {
     newStart: Date,
     newEnd: Date,
     excludeId?: string,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
   ) {
-    return this.prisma.event.findFirst({
+    // Prisma no puede expresar el fin calculado de cada fila. Limitamos por
+    // inicio y comprobamos en memoria la segunda mitad de la intersección.
+    const candidates = await db.event.findMany({
       where: {
         tenantId,
         roomId,
@@ -235,6 +246,15 @@ export class StreamingRepository {
         scheduledAt: { lt: newEnd },
       },
     });
+    return (
+      candidates.find((event) => {
+        const duration = event.estimatedDuration ?? 60;
+        const existingEnd = new Date(
+          event.scheduledAt.getTime() + duration * 60_000,
+        );
+        return existingEnd > newStart;
+      }) ?? null
+    );
   }
 
   // ── Messages ────────────────────────────────────────────────────────
