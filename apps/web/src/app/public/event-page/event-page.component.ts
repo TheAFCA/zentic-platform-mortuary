@@ -576,9 +576,13 @@ export class EventPageComponent {
         },
         error: (err: { error?: { message?: string }; message?: string }) => {
           this.messageSending.set(false);
-          this.snackBar.open(err.error?.message ?? err.message ?? 'Error al enviar mensaje', 'Cerrar', {
-            duration: 2000,
-          });
+          this.snackBar.open(
+            err.error?.message ?? err.message ?? 'Error al enviar mensaje',
+            'Cerrar',
+            {
+              duration: 2000,
+            },
+          );
         },
       });
   }

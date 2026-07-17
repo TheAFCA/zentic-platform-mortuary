@@ -531,9 +531,9 @@ export class EventFormComponent {
 
     this.submitting.set(true);
 
-    const scheduledDate = this.form.controls.scheduledDate.value;
+    const scheduledDate = this.toLocalDateString(this.form.controls.scheduledDate.value);
     const scheduledTime = this.form.controls.scheduledTime.value;
-    const scheduledAt = `${scheduledDate}T${scheduledTime}:00`;
+    const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
 
     const deceasedFirstName = this.form.controls.deceasedFirstName.value;
     const deceasedLastName = this.form.controls.deceasedLastName.value;
@@ -578,5 +578,14 @@ export class EventFormComponent {
         this.snackBar.open(err.message ?? 'Error al guardar', 'Cerrar', { duration: 3000 });
       },
     });
+  }
+
+  private toLocalDateString(value: string | Date): string {
+    if (typeof value === 'string') return value;
+
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }

@@ -247,7 +247,8 @@ describe('EventFormComponent', () => {
       title: 'Nuevo Evento',
       ceremonyType: 'ENTIERRO',
       estimatedDuration: 180,
-      scheduledDate: '2026-07-20',
+      // MatDatepicker entrega un Date, no el string que espera el API.
+      scheduledDate: new Date(2026, 6, 20) as unknown as string,
       scheduledTime: '10:00',
       description: 'Ceremonia de prueba',
       deceasedFirstName: 'María',
@@ -272,7 +273,7 @@ describe('EventFormComponent', () => {
       title: 'Nuevo Evento',
       ceremonyType: 'ENTIERRO',
       estimatedDuration: 180,
-      scheduledAt: '2026-07-20T10:00:00',
+      scheduledAt: new Date(2026, 6, 20, 10, 0, 0).toISOString(),
       description: 'Ceremonia de prueba',
       isPublic: true,
       accessCode: undefined,
@@ -307,7 +308,7 @@ describe('EventFormComponent', () => {
       expect.objectContaining({
         title: 'Evento Actualizado',
         ceremonyType: 'MISA',
-        scheduledAt: '2026-08-01T09:00:00',
+        scheduledAt: new Date(2026, 7, 1, 9, 0, 0).toISOString(),
       }),
     );
   });

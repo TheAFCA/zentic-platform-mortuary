@@ -1,5 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DomSanitizer } from '@angular/platform-browser';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -449,6 +456,65 @@ import { HlsPlayerComponent } from '../../../shared/molecules/hls-player/hls-pla
         border-radius: 1rem;
         overflow: hidden;
         border: 1px solid #e7e9ee;
+        background: #fff;
+      }
+
+      .preview-card__toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid #e7e9ee;
+        background: #fafbfc;
+      }
+
+      .preview-card__context {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        min-width: 0;
+      }
+
+      .preview-card__context mat-icon {
+        color: #0f5e59;
+      }
+
+      .preview-card__copy {
+        display: grid;
+        gap: 0.1rem;
+        min-width: 0;
+      }
+
+      .preview-card__copy strong {
+        color: #1f2937;
+        font-size: 0.88rem;
+      }
+      .preview-card__copy span {
+        color: #6b7280;
+        font-size: 0.76rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .preview-card iframe {
+        width: 100%;
+        height: min(72vh, 58rem);
+        min-height: 34rem;
+        display: block;
+        border: 0;
+        background: #f7f8fa;
+      }
+
+      @media (max-width: 640px) {
+        .preview-card__toolbar {
+          align-items: flex-start;
+        }
+        .preview-card iframe {
+          height: 70vh;
+          min-height: 28rem;
+        }
       }
 
       .recording-card {
@@ -766,10 +832,21 @@ import { HlsPlayerComponent } from '../../../shared/molecules/hls-player/hls-pla
 
         @if (activeTab() === 'preview') {
           <div class="preview-card">
+            <div class="preview-card__toolbar">
+              <div class="preview-card__context">
+                <mat-icon>public</mat-icon>
+                <div class="preview-card__copy">
+                  <strong>Vista del espectador</strong>
+                  <span>{{ publicEventUrl() }}</span>
+                </div>
+              </div>
+              <a mat-stroked-button [href]="publicEventUrl()" target="_blank" rel="noopener">
+                <mat-icon>open_in_new</mat-icon>
+                Abrir aparte
+              </a>
+            </div>
             <iframe
               [src]="previewUrl()"
-              class="w-full border-0"
-              style="height: 80vh; display: block;"
               title="Vista previa del evento"
               sandbox="allow-scripts allow-same-origin"
             ></iframe>
@@ -839,10 +916,13 @@ export class EventDetailComponent {
   ];
 
   readonly previewUrl = computed(() => {
+    const url = this.publicEventUrl();
+    return url ? this.sanitizer.bypassSecurityTrustResourceUrl(url) : null;
+  });
+
+  readonly publicEventUrl = computed(() => {
     const ev = this.event();
-    if (!ev) return null;
-    const url = `${window.location.origin}/e/${ev.slug}`;
-    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+    return ev ? `${window.location.origin}/e/${ev.slug}` : '';
   });
 
   readonly iconMap: Partial<Record<string, string>> = {
@@ -923,40 +1003,49 @@ export class EventDetailComponent {
   }
 
   copyStreamKey(value: string): void {
-    this.api.auditStreamKeyCopy(this.eventId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => this.copyToClipboard(value),
-      error: () =>
-        this.snackBar.open('No fue posible registrar la copia', 'Cerrar', {
-          duration: 3000,
-        }),
-    });
+    this.api
+      .auditStreamKeyCopy(this.eventId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => this.copyToClipboard(value),
+        error: () =>
+          this.snackBar.open('No fue posible registrar la copia', 'Cerrar', {
+            duration: 3000,
+          }),
+      });
   }
 
   revealCredentials(): void {
-    this.api.revealCredentials(this.eventId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (credentials) => {
-        this.credentialsRevealed.set(true);
-        this.event.update((event) => (event ? { ...event, ...credentials } : event));
-      },
-      error: () =>
-        this.snackBar.open('No fue posible revelar las credenciales', 'Cerrar', {
-          duration: 3000,
-        }),
-    });
+    this.api
+      .revealCredentials(this.eventId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (credentials) => {
+          this.credentialsRevealed.set(true);
+          this.event.update((event) => (event ? { ...event, ...credentials } : event));
+        },
+        error: () =>
+          this.snackBar.open('No fue posible revelar las credenciales', 'Cerrar', {
+            duration: 3000,
+          }),
+      });
   }
 
   rotateStreamKey(): void {
-    this.api.rotateStreamKey(this.eventId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (credentials) => {
-        this.credentialsRevealed.set(true);
-        this.event.update((event) => (event ? { ...event, ...credentials } : event));
-        this.snackBar.open('Stream key rotada', 'Cerrar', { duration: 3000 });
-      },
-      error: () =>
-        this.snackBar.open('No fue posible rotar la stream key', 'Cerrar', {
-          duration: 3000,
-        }),
-    });
+    this.api
+      .rotateStreamKey(this.eventId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (credentials) => {
+          this.credentialsRevealed.set(true);
+          this.event.update((event) => (event ? { ...event, ...credentials } : event));
+          this.snackBar.open('Stream key rotada', 'Cerrar', { duration: 3000 });
+        },
+        error: () =>
+          this.snackBar.open('No fue posible rotar la stream key', 'Cerrar', {
+            duration: 3000,
+          }),
+      });
   }
 
   showAllMessages(): void {
@@ -971,57 +1060,69 @@ export class EventDetailComponent {
 
   startStream(): void {
     this.streamLoading.set(true);
-    this.api.startStream(this.eventId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (ev) => {
-        this.event.set(ev);
-        this.streamLoading.set(false);
-        this.socket.connect(this.eventId, true);
-        this.snackBar.open('Transmisión iniciada', 'Cerrar', { duration: 3000 });
-      },
-      error: (err: { message?: string }) => {
-        this.streamLoading.set(false);
-        this.snackBar.open(err.message ?? 'Error al iniciar', 'Cerrar', { duration: 3000 });
-      },
-    });
+    this.api
+      .startStream(this.eventId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (ev) => {
+          this.event.set(ev);
+          this.streamLoading.set(false);
+          this.socket.connect(this.eventId, true);
+          this.snackBar.open('Transmisión iniciada', 'Cerrar', { duration: 3000 });
+        },
+        error: (err: { message?: string }) => {
+          this.streamLoading.set(false);
+          this.snackBar.open(err.message ?? 'Error al iniciar', 'Cerrar', { duration: 3000 });
+        },
+      });
   }
 
   stopStream(): void {
     this.streamLoading.set(true);
-    this.api.stopStream(this.eventId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (ev) => {
-        this.event.set(ev);
-        this.streamLoading.set(false);
-        this.socket.disconnect();
-        this.snackBar.open('Transmisión finalizada', 'Cerrar', { duration: 3000 });
-      },
-      error: (err: { message?: string }) => {
-        this.streamLoading.set(false);
-        this.snackBar.open(err.message ?? 'Error al finalizar', 'Cerrar', { duration: 3000 });
-      },
-    });
+    this.api
+      .stopStream(this.eventId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (ev) => {
+          this.event.set(ev);
+          this.streamLoading.set(false);
+          this.socket.disconnect();
+          this.snackBar.open('Transmisión finalizada', 'Cerrar', { duration: 3000 });
+        },
+        error: (err: { message?: string }) => {
+          this.streamLoading.set(false);
+          this.snackBar.open(err.message ?? 'Error al finalizar', 'Cerrar', { duration: 3000 });
+        },
+      });
   }
 
   loadMessages(): void {
     this.messagesLoading.set(true);
-    this.api.getMessages(this.eventId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (msgs) => {
-        this.messages.set(msgs);
-        this.messagesLoading.set(false);
-      },
-      error: () => this.messagesLoading.set(false),
-    });
+    this.api
+      .getMessages(this.eventId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (msgs) => {
+          this.messages.set(msgs);
+          this.messagesLoading.set(false);
+        },
+        error: () => this.messagesLoading.set(false),
+      });
   }
 
   loadPendingMessages(): void {
     this.messagesLoading.set(true);
-    this.api.getPendingMessages(this.eventId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (msgs) => {
-        this.messages.set(msgs);
-        this.pendingCount.set(msgs.length);
-        this.messagesLoading.set(false);
-      },
-      error: () => this.messagesLoading.set(false),
-    });
+    this.api
+      .getPendingMessages(this.eventId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (msgs) => {
+          this.messages.set(msgs);
+          this.pendingCount.set(msgs.length);
+          this.messagesLoading.set(false);
+        },
+        error: () => this.messagesLoading.set(false),
+      });
   }
 
   refreshPlaybackUrl(): void {
@@ -1029,60 +1130,72 @@ export class EventDetailComponent {
   }
 
   approveMessage(messageId: string): void {
-    this.api.approveMessage(this.eventId, messageId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.messages.update((prev) => prev.filter((m) => m.id !== messageId));
-        this.pendingCount.update((c) => Math.max(0, c - 1));
-        this.snackBar.open('Mensaje aprobado', 'Cerrar', { duration: 2000 });
-      },
-      error: () => this.snackBar.open('Error al aprobar mensaje', 'Cerrar', { duration: 2000 }),
-    });
+    this.api
+      .approveMessage(this.eventId, messageId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.messages.update((prev) => prev.filter((m) => m.id !== messageId));
+          this.pendingCount.update((c) => Math.max(0, c - 1));
+          this.snackBar.open('Mensaje aprobado', 'Cerrar', { duration: 2000 });
+        },
+        error: () => this.snackBar.open('Error al aprobar mensaje', 'Cerrar', { duration: 2000 }),
+      });
   }
 
   rejectMessage(messageId: string): void {
-    this.api.rejectMessage(this.eventId, messageId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        this.messages.update((prev) => prev.filter((m) => m.id !== messageId));
-        this.pendingCount.update((c) => Math.max(0, c - 1));
-        this.snackBar.open('Mensaje rechazado', 'Cerrar', { duration: 2000 });
-      },
-      error: () => this.snackBar.open('Error al rechazar mensaje', 'Cerrar', { duration: 2000 }),
-    });
+    this.api
+      .rejectMessage(this.eventId, messageId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.messages.update((prev) => prev.filter((m) => m.id !== messageId));
+          this.pendingCount.update((c) => Math.max(0, c - 1));
+          this.snackBar.open('Mensaje rechazado', 'Cerrar', { duration: 2000 });
+        },
+        error: () => this.snackBar.open('Error al rechazar mensaje', 'Cerrar', { duration: 2000 }),
+      });
   }
 
   private loadEvent(): void {
     this.loading.set(true);
-    this.api.findOne(this.eventId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (ev) => {
-        this.event.set(ev);
-        this.loading.set(false);
-        this.loadMessages();
+    this.api
+      .findOne(this.eventId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (ev) => {
+          this.event.set(ev);
+          this.loading.set(false);
+          this.loadMessages();
 
-        if (ev.status === EventStatus.SCHEDULED && this.canManage()) {
-          this.loadCredentials();
-        }
+          if (ev.status === EventStatus.SCHEDULED && this.canManage()) {
+            this.loadCredentials();
+          }
 
-        if (ev.status === EventStatus.LIVE || ev.status === EventStatus.PAUSED) {
-          this.socket.connect(this.eventId, true);
-        }
-      },
-      error: (err: { message?: string }) => {
-        this.error.set(err.message ?? 'Error al cargar evento');
-        this.loading.set(false);
-      },
-    });
+          if (ev.status === EventStatus.LIVE || ev.status === EventStatus.PAUSED) {
+            this.socket.connect(this.eventId, true);
+          }
+        },
+        error: (err: { message?: string }) => {
+          this.error.set(err.message ?? 'Error al cargar evento');
+          this.loading.set(false);
+        },
+      });
   }
 
   private loadCredentials(): void {
-    this.api.getCredentials(this.eventId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (credentials) => {
-        this.event.update((event) => (event ? { ...event, ...credentials } : event));
-      },
-      error: () => {
-        this.snackBar.open('No fue posible cargar las credenciales', 'Cerrar', {
-          duration: 3000,
-        });
-      },
-    });
+    this.api
+      .getCredentials(this.eventId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (credentials) => {
+          this.event.update((event) => (event ? { ...event, ...credentials } : event));
+        },
+        error: () => {
+          this.snackBar.open('No fue posible cargar las credenciales', 'Cerrar', {
+            duration: 3000,
+          });
+        },
+      });
   }
 }
