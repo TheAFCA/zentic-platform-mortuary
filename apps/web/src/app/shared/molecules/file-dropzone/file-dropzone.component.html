@@ -27,5 +27,7 @@
       (click)="$event.stopPropagation()"
     />
   </div>
-  <p class="file-dropzone__error" *ngIf="error()" data-testid="file-dropzone-error">{{ error() }}</p>
+  <p class="file-dropzone__error" *ngIf="error()" role="alert" data-testid="file-dropzone-error">
+    {{ error() }}
+  </p>
 </div>

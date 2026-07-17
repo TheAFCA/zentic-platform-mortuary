@@ -40,7 +40,13 @@
         />
         <button type="button" class="btn-primary" (click)="applyFilters()">Filtrar</button>
         <button type="button" class="btn-ghost" (click)="clearFilters()">Limpiar</button>
-        <button type="button" class="btn-ghost" (click)="exportCsv()" [disabled]="exporting()">
+        <button
+          type="button"
+          class="btn-ghost"
+          (click)="exportCsv()"
+          [disabled]="exporting()"
+          [attr.aria-busy]="exporting()"
+        >
           {{ exporting() ? 'Exportando…' : 'Exportar CSV' }}
         </button>
       </div>
@@ -55,7 +61,14 @@
       </div>
     </div>
     <div class="panel-card__body panel-card__body--flush">
-      <app-data-table [columns]="columns" [rows]="logs()" emptyMessage="No hay registros de auditoría" />
+      <app-data-table
+        [columns]="columns"
+        [rows]="logs()"
+        [loading]="loading()"
+        [errorMessage]="loadError()"
+        (retry)="load()"
+        emptyMessage="No hay registros de auditoría"
+      />
     </div>
   </section>
 </div>

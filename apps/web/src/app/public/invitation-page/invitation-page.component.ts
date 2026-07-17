@@ -6,11 +6,19 @@ import { PublicInvitation } from '@zentic/shared-types';
 import { InvitationsApiService } from '../../core/services/invitations-api.service';
 import { InitialsAvatarComponent } from '../../shared/atoms/initials-avatar/initials-avatar.component';
 import { ShareButtonsComponent } from '../../shared/molecules/share-buttons/share-buttons.component';
+import { FeedbackBannerComponent } from '../../shared/molecules/feedback-banner/feedback-banner.component';
+import { getErrorMessage } from '../../core/utils/error-message';
 
 @Component({
   selector: 'app-invitation-page',
   standalone: true,
-  imports: [CommonModule, RouterLink, InitialsAvatarComponent, ShareButtonsComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    InitialsAvatarComponent,
+    ShareButtonsComponent,
+    FeedbackBannerComponent,
+  ],
   templateUrl: './invitation-page.component.html',
   styleUrl: './invitation-page.component.scss',
 })
@@ -23,6 +31,8 @@ export class InvitationPageComponent implements OnInit {
   readonly invitation = signal<PublicInvitation | null>(null);
   readonly loading = signal(true);
   readonly notFound = signal(false);
+  readonly loadError = signal('');
+  private slug = '';
 
   get currentUrl(): string {
     return window.location.href;
@@ -74,16 +84,28 @@ export class InvitationPageComponent implements OnInit {
       this.notFound.set(true);
       return;
     }
+    this.slug = slug;
 
-    this.invitationsApi.getPublic(slug).subscribe({
+    this.load();
+  }
+
+  load(): void {
+    this.loading.set(true);
+    this.loadError.set('');
+    this.notFound.set(false);
+    this.invitationsApi.getPublic(this.slug).subscribe({
       next: (invitation) => {
         this.invitation.set(invitation);
         this.loading.set(false);
         this.updateMetaTags(invitation);
       },
-      error: () => {
+      error: (error: unknown) => {
         this.loading.set(false);
-        this.notFound.set(true);
+        if ((error as { status?: number }).status === 404) {
+          this.notFound.set(true);
+        } else {
+          this.loadError.set(getErrorMessage(error, 'No se pudo cargar la invitación'));
+        }
       },
     });
   }

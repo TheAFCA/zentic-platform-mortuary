@@ -45,6 +45,7 @@ export class InvitationFormComponent implements OnChanges {
   @Input() initialValue: InvitationFormValue | null = null;
   @Input() eventOptions: StreamingEvent[] = [];
   @Input() errorMessage = '';
+  @Input() saving = false;
   @Output() save = new EventEmitter<InvitationFormSubmission>();
   @Output() cancel = new EventEmitter<void>();
 
@@ -86,7 +87,7 @@ export class InvitationFormComponent implements OnChanges {
   }
 
   get selectedEventHasAccessCode(): boolean {
-    return !!this.selectedEvent?.accessCode;
+    return this.selectedEvent?.hasAccessCode ?? false;
   }
 
   get previewTemplate(): InvitationTemplate {

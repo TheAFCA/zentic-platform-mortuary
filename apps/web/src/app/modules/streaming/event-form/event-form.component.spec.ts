@@ -24,6 +24,7 @@ const mockStreamingEvent = {
   finishedAt: null,
   estimatedDuration: 150,
   isPublic: false,
+  hasAccessCode: true,
   accessCode: 'CODE123',
   streamKey: null,
   rtmpUrl: null,
@@ -350,6 +351,13 @@ describe('EventFormComponent', () => {
     component.onSubmit();
 
     expect(mockApi.create).toHaveBeenCalled();
-    expect(mockSnackBar.open).toHaveBeenCalledWith('Error de red', 'Cerrar', { duration: 3000 });
+    expect(mockSnackBar.open).toHaveBeenCalledWith(
+      'Error de red',
+      'Cerrar',
+      expect.objectContaining({
+        politeness: 'assertive',
+        panelClass: ['zentic-notification', 'zentic-notification--error'],
+      }),
+    );
   });
 });

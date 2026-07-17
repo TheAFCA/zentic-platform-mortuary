@@ -1,5 +1,7 @@
 <form class="room-form" [formGroup]="form" (ngSubmit)="submit()">
-  <p class="room-form__error" *ngIf="errorMessage" data-testid="room-form-error">{{ errorMessage }}</p>
+  <p class="room-form__error" *ngIf="errorMessage" role="alert" data-testid="room-form-error">
+    {{ errorMessage }}
+  </p>
 
   <mat-form-field appearance="outline">
     <mat-label>Nombre de la sala</mat-label>
@@ -12,9 +14,22 @@
   </mat-form-field>
 
   <div class="room-form__actions">
-    <button type="button" class="btn-ghost btn-ghost--sm" (click)="cancel.emit()">Cancelar</button>
-    <button type="submit" class="btn-primary btn-primary--sm" data-testid="room-form-submit">
-      {{ isEditing ? 'Guardar' : 'Agregar sala' }}
+    <button
+      type="button"
+      class="btn-ghost btn-ghost--sm"
+      (click)="cancel.emit()"
+      [disabled]="saving"
+    >
+      Cancelar
+    </button>
+    <button
+      type="submit"
+      class="btn-primary btn-primary--sm"
+      data-testid="room-form-submit"
+      [disabled]="saving"
+      [attr.aria-busy]="saving"
+    >
+      {{ saving ? 'Guardando…' : isEditing ? 'Guardar' : 'Agregar sala' }}
     </button>
   </div>
 </form>

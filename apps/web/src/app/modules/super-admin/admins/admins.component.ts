@@ -1,5 +1,4 @@
 import { CommonModule } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -13,6 +12,8 @@ import {
 } from '../../../shared/organisms/data-table/data-table.component';
 import { ConfirmDialogComponent } from '../../../shared/organisms/confirm-dialog/confirm-dialog.component';
 import { BadgeComponent } from '../../../shared/atoms/badge/badge.component';
+import { NotificationService } from '../../../core/services/notification.service';
+import { getErrorMessage } from '../../../core/utils/error-message';
 
 @Component({
   selector: 'app-super-admin-admins',
@@ -30,9 +31,13 @@ import { BadgeComponent } from '../../../shared/atoms/badge/badge.component';
 })
 export class SuperAdminAdminsComponent implements OnInit {
   private readonly superAdminUsersApi = inject(SuperAdminUsersApiService);
+  private readonly notifications = inject(NotificationService);
 
   readonly admins = signal<SuperAdminUser[]>([]);
   readonly loading = signal(false);
+  readonly loadError = signal('');
+  readonly creating = signal(false);
+  readonly actionLoading = signal(false);
   readonly newEmail = signal('');
   readonly createError = signal('');
 
@@ -54,27 +59,36 @@ export class SuperAdminAdminsComponent implements OnInit {
 
   load(): void {
     this.loading.set(true);
+    this.loadError.set('');
     this.superAdminUsersApi.list().subscribe({
       next: (admins) => {
         this.admins.set(admins);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false),
+      error: (error: unknown) => {
+        this.loading.set(false);
+        this.loadError.set(getErrorMessage(error, 'No se pudieron cargar los Super Admins'));
+      },
     });
   }
 
   createSuperAdmin(): void {
     const email = this.newEmail().trim();
-    if (!email) return;
+    if (!email || this.creating()) return;
 
     this.createError.set('');
+    this.creating.set(true);
     this.superAdminUsersApi.create(email).subscribe({
       next: () => {
+        this.creating.set(false);
         this.newEmail.set('');
+        this.notifications.success('Super Admin creado');
         this.load();
       },
-      error: (error: HttpErrorResponse) =>
-        this.createError.set(this.extractErrorMessage(error, 'No se pudo crear el Super Admin')),
+      error: (error: unknown) => {
+        this.creating.set(false);
+        this.createError.set(getErrorMessage(error, 'No se pudo crear el Super Admin'));
+      },
     });
   }
 
@@ -89,23 +103,22 @@ export class SuperAdminAdminsComponent implements OnInit {
 
   confirmToggle(): void {
     const admin = this.confirmTarget();
-    if (!admin) return;
+    if (!admin || this.actionLoading()) return;
+    this.actionLoading.set(true);
 
     this.superAdminUsersApi.setActive(admin.id, !admin.active).subscribe({
       next: () => {
+        this.actionLoading.set(false);
         this.cancelConfirm();
+        this.notifications.success(
+          admin.active ? 'Super Admin desactivado' : 'Super Admin reactivado',
+        );
         this.load();
       },
-      error: (error: HttpErrorResponse) =>
-        this.confirmError.set(
-          this.extractErrorMessage(error, 'No se pudo actualizar el Super Admin'),
-        ),
+      error: (error: unknown) => {
+        this.actionLoading.set(false);
+        this.confirmError.set(getErrorMessage(error, 'No se pudo actualizar el Super Admin'));
+      },
     });
-  }
-
-  private extractErrorMessage(error: HttpErrorResponse, fallback: string): string {
-    const message = (error.error as { message?: string | string[] } | null)?.message;
-    if (Array.isArray(message)) return message.join(', ');
-    return message ?? fallback;
   }
 }

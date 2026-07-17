@@ -31,6 +31,7 @@ describe('StreamingApiService', () => {
     finishedAt: null,
     estimatedDuration: 60,
     isPublic: true,
+    hasAccessCode: false,
     streamKey: null,
     rtmpUrl: null,
     recordingUrl: null,

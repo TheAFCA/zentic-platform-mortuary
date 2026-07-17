@@ -1,5 +1,4 @@
 import { CommonModule } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -19,6 +18,8 @@ import {
   ObituaryFormComponent,
   ObituaryFormSubmission,
 } from '../obituary-form/obituary-form.component';
+import { NotificationService } from '../../../core/services/notification.service';
+import { getErrorMessage } from '../../../core/utils/error-message';
 
 @Component({
   selector: 'app-obituaries-list',
@@ -38,10 +39,13 @@ import {
 export class ObituariesListComponent implements OnInit {
   private readonly obituariesApi = inject(ObituariesApiService);
   private readonly router = inject(Router);
+  private readonly notifications = inject(NotificationService);
 
   readonly obituaries = signal<Obituary[]>([]);
   readonly total = signal(0);
   readonly loading = signal(false);
+  readonly loadError = signal('');
+  readonly saving = signal(false);
   readonly search = signal('');
   readonly statusFilter = signal<ObituaryStatus | ''>('');
 
@@ -67,11 +71,16 @@ export class ObituariesListComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
-    this.obituariesApi.listEvents().subscribe((events) => this.eventOptions.set(events));
+    this.obituariesApi.listEvents().subscribe({
+      next: (events) => this.eventOptions.set(events),
+      error: (error: unknown) =>
+        this.notifications.apiError(error, 'No se pudieron cargar los eventos disponibles'),
+    });
   }
 
   load(): void {
     this.loading.set(true);
+    this.loadError.set('');
     this.obituariesApi
       .list({
         page: 1,
@@ -85,7 +94,10 @@ export class ObituariesListComponent implements OnInit {
           this.total.set(result.total);
           this.loading.set(false);
         },
-        error: () => this.loading.set(false),
+        error: (error: unknown) => {
+          this.loading.set(false);
+          this.loadError.set(getErrorMessage(error, 'No se pudieron cargar los obituarios'));
+        },
       });
   }
 
@@ -119,7 +131,9 @@ export class ObituariesListComponent implements OnInit {
   }
 
   onSave(submission: ObituaryFormSubmission): void {
+    if (this.saving()) return;
     this.formError.set('');
+    this.saving.set(true);
     const { value, photoFile } = submission;
 
     const payload = {
@@ -140,27 +154,33 @@ export class ObituariesListComponent implements OnInit {
       next: (created) => {
         if (photoFile) {
           this.obituariesApi.uploadPhoto(created.id, photoFile).subscribe({
-            next: () => this.goToDetail(created.id),
-            error: () => this.goToDetail(created.id),
+            next: () => {
+              this.notifications.success('Obituario y fotografía guardados');
+              this.goToDetail(created.id);
+            },
+            error: (error: unknown) => {
+              this.notifications.apiError(
+                error,
+                'El obituario se creó, pero no se pudo subir la fotografía',
+              );
+              this.goToDetail(created.id);
+            },
           });
         } else {
+          this.notifications.success('Obituario creado');
           this.goToDetail(created.id);
         }
       },
-      error: (error: HttpErrorResponse) => {
-        this.formError.set(this.extractErrorMessage(error, 'No se pudo crear el obituario'));
+      error: (error: unknown) => {
+        this.saving.set(false);
+        this.formError.set(getErrorMessage(error, 'No se pudo crear el obituario'));
       },
     });
   }
 
   private goToDetail(id: string): void {
+    this.saving.set(false);
     this.showForm.set(false);
     void this.router.navigate(['/admin/obituaries', id]);
-  }
-
-  private extractErrorMessage(error: HttpErrorResponse, fallback: string): string {
-    const message = (error.error as { message?: string | string[] } | null)?.message;
-    if (Array.isArray(message)) return message.join(', ');
-    return message ?? fallback;
   }
 }

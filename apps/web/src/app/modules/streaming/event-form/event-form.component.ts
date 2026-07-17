@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import {
   StreamingApiService,
@@ -18,6 +18,7 @@ import {
 import { VenuesApiService } from '../../../core/services/venues-api.service';
 import { ClientsApiService } from '../../../core/services/clients-api.service';
 import { UsersService, AdminUser } from '../../../core/services/users.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { Client, Venue } from '@zentic/shared-types';
 
 @Component({
@@ -418,7 +419,7 @@ export class EventFormComponent {
   private readonly usersService = inject(UsersService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  private readonly snackBar = inject(MatSnackBar);
+  private readonly notifications = inject(NotificationService);
 
   readonly loading = signal(false);
   readonly submitting = signal(false);
@@ -469,18 +470,24 @@ export class EventFormComponent {
   private loadClients(): void {
     this.clientsApi.list({ page: 1, limit: 200 }).subscribe({
       next: (res) => this.clients.set(res.data),
+      error: (error: unknown) =>
+        this.notifications.apiError(error, 'No se pudieron cargar los clientes'),
     });
   }
 
   private loadOperators(): void {
     this.usersService.list().subscribe({
       next: (list) => this.operators.set(list),
+      error: (error: unknown) =>
+        this.notifications.apiError(error, 'No se pudieron cargar los operadores'),
     });
   }
 
   private loadVenues(): void {
     this.venuesApi.list().subscribe({
       next: (list) => this.venues.set(list),
+      error: (error: unknown) =>
+        this.notifications.apiError(error, 'No se pudieron cargar las sedes'),
     });
   }
 
@@ -517,13 +524,14 @@ export class EventFormComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.snackBar.open('Error al cargar evento', 'Cerrar', { duration: 3000 });
+        this.notifications.error('No se pudo cargar el evento. Inténtalo de nuevo.');
         this.loading.set(false);
       },
     });
   }
 
   onSubmit(): void {
+    if (this.submitting()) return;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -568,14 +576,12 @@ export class EventFormComponent {
     request.subscribe({
       next: () => {
         this.submitting.set(false);
-        this.snackBar.open(editId ? 'Evento actualizado' : 'Evento creado exitosamente', 'Cerrar', {
-          duration: 3000,
-        });
+        this.notifications.success(editId ? 'Evento actualizado' : 'Evento creado correctamente');
         void this.router.navigate(['/admin/streaming']);
       },
-      error: (err: { message?: string }) => {
+      error: (error: unknown) => {
         this.submitting.set(false);
-        this.snackBar.open(err.message ?? 'Error al guardar', 'Cerrar', { duration: 3000 });
+        this.notifications.apiError(error, 'No se pudo guardar el evento');
       },
     });
   }

@@ -1,17 +1,19 @@
 import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { interval, startWith, switchMap } from 'rxjs';
+import { EMPTY, catchError, interval, startWith, switchMap } from 'rxjs';
 import { AdminDashboardMetrics } from '@zentic/shared-types';
 import { AdminDashboardApiService } from '../../../core/services/admin-dashboard-api.service';
 import { StatCardComponent } from '../../../shared/molecules/stat-card/stat-card.component';
+import { FeedbackBannerComponent } from '../../../shared/molecules/feedback-banner/feedback-banner.component';
+import { getErrorMessage } from '../../../core/utils/error-message';
 
 const REFRESH_INTERVAL_MS = 60_000;
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, StatCardComponent],
+  imports: [CommonModule, StatCardComponent, FeedbackBannerComponent],
   styles: [
     `
       .dashboard {
@@ -55,6 +57,13 @@ const REFRESH_INTERVAL_MS = 60_000;
         <p class="dashboard__eyebrow">Panel de control</p>
         <h1 class="dashboard__title">Dashboard</h1>
       </div>
+      <app-feedback-banner
+        [message]="loadError()"
+        title="No pudimos actualizar el dashboard"
+        kind="error"
+        retryLabel="Reintentar"
+        (retry)="refresh()"
+      />
       <div class="dashboard__grid">
         <app-stat-card
           label="Eventos activos hoy"
@@ -100,21 +109,45 @@ export class DashboardComponent implements OnInit {
 
   readonly metrics = signal<AdminDashboardMetrics | null>(null);
   readonly loading = signal(true);
+  readonly loadError = signal('');
 
   ngOnInit(): void {
     interval(REFRESH_INTERVAL_MS)
       .pipe(
         startWith(0),
-        switchMap(() => this.dashboardApi.get()),
+        switchMap(() =>
+          this.dashboardApi.get().pipe(
+            catchError((error: unknown) => {
+              this.loading.set(false);
+              this.loadError.set(getErrorMessage(error, 'No se pudo actualizar el dashboard'));
+              return EMPTY;
+            }),
+          ),
+        ),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (metrics) => {
           this.metrics.set(metrics);
           this.loading.set(false);
+          this.loadError.set('');
         },
-        error: () => this.loading.set(false),
       });
+  }
+
+  refresh(): void {
+    this.loading.set(true);
+    this.dashboardApi.get().subscribe({
+      next: (metrics) => {
+        this.metrics.set(metrics);
+        this.loading.set(false);
+        this.loadError.set('');
+      },
+      error: (error: unknown) => {
+        this.loading.set(false);
+        this.loadError.set(getErrorMessage(error, 'No se pudo actualizar el dashboard'));
+      },
+    });
   }
 
   leadsDeltaSubtitle(): string {

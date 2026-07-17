@@ -1,4 +1,11 @@
-<div class="obituary-page" *ngIf="!loading(); else loadingState">
+<app-feedback-banner
+  [message]="loadError()"
+  title="No pudimos cargar el obituario"
+  kind="error"
+  retryLabel="Reintentar"
+  (retry)="fetch()"
+/>
+<div class="obituary-page" *ngIf="!loading() && !loadError(); else loadingState">
   <ng-container *ngIf="obituary() as obituary; else notAvailableState">
     <div class="obituary-page__locked" *ngIf="!obituary.accessGranted; else unlockedState">
       <h1>Contenido protegido</h1>
@@ -9,7 +16,12 @@
         [formGroup]="accessForm"
         (ngSubmit)="submitAccessCode()"
       >
-        <p class="obituary-page__access-error" *ngIf="accessCodeError()" data-testid="access-code-error">
+        <p
+          class="obituary-page__access-error"
+          *ngIf="accessCodeError()"
+          role="alert"
+          data-testid="access-code-error"
+        >
           {{ accessCodeError() }}
         </p>
         <input
@@ -18,8 +30,13 @@
           formControlName="accessCode"
           data-testid="access-code-input"
         />
-        <button type="submit" [disabled]="unlocking()" data-testid="access-code-submit">
-          Ver obituario
+        <button
+          type="submit"
+          [disabled]="unlocking()"
+          [attr.aria-busy]="unlocking()"
+          data-testid="access-code-submit"
+        >
+          {{ unlocking() ? 'Verificando…' : 'Ver obituario' }}
         </button>
       </form>
     </div>
@@ -102,5 +119,5 @@
 </div>
 
 <ng-template #loadingState>
-  <p class="obituary-page__loading">Cargando...</p>
+  <p class="obituary-page__loading" *ngIf="loading()" role="status">Cargando...</p>
 </ng-template>

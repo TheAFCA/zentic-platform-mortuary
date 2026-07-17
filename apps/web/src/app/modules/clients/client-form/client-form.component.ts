@@ -27,6 +27,7 @@ export class ClientFormComponent implements OnChanges {
   @Input() initialValue: ClientFormValue | null = null;
   @Input() convertedFromLeadName: string | null = null;
   @Input() errorMessage = '';
+  @Input() saving = false;
   @Output() save = new EventEmitter<ClientFormValue>();
   @Output() cancel = new EventEmitter<void>();
 

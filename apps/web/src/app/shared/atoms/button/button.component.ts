@@ -114,6 +114,7 @@ export type ButtonSize = 'sm' | 'md' | 'lg';
     <button
       [type]="type"
       [disabled]="disabled || loading"
+      [attr.aria-busy]="loading"
       [attr.data-variant]="variant"
       [attr.data-size]="size"
       (click)="onClick.emit($event)"

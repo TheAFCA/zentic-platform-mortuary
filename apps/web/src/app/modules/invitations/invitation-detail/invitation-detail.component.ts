@@ -1,5 +1,4 @@
 import { CommonModule } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,6 +14,9 @@ import {
   InvitationFormSubmission,
   InvitationFormValue,
 } from '../invitation-form/invitation-form.component';
+import { FeedbackBannerComponent } from '../../../shared/molecules/feedback-banner/feedback-banner.component';
+import { NotificationService } from '../../../core/services/notification.service';
+import { getErrorMessage } from '../../../core/utils/error-message';
 
 @Component({
   selector: 'app-invitation-detail',
@@ -27,6 +29,7 @@ import {
     ConfirmDialogComponent,
     InvitationFormComponent,
     ShareButtonsComponent,
+    FeedbackBannerComponent,
   ],
   templateUrl: './invitation-detail.component.html',
   styleUrl: './invitation-detail.component.scss',
@@ -36,11 +39,15 @@ export class InvitationDetailComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly invitationsApi = inject(InvitationsApiService);
   private readonly streamingApi = inject(StreamingApiService);
+  private readonly notifications = inject(NotificationService);
 
   readonly invitation = signal<Invitation | null>(null);
   readonly event = signal<StreamingEvent | null>(null);
   readonly eventOptions = signal<StreamingEvent[]>([]);
   readonly loading = signal(true);
+  readonly loadError = signal('');
+  readonly saving = signal(false);
+  readonly actionLoading = signal(false);
 
   readonly editing = signal(false);
   readonly formError = signal('');
@@ -95,18 +102,30 @@ export class InvitationDetailComponent implements OnInit {
     if (!id) return;
 
     this.load(id);
-    this.streamingApi.findAll().subscribe((events) => this.eventOptions.set(events));
+    this.streamingApi.findAll().subscribe({
+      next: (events) => this.eventOptions.set(events),
+      error: (error: unknown) =>
+        this.notifications.apiError(error, 'No se pudieron cargar los eventos disponibles'),
+    });
   }
 
   load(id: string): void {
     this.loading.set(true);
+    this.loadError.set('');
     this.invitationsApi.get(id).subscribe({
       next: (invitation) => {
         this.invitation.set(invitation);
         this.loading.set(false);
-        this.streamingApi.findOne(invitation.eventId).subscribe((event) => this.event.set(event));
+        this.streamingApi.findOne(invitation.eventId).subscribe({
+          next: (event) => this.event.set(event),
+          error: (error: unknown) =>
+            this.notifications.apiError(error, 'No se pudo cargar el evento de la invitación'),
+        });
       },
-      error: () => this.loading.set(false),
+      error: (error: unknown) => {
+        this.loading.set(false);
+        this.loadError.set(getErrorMessage(error, 'No se pudo cargar la invitación'));
+      },
     });
   }
 
@@ -132,9 +151,10 @@ export class InvitationDetailComponent implements OnInit {
 
   onSave(submission: InvitationFormSubmission): void {
     const invitation = this.invitation();
-    if (!invitation) return;
+    if (!invitation || this.saving()) return;
 
     this.formError.set('');
+    this.saving.set(true);
     const { value } = submission;
 
     this.invitationsApi
@@ -145,11 +165,14 @@ export class InvitationDetailComponent implements OnInit {
       })
       .subscribe({
         next: () => {
+          this.saving.set(false);
           this.editing.set(false);
+          this.notifications.success('Invitación actualizada');
           this.load(invitation.id);
         },
-        error: (error: HttpErrorResponse) => {
-          this.formError.set(this.extractErrorMessage(error, 'No se pudo guardar la invitación'));
+        error: (error: unknown) => {
+          this.saving.set(false);
+          this.formError.set(getErrorMessage(error, 'No se pudo guardar la invitación'));
         },
       });
   }
@@ -164,14 +187,20 @@ export class InvitationDetailComponent implements OnInit {
 
   confirmPublishAction(): void {
     const invitation = this.invitation();
-    this.confirmPublish.set(false);
-    if (!invitation) return;
+    if (!invitation || this.actionLoading()) return;
 
     this.actionError.set('');
+    this.actionLoading.set(true);
     this.invitationsApi.publish(invitation.id).subscribe({
-      next: (updated) => this.invitation.set(updated),
-      error: (error: HttpErrorResponse) => {
-        this.actionError.set(this.extractErrorMessage(error, 'No se pudo publicar la invitación'));
+      next: (updated) => {
+        this.actionLoading.set(false);
+        this.confirmPublish.set(false);
+        this.invitation.set(updated);
+        this.notifications.success('Invitación publicada');
+      },
+      error: (error: unknown) => {
+        this.actionLoading.set(false);
+        this.actionError.set(getErrorMessage(error, 'No se pudo publicar la invitación'));
       },
     });
   }
@@ -198,13 +227,14 @@ export class InvitationDetailComponent implements OnInit {
         link.download = `invitacion-${nameSlug}-${year}.png`;
         link.click();
         URL.revokeObjectURL(url);
+        this.notifications.success('Imagen de invitación descargada');
         // Refresca la invitación para reflejar el imageUrl (og:image) recién generado.
         this.load(invitation.id);
       },
-      error: (error: HttpErrorResponse) => {
+      error: (error: unknown) => {
         this.generatingImage.set(false);
         this.imageError.set(
-          this.extractErrorMessage(
+          getErrorMessage(
             error,
             'No se pudo generar la imagen. El enlace público sigue disponible — intenta nuevamente.',
           ),
@@ -214,18 +244,22 @@ export class InvitationDetailComponent implements OnInit {
   }
 
   copyPublicUrl(): void {
-    void navigator.clipboard.writeText(this.publicUrl);
-    this.copied.set(true);
-    setTimeout(() => this.copied.set(false), 2000);
+    void navigator.clipboard
+      .writeText(this.publicUrl)
+      .then(() => {
+        this.copied.set(true);
+        this.notifications.success('Enlace copiado');
+        setTimeout(() => this.copied.set(false), 2000);
+      })
+      .catch(() => this.notifications.error('No se pudo copiar el enlace'));
   }
 
   goBack(): void {
     void this.router.navigate(['/admin/invitations']);
   }
 
-  private extractErrorMessage(error: HttpErrorResponse, fallback: string): string {
-    const message = (error.error as { message?: string | string[] } | null)?.message;
-    if (Array.isArray(message)) return message.join(', ');
-    return message ?? fallback;
+  retryLoad(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) this.load(id);
   }
 }

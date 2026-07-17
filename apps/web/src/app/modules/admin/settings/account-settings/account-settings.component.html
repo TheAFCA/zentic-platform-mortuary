@@ -1,8 +1,21 @@
 <div class="account-settings">
   <p class="account-settings__success" *ngIf="success()" role="status">{{ success() }}</p>
   <p class="account-settings__error" *ngIf="error()" role="alert">{{ error() }}</p>
+  <app-feedback-banner
+    [message]="loadError()"
+    title="No pudimos cargar la configuración"
+    kind="error"
+    retryLabel="Reintentar"
+    (retry)="load()"
+  />
+  <p *ngIf="loading()" role="status">Cargando configuración…</p>
 
-  <form class="account-settings__form" [formGroup]="form" (ngSubmit)="onSubmit()" *ngIf="!loading()">
+  <form
+    class="account-settings__form"
+    [formGroup]="form"
+    (ngSubmit)="onSubmit()"
+    *ngIf="!loading()"
+  >
     <div class="account-settings__field">
       <label for="timezone">Zona horaria</label>
       <select id="timezone" formControlName="timezone">
@@ -39,7 +52,7 @@
       <span>Requerir código de acceso en todos los eventos por defecto</span>
     </label>
 
-    <button type="submit" class="btn-primary" [disabled]="saving()">
+    <button type="submit" class="btn-primary" [disabled]="saving()" [attr.aria-busy]="saving()">
       {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
     </button>
   </form>

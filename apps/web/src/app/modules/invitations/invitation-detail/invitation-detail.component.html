@@ -1,4 +1,11 @@
-<div class="invitation-detail" *ngIf="!loading(); else loadingState">
+<app-feedback-banner
+  [message]="loadError()"
+  title="No pudimos cargar la invitación"
+  kind="error"
+  retryLabel="Reintentar"
+  (retry)="retryLoad()"
+/>
+<div class="invitation-detail" *ngIf="!loading() && !loadError(); else loadingState">
   <ng-container *ngIf="invitation() as invitation">
     <header class="invitation-detail__header">
       <button type="button" class="btn-ghost btn-ghost--sm" (click)="goBack()">
@@ -8,7 +15,7 @@
       <app-badge [color]="statusBadgeColor(invitation.status)">{{ invitation.status }}</app-badge>
     </header>
 
-    <p class="invitation-detail__error" *ngIf="actionError()">{{ actionError() }}</p>
+    <p class="invitation-detail__error" *ngIf="actionError()" role="alert">{{ actionError() }}</p>
 
     <section class="panel-card" *ngIf="!editing()">
       <div class="panel-card__body invitation-detail__summary" *ngIf="event() as event">
@@ -19,7 +26,9 @@
         <p class="invitation-detail__meta" *ngIf="event.room">
           {{ event.room.venue.name }} — {{ event.room.name }}
         </p>
-        <p class="invitation-detail__message" *ngIf="invitation.message">{{ invitation.message }}</p>
+        <p class="invitation-detail__message" *ngIf="invitation.message">
+          {{ invitation.message }}
+        </p>
       </div>
 
       <div class="panel-card__body invitation-detail__actions">
@@ -56,7 +65,7 @@
         </button>
       </div>
 
-      <p class="invitation-detail__error" *ngIf="imageError()">{{ imageError() }}</p>
+      <p class="invitation-detail__error" *ngIf="imageError()" role="alert">{{ imageError() }}</p>
 
       <div class="panel-card__body invitation-detail__share" *ngIf="invitation.status !== 'DRAFT'">
         <label class="invitation-detail__share-label">Enlace público</label>
@@ -85,6 +94,7 @@
           [initialValue]="editingFormValue()"
           [eventOptions]="eventOptions()"
           [errorMessage]="formError()"
+          [saving]="saving()"
           (save)="onSave($event)"
           (cancel)="closeEdit()"
         />
@@ -94,7 +104,7 @@
 </div>
 
 <ng-template #loadingState>
-  <p class="invitation-detail__loading">Cargando invitación...</p>
+  <p class="invitation-detail__loading" *ngIf="loading()" role="status">Cargando invitación...</p>
 </ng-template>
 
 <app-confirm-dialog
@@ -102,6 +112,7 @@
   title="Publicar invitación"
   message="La invitación quedará disponible en un enlace público. Verifica que el evento tenga una sala/lugar asignado."
   confirmLabel="Publicar"
+  [loading]="actionLoading()"
   (confirm)="confirmPublishAction()"
   (cancel)="cancelPublish()"
 />

@@ -9,6 +9,15 @@
     </div>
   </header>
 
+  <app-feedback-banner
+    [message]="loadError()"
+    title="No pudimos cargar el dashboard"
+    kind="error"
+    retryLabel="Reintentar"
+    (retry)="load()"
+  />
+  <p *ngIf="loading()" role="status">Cargando dashboard…</p>
+
   <ng-container *ngIf="dashboard() as data">
     <div class="dashboard-page__grid">
       <app-stat-card
@@ -29,7 +38,12 @@
         icon="hourglass_top"
         accent="warning"
       />
-      <app-stat-card label="Eventos en vivo" [value]="data.liveEvents" icon="sensors" accent="primary" />
+      <app-stat-card
+        label="Eventos en vivo"
+        [value]="data.liveEvents"
+        icon="sensors"
+        accent="primary"
+      />
       <app-stat-card
         label="Obituarios publicados hoy"
         [value]="data.obituariesPublishedToday"
@@ -42,7 +56,12 @@
         icon="date_range"
         accent="neutral"
       />
-      <app-stat-card label="Usuarios registrados" [value]="data.totalUsers" icon="group" accent="primary" />
+      <app-stat-card
+        label="Usuarios registrados"
+        [value]="data.totalUsers"
+        icon="group"
+        accent="primary"
+      />
     </div>
 
     <section class="panel-card">

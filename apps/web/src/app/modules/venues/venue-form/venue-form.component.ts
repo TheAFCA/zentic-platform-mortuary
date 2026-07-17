@@ -19,6 +19,7 @@ export interface VenueFormValue {
 export class VenueFormComponent implements OnChanges {
   @Input() initialValue: VenueFormValue | null = null;
   @Input() errorMessage = '';
+  @Input() saving = false;
   @Output() save = new EventEmitter<VenueFormValue>();
   @Output() cancel = new EventEmitter<void>();
 

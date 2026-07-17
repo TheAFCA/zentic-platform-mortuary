@@ -57,7 +57,7 @@ export type PlayerMode = 'live' | 'recording';
                 </div>
               }
               @case ('error') {
-                <div class="hls-player__indicator hls-player__indicator--error">
+                <div class="hls-player__indicator hls-player__indicator--error" role="alert">
                   <mat-icon>error_outline</mat-icon>
                   <span>Error de reproducción</span>
                 </div>

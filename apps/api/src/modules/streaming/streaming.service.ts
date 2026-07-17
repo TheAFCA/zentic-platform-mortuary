@@ -1399,7 +1399,7 @@ export class StreamingService {
     | 'providerStreamId'
     | 'playbackId'
     | 'playbackPolicy'
-  > {
+  > & { hasAccessCode: boolean } {
     const {
       streamKey: _streamKey,
       rtmpUrl: _rtmpUrl,
@@ -1409,6 +1409,6 @@ export class StreamingService {
       playbackPolicy: _playbackPolicy,
       ...safeEvent
     } = event;
-    return safeEvent;
+    return { ...safeEvent, hasAccessCode: Boolean(_accessCode) };
   }
 }

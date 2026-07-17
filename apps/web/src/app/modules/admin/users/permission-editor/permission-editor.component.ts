@@ -16,6 +16,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { Permission, PermissionMeta, PermissionPreset } from '@zentic/shared-types';
 import { PermissionsApiService } from '../../../../core/services/permissions-api.service';
+import { NotificationService } from '../../../../core/services/notification.service';
 
 /**
  * Checkboxes agrupados por módulo, filtrados según lo que sea asignable al rol (OPERATOR/VIEWER)
@@ -36,6 +37,7 @@ export class PermissionEditorComponent implements OnInit, OnChanges {
   @Output() permissionsChange = new EventEmitter<Permission[]>();
 
   private readonly permissionsApi = inject(PermissionsApiService);
+  private readonly notifications = inject(NotificationService);
 
   catalogGroups: Record<string, PermissionMeta[]> = {};
   presets: PermissionPreset[] = [];
@@ -43,8 +45,16 @@ export class PermissionEditorComponent implements OnInit, OnChanges {
 
   ngOnInit(): void {
     this.selected = new Set(this.initialPermissions);
-    this.permissionsApi.getCatalog().subscribe((groups) => (this.catalogGroups = groups));
-    this.permissionsApi.getPresets().subscribe((presets) => (this.presets = presets));
+    this.permissionsApi.getCatalog().subscribe({
+      next: (groups) => (this.catalogGroups = groups),
+      error: (error: unknown) =>
+        this.notifications.apiError(error, 'No se pudo cargar el catálogo de permisos'),
+    });
+    this.permissionsApi.getPresets().subscribe({
+      next: (presets) => (this.presets = presets),
+      error: (error: unknown) =>
+        this.notifications.apiError(error, 'No se pudieron cargar los perfiles de permisos'),
+    });
   }
 
   ngOnChanges(changes: SimpleChanges): void {

@@ -5,7 +5,12 @@
   *ngIf="!success(); else successState"
 >
   <h3 class="condolence-form__title">Deja un mensaje de condolencia</h3>
-  <p class="condolence-form__error" *ngIf="errorMessage()" data-testid="condolence-form-error">
+  <p
+    class="condolence-form__error"
+    *ngIf="errorMessage()"
+    role="alert"
+    data-testid="condolence-form-error"
+  >
     {{ errorMessage() }}
   </p>
 
@@ -33,14 +38,15 @@
     type="submit"
     class="condolence-form__submit"
     [disabled]="submitting()"
+    [attr.aria-busy]="submitting()"
     data-testid="condolence-form-submit"
   >
-    Enviar mensaje
+    {{ submitting() ? 'Enviando…' : 'Enviar mensaje' }}
   </button>
 </form>
 
 <ng-template #successState>
-  <p class="condolence-form__success" data-testid="condolence-form-success">
+  <p class="condolence-form__success" role="status" data-testid="condolence-form-success">
     Tu mensaje fue enviado y será revisado antes de publicarse.
   </p>
 </ng-template>

@@ -1,6 +1,11 @@
 <div class="invitation-form-layout">
   <form class="invitation-form" [formGroup]="form" (ngSubmit)="submit()">
-    <p class="invitation-form__error" *ngIf="errorMessage" data-testid="invitation-form-error">
+    <p
+      class="invitation-form__error"
+      *ngIf="errorMessage"
+      role="alert"
+      data-testid="invitation-form-error"
+    >
       {{ errorMessage }}
     </p>
 
@@ -17,7 +22,9 @@
     <mat-form-field appearance="outline">
       <mat-label>Plantilla</mat-label>
       <mat-select formControlName="template" data-testid="invitation-template-select">
-        <mat-option *ngFor="let template of templates" [value]="template">{{ template }}</mat-option>
+        <mat-option *ngFor="let template of templates" [value]="template">{{
+          template
+        }}</mat-option>
       </mat-select>
     </mat-form-field>
 
@@ -41,13 +48,24 @@
         maxlength="50"
         data-testid="invitation-access-code-input"
       />
-      <mat-hint>El evento tiene código de acceso habilitado — escríbelo para mostrarlo en la invitación</mat-hint>
+      <mat-hint
+        >El evento tiene código de acceso habilitado — escríbelo para mostrarlo en la
+        invitación</mat-hint
+      >
     </mat-form-field>
 
     <div class="invitation-form__actions">
-      <button type="button" class="btn-ghost" (click)="cancel.emit()">Cancelar</button>
-      <button type="submit" class="btn-primary" data-testid="invitation-form-submit">
-        {{ isEditing ? 'Guardar cambios' : 'Guardar como borrador' }}
+      <button type="button" class="btn-ghost" (click)="cancel.emit()" [disabled]="saving">
+        Cancelar
+      </button>
+      <button
+        type="submit"
+        class="btn-primary"
+        data-testid="invitation-form-submit"
+        [disabled]="saving"
+        [attr.aria-busy]="saving"
+      >
+        {{ saving ? 'Guardando…' : isEditing ? 'Guardar cambios' : 'Guardar como borrador' }}
       </button>
     </div>
   </form>

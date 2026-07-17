@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ContentChild, Input, TemplateRef } from '@angular/core';
+import { Component, ContentChild, EventEmitter, Input, Output, TemplateRef } from '@angular/core';
 
 export interface DataTableColumn<T> {
   key: keyof T & string;
@@ -18,6 +18,9 @@ export class DataTableComponent<T extends object> {
   @Input() columns: DataTableColumn<T>[] = [];
   @Input() rows: T[] = [];
   @Input() emptyMessage = 'No hay datos para mostrar';
+  @Input() loading = false;
+  @Input() errorMessage = '';
+  @Output() retry = new EventEmitter<void>();
 
   @ContentChild('rowActions') actionsTemplate?: TemplateRef<{ $implicit: T }>;
 

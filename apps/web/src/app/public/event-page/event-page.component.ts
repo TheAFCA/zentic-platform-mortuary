@@ -4,17 +4,19 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { StreamingApiService, PublicEvent } from '../../core/services/streaming-api.service';
+import { NotificationService } from '../../core/services/notification.service';
 import {
   StreamingSocketService,
   SocketMessage,
 } from '../../core/services/streaming-socket.service';
 import { EventStatus } from '@zentic/shared-types';
 import { HlsPlayerComponent } from '../../shared/molecules/hls-player/hls-player.component';
+import { getErrorMessage } from '../../core/utils/error-message';
 
 /** Iconos de reacción rápida disponibles */
 const REACTION_ICONS = [
@@ -260,8 +262,8 @@ const REACTION_ICONS = [
       align-items: center;
       padding: 0 1rem;
       gap: 0.75rem;
-      background: linear-gradient(transparent, rgba(0,0,0,0.6));
-      color: rgba(255,255,255,0.8);
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+      color: rgba(255, 255, 255, 0.8);
     }
     .stream-room__player-bottom mat-icon {
       font-size: 1.125rem;
@@ -272,7 +274,7 @@ const REACTION_ICONS = [
       flex: 1;
       height: 0.25rem;
       border-radius: 0.125rem;
-      background: rgba(255,255,255,0.2);
+      background: rgba(255, 255, 255, 0.2);
     }
 
     /* ── Metadata (channel info below player) ── */
@@ -828,7 +830,7 @@ const REACTION_ICONS = [
         <mat-spinner diameter="40" />
       </div>
     } @else if (error()) {
-      <div class="stream-room__error">
+      <div class="stream-room__error" role="alert">
         <div class="stream-room__error-content">
           <h1>Evento no encontrado</h1>
           <p>{{ error() }}</p>
@@ -851,18 +853,32 @@ const REACTION_ICONS = [
               Ingresa el código de acceso para ver el evento
             </p>
 
-            <form [formGroup]="accessForm" (ngSubmit)="submitAccessCode()" class="stream-room__access-form">
+            <form
+              [formGroup]="accessForm"
+              (ngSubmit)="submitAccessCode()"
+              class="stream-room__access-form"
+            >
               <div class="stream-room__access-field">
                 <label for="access-name">Tu nombre</label>
                 <input id="access-name" formControlName="name" placeholder="Nombre completo" />
               </div>
               <div class="stream-room__access-field">
                 <label for="access-email">Email (opcional)</label>
-                <input id="access-email" type="email" formControlName="email" placeholder="correo@ejemplo.com" />
+                <input
+                  id="access-email"
+                  type="email"
+                  formControlName="email"
+                  placeholder="correo@ejemplo.com"
+                />
               </div>
               <div class="stream-room__access-field">
                 <label for="access-code">Código de acceso</label>
-                <input id="access-code" formControlName="code" placeholder="Ej: FAMILIA2026" required />
+                <input
+                  id="access-code"
+                  formControlName="code"
+                  placeholder="Ej: FAMILIA2026"
+                  required
+                />
               </div>
 
               <button
@@ -878,7 +894,7 @@ const REACTION_ICONS = [
               </button>
 
               @if (accessError()) {
-                <p class="stream-room__access-error">{{ accessError() }}</p>
+                <p class="stream-room__access-error" role="alert">{{ accessError() }}</p>
               }
             </form>
           </div>
@@ -886,7 +902,6 @@ const REACTION_ICONS = [
       } @else {
         <!-- Full Twitch‑style event page -->
         <div class="stream-room">
-
           <!-- ── Top Nav ── -->
           <header class="stream-room__topbar">
             <div class="stream-room__nav">
@@ -897,13 +912,25 @@ const REACTION_ICONS = [
                 <span>{{ event.tenant.name }}</span>
               </div>
               <div class="stream-room__nav-actions">
-                <button class="stream-room__nav-btn" (click)="shareWhatsApp()" matTooltip="Compartir por WhatsApp">
+                <button
+                  class="stream-room__nav-btn"
+                  (click)="shareWhatsApp()"
+                  matTooltip="Compartir por WhatsApp"
+                >
                   <mat-icon>chat</mat-icon>
                 </button>
-                <button class="stream-room__nav-btn" (click)="shareEmail()" matTooltip="Compartir por email">
+                <button
+                  class="stream-room__nav-btn"
+                  (click)="shareEmail()"
+                  matTooltip="Compartir por email"
+                >
                   <mat-icon>email</mat-icon>
                 </button>
-                <button class="stream-room__nav-btn" (click)="copyLink()" matTooltip="Copiar enlace">
+                <button
+                  class="stream-room__nav-btn"
+                  (click)="copyLink()"
+                  matTooltip="Copiar enlace"
+                >
                   <mat-icon>link</mat-icon>
                 </button>
               </div>
@@ -912,11 +939,13 @@ const REACTION_ICONS = [
 
           <!-- ── Body: sidebar / main / chat ── -->
           <div class="stream-room__body">
-
             <!-- Sidebar -->
             <aside class="stream-room__sidebar" aria-label="Navegación del evento">
               <span class="stream-room__sidebar-label">Este homenaje</span>
-              <button class="stream-room__sidebar-item stream-room__sidebar-item--active" type="button">
+              <button
+                class="stream-room__sidebar-item stream-room__sidebar-item--active"
+                type="button"
+              >
                 <mat-icon>play_circle</mat-icon>
                 Ver transmisión
               </button>
@@ -932,7 +961,6 @@ const REACTION_ICONS = [
 
             <!-- Main Content -->
             <div class="stream-room__main">
-
               <!-- Player -->
               <section class="stream-room__player" aria-label="Reproductor de transmisión">
                 @if (event.status === 'LIVE' || event.status === 'FINISHED') {
@@ -964,7 +992,11 @@ const REACTION_ICONS = [
               <!-- Metadata -->
               <section class="stream-room__metadata">
                 @if (event.deceased?.photoUrl) {
-                  <img [src]="event.deceased?.photoUrl" class="stream-room__metadata-avatar" alt="" />
+                  <img
+                    [src]="event.deceased?.photoUrl"
+                    class="stream-room__metadata-avatar"
+                    alt=""
+                  />
                 } @else {
                   <div class="stream-room__metadata-avatar-fallback">
                     <mat-icon>person</mat-icon>
@@ -998,7 +1030,12 @@ const REACTION_ICONS = [
                   </div>
                 </div>
                 <div class="stream-room__metadata-actions">
-                  <button class="stream-room__metadata-share" (click)="copyLink()" matTooltip="Compartir enlace" aria-label="Compartir enlace">
+                  <button
+                    class="stream-room__metadata-share"
+                    (click)="copyLink()"
+                    matTooltip="Compartir enlace"
+                    aria-label="Compartir enlace"
+                  >
                     <mat-icon>share</mat-icon>
                   </button>
                 </div>
@@ -1006,7 +1043,6 @@ const REACTION_ICONS = [
 
               <!-- Info sections -->
               <div class="stream-room__info">
-
                 <!-- Deceased about -->
                 @if (event.deceased; as deceased) {
                   <section class="stream-room__about">
@@ -1020,7 +1056,9 @@ const REACTION_ICONS = [
                         </div>
                       }
                       <div>
-                        <p class="stream-room__about-name">{{ deceased.firstName }} {{ deceased.lastName }}</p>
+                        <p class="stream-room__about-name">
+                          {{ deceased.firstName }} {{ deceased.lastName }}
+                        </p>
                         @if (deceased.birthDate || deceased.deathDate) {
                           <p class="stream-room__about-dates">
                             @if (deceased.birthDate) {
@@ -1062,7 +1100,6 @@ const REACTION_ICONS = [
                     }
                   </section>
                 }
-
               </div>
             </div>
 
@@ -1071,7 +1108,11 @@ const REACTION_ICONS = [
               <div class="stream-room__chat-header">
                 <h3>Chat del evento</h3>
                 <div class="stream-room__chat-header-actions">
-                  <button class="stream-room__chat-header-btn" matTooltip="Configuración del chat" aria-label="Configuración del chat">
+                  <button
+                    class="stream-room__chat-header-btn"
+                    matTooltip="Configuración del chat"
+                    aria-label="Configuración del chat"
+                  >
                     <mat-icon>settings</mat-icon>
                   </button>
                 </div>
@@ -1080,11 +1121,15 @@ const REACTION_ICONS = [
               <div class="stream-room__messages">
                 @for (msg of messages(); track msg.id) {
                   <div class="stream-room__message">
-                    <span class="stream-room__message-icon">{{ iconMap[msg.iconType ?? ''] ?? '💬' }}</span>
+                    <span class="stream-room__message-icon">{{
+                      iconMap[msg.iconType ?? ''] ?? '💬'
+                    }}</span>
                     <div class="stream-room__message-body">
                       <span class="stream-room__message-author">{{ msg.authorName }}</span>
                       <span class="stream-room__message-text">{{ msg.content }}</span>
-                      <div class="stream-room__message-time">{{ msg.createdAt | date: 'dd/MM HH:mm' }}</div>
+                      <div class="stream-room__message-time">
+                        {{ msg.createdAt | date: 'dd/MM HH:mm' }}
+                      </div>
                     </div>
                   </div>
                 } @empty {
@@ -1108,7 +1153,12 @@ const REACTION_ICONS = [
                 </div>
                 <div class="stream-room__composer-input">
                   <div class="stream-room__composer-field">
-                    <input formControlName="content" placeholder="Escribe tu mensaje..." required maxlength="500" />
+                    <input
+                      formControlName="content"
+                      placeholder="Escribe tu mensaje..."
+                      required
+                      maxlength="500"
+                    />
                   </div>
                   <button
                     class="stream-room__composer-send"
@@ -1124,7 +1174,6 @@ const REACTION_ICONS = [
                 </div>
               </form>
             </aside>
-
           </div>
         </div>
       }
@@ -1137,7 +1186,7 @@ export class EventPageComponent {
   private readonly fb = inject(FormBuilder);
   private readonly api = inject(StreamingApiService);
   private readonly socket = inject(StreamingSocketService);
-  private readonly snackBar = inject(MatSnackBar);
+  private readonly notifications = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
 
   /** Indica si los datos del evento están cargando */
@@ -1246,8 +1295,8 @@ export class EventPageComponent {
           this.pollRecordingUrl();
         }
       },
-      error: (err: { message?: string }) => {
-        this.error.set(err.message ?? 'Evento no encontrado');
+      error: (error: unknown) => {
+        this.error.set(getErrorMessage(error, 'Evento no encontrado'));
         this.loading.set(false);
         this.accessLoading.set(false);
       },
@@ -1331,7 +1380,7 @@ export class EventPageComponent {
 
   /** Valida el código de acceso y concede acceso si es correcto */
   submitAccessCode(): void {
-    if (this.accessForm.invalid) return;
+    if (this.accessForm.invalid || this.accessLoading()) return;
     this.accessLoading.set(true);
     this.accessError.set('');
 
@@ -1348,8 +1397,8 @@ export class EventPageComponent {
           this.eventId = res.eventId;
           this.loadPublicEvent();
         },
-        error: (err: { error?: { message?: string }; message?: string }) => {
-          this.accessError.set(err.error?.message ?? err.message ?? 'Código incorrecto');
+        error: (error: unknown) => {
+          this.accessError.set(getErrorMessage(error, 'Código incorrecto'));
           this.accessLoading.set(false);
         },
       });
@@ -1357,7 +1406,7 @@ export class EventPageComponent {
 
   /** Envía un mensaje de homenaje al evento */
   submitMessage(): void {
-    if (this.messageForm.invalid) return;
+    if (this.messageForm.invalid || this.messageSending()) return;
     this.messageSending.set(true);
 
     this.api
@@ -1372,17 +1421,11 @@ export class EventPageComponent {
             content: '',
           });
           this.messageSending.set(false);
-          this.snackBar.open('Mensaje enviado', 'Cerrar', { duration: 2000 });
+          this.notifications.success('Mensaje enviado para moderación');
         },
-        error: (err: { error?: { message?: string }; message?: string }) => {
+        error: (error: unknown) => {
           this.messageSending.set(false);
-          this.snackBar.open(
-            err.error?.message ?? err.message ?? 'Error al enviar mensaje',
-            'Cerrar',
-            {
-              duration: 2000,
-            },
-          );
+          this.notifications.apiError(error, 'No se pudo enviar el mensaje');
         },
       });
   }
@@ -1398,6 +1441,7 @@ export class EventPageComponent {
       },
       error: () => {
         this.reactionCooldown.set(false);
+        this.notifications.error('No se pudo enviar la reacción');
       },
     });
   }
@@ -1425,9 +1469,10 @@ export class EventPageComponent {
 
   /** Copia el enlace del evento al portapapeles */
   copyLink(): void {
-    void navigator.clipboard.writeText(window.location.href).then(() => {
-      this.snackBar.open('Enlace copiado', 'Cerrar', { duration: 2000 });
-    });
+    void navigator.clipboard
+      .writeText(window.location.href)
+      .then(() => this.notifications.success('Enlace copiado'))
+      .catch(() => this.notifications.error('No se pudo copiar el enlace'));
   }
 
   /** Conecta al Socket.IO para recibir actualizaciones en tiempo real */
@@ -1454,6 +1499,7 @@ export class EventPageComponent {
       },
       error: () => {
         this.messages.set([]);
+        this.notifications.error('No se pudieron cargar los mensajes');
       },
     });
   }

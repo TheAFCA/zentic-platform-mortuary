@@ -13,7 +13,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import {
   StreamingApiService,
@@ -22,9 +22,11 @@ import {
 } from '../../../core/services/streaming-api.service';
 import { StreamingSocketService } from '../../../core/services/streaming-socket.service';
 import { InvitationsApiService } from '../../../core/services/invitations-api.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { EventStatus } from '@zentic/shared-types';
 import { AuthStateService } from '../../../core/services/auth-state.service';
 import { HlsPlayerComponent } from '../../../shared/molecules/hls-player/hls-player.component';
+import { getErrorMessage } from '../../../core/utils/error-message';
 
 @Component({
   selector: 'app-event-detail',
@@ -904,7 +906,8 @@ export class EventDetailComponent {
   private readonly router = inject(Router);
   private readonly api = inject(StreamingApiService);
   private readonly socket = inject(StreamingSocketService);
-  private readonly snackBar = inject(MatSnackBar);
+  private readonly invitationsApi = inject(InvitationsApiService);
+  private readonly notifications = inject(NotificationService);
   private readonly authState = inject(AuthStateService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -1011,7 +1014,7 @@ export class EventDetailComponent {
       },
       error: () => {
         this.generatingInvitation.set(false);
-        this.snackBar.open('No se pudo generar la invitación', 'Cerrar', { duration: 3000 });
+        this.notifications.error('No se pudo generar la invitación. Inténtalo de nuevo.');
       },
     });
   }
@@ -1022,11 +1025,10 @@ export class EventDetailComponent {
   }
 
   copyToClipboard(value: string): void {
-    void navigator.clipboard.writeText(value).then(() => {
-      this.snackBar.open('Copiado al portapapeles', 'Cerrar', {
-        duration: 2000,
-      });
-    });
+    void navigator.clipboard
+      .writeText(value)
+      .then(() => this.notifications.success('Copiado al portapapeles'))
+      .catch(() => this.notifications.error('No se pudo copiar al portapapeles'));
   }
 
   copyStreamKey(value: string): void {
@@ -1035,10 +1037,7 @@ export class EventDetailComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => this.copyToClipboard(value),
-        error: () =>
-          this.snackBar.open('No fue posible registrar la copia', 'Cerrar', {
-            duration: 3000,
-          }),
+        error: () => this.notifications.error('No fue posible registrar la copia'),
       });
   }
 
@@ -1051,10 +1050,7 @@ export class EventDetailComponent {
           this.credentialsRevealed.set(true);
           this.event.update((event) => (event ? { ...event, ...credentials } : event));
         },
-        error: () =>
-          this.snackBar.open('No fue posible revelar las credenciales', 'Cerrar', {
-            duration: 3000,
-          }),
+        error: () => this.notifications.error('No fue posible revelar las credenciales'),
       });
   }
 
@@ -1066,12 +1062,9 @@ export class EventDetailComponent {
         next: (credentials) => {
           this.credentialsRevealed.set(true);
           this.event.update((event) => (event ? { ...event, ...credentials } : event));
-          this.snackBar.open('Stream key rotada', 'Cerrar', { duration: 3000 });
+          this.notifications.success('Stream key rotada');
         },
-        error: () =>
-          this.snackBar.open('No fue posible rotar la stream key', 'Cerrar', {
-            duration: 3000,
-          }),
+        error: () => this.notifications.error('No fue posible rotar la stream key'),
       });
   }
 
@@ -1095,11 +1088,11 @@ export class EventDetailComponent {
           this.event.set(ev);
           this.streamLoading.set(false);
           this.socket.connect(this.eventId, true);
-          this.snackBar.open('Transmisión iniciada', 'Cerrar', { duration: 3000 });
+          this.notifications.success('Transmisión iniciada');
         },
-        error: (err: { message?: string }) => {
+        error: (error: unknown) => {
           this.streamLoading.set(false);
-          this.snackBar.open(err.message ?? 'Error al iniciar', 'Cerrar', { duration: 3000 });
+          this.notifications.apiError(error, 'No se pudo iniciar la transmisión');
         },
       });
   }
@@ -1114,11 +1107,11 @@ export class EventDetailComponent {
           this.event.set(ev);
           this.streamLoading.set(false);
           this.socket.disconnect();
-          this.snackBar.open('Transmisión finalizada', 'Cerrar', { duration: 3000 });
+          this.notifications.success('Transmisión finalizada');
         },
-        error: (err: { message?: string }) => {
+        error: (error: unknown) => {
           this.streamLoading.set(false);
-          this.snackBar.open(err.message ?? 'Error al finalizar', 'Cerrar', { duration: 3000 });
+          this.notifications.apiError(error, 'No se pudo finalizar la transmisión');
         },
       });
   }
@@ -1133,7 +1126,10 @@ export class EventDetailComponent {
           this.messages.set(msgs);
           this.messagesLoading.set(false);
         },
-        error: () => this.messagesLoading.set(false),
+        error: (error: unknown) => {
+          this.messagesLoading.set(false);
+          this.notifications.apiError(error, 'No se pudieron cargar los mensajes');
+        },
       });
   }
 
@@ -1148,7 +1144,10 @@ export class EventDetailComponent {
           this.pendingCount.set(msgs.length);
           this.messagesLoading.set(false);
         },
-        error: () => this.messagesLoading.set(false),
+        error: (error: unknown) => {
+          this.messagesLoading.set(false);
+          this.notifications.apiError(error, 'No se pudieron cargar los mensajes pendientes');
+        },
       });
   }
 
@@ -1164,9 +1163,9 @@ export class EventDetailComponent {
         next: () => {
           this.messages.update((prev) => prev.filter((m) => m.id !== messageId));
           this.pendingCount.update((c) => Math.max(0, c - 1));
-          this.snackBar.open('Mensaje aprobado', 'Cerrar', { duration: 2000 });
+          this.notifications.success('Mensaje aprobado');
         },
-        error: () => this.snackBar.open('Error al aprobar mensaje', 'Cerrar', { duration: 2000 }),
+        error: () => this.notifications.error('No se pudo aprobar el mensaje'),
       });
   }
 
@@ -1178,9 +1177,9 @@ export class EventDetailComponent {
         next: () => {
           this.messages.update((prev) => prev.filter((m) => m.id !== messageId));
           this.pendingCount.update((c) => Math.max(0, c - 1));
-          this.snackBar.open('Mensaje rechazado', 'Cerrar', { duration: 2000 });
+          this.notifications.success('Mensaje rechazado');
         },
-        error: () => this.snackBar.open('Error al rechazar mensaje', 'Cerrar', { duration: 2000 }),
+        error: () => this.notifications.error('No se pudo rechazar el mensaje'),
       });
   }
 
@@ -1203,8 +1202,8 @@ export class EventDetailComponent {
             this.socket.connect(this.eventId, true);
           }
         },
-        error: (err: { message?: string }) => {
-          this.error.set(err.message ?? 'Error al cargar evento');
+        error: (error: unknown) => {
+          this.error.set(getErrorMessage(error, 'No se pudo cargar el evento'));
           this.loading.set(false);
         },
       });
@@ -1219,9 +1218,7 @@ export class EventDetailComponent {
           this.event.update((event) => (event ? { ...event, ...credentials } : event));
         },
         error: () => {
-          this.snackBar.open('No fue posible cargar las credenciales', 'Cerrar', {
-            duration: 3000,
-          });
+          this.notifications.error('No fue posible cargar las credenciales');
         },
       });
   }

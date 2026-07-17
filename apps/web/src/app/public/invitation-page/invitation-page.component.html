@@ -1,6 +1,17 @@
-<div class="invitation-page" *ngIf="!loading(); else loadingState">
+<app-feedback-banner
+  [message]="loadError()"
+  title="No pudimos cargar la invitación"
+  kind="error"
+  retryLabel="Reintentar"
+  (retry)="load()"
+/>
+<div class="invitation-page" *ngIf="!loading() && !loadError(); else loadingState">
   <ng-container *ngIf="invitation() as invitation; else notAvailableState">
-    <p class="invitation-page__banner" *ngIf="invitation.event.status === 'CANCELLED'" data-testid="cancelled-banner">
+    <p
+      class="invitation-page__banner"
+      *ngIf="invitation.event.status === 'CANCELLED'"
+      data-testid="cancelled-banner"
+    >
       Este evento ha sido cancelado
     </p>
 
@@ -32,7 +43,11 @@
 
       <p class="invitation-page__message" *ngIf="invitation.message">{{ invitation.message }}</p>
 
-      <div class="invitation-page__access-code" *ngIf="invitation.event.hasAccessCode" data-testid="access-code-block">
+      <div
+        class="invitation-page__access-code"
+        *ngIf="invitation.event.hasAccessCode"
+        data-testid="access-code-block"
+      >
         <ng-container *ngIf="invitation.accessCodeDisplay; else genericAccessNotice">
           Código de acceso: <strong>{{ invitation.accessCodeDisplay }}</strong>
         </ng-container>
@@ -65,5 +80,5 @@
 </div>
 
 <ng-template #loadingState>
-  <p class="invitation-page__loading">Cargando...</p>
+  <p class="invitation-page__loading" *ngIf="loading()" role="status">Cargando...</p>
 </ng-template>

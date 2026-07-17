@@ -1,4 +1,11 @@
-<div class="obituary-detail" *ngIf="!loading(); else loadingState">
+<app-feedback-banner
+  [message]="loadError()"
+  title="No pudimos cargar el obituario"
+  kind="error"
+  retryLabel="Reintentar"
+  (retry)="retryLoad()"
+/>
+<div class="obituary-detail" *ngIf="!loading() && !loadError(); else loadingState">
   <ng-container *ngIf="obituary() as obituary">
     <header class="obituary-detail__header">
       <button type="button" class="btn-ghost btn-ghost--sm" (click)="goBack()">
@@ -8,7 +15,7 @@
       <app-badge [color]="statusBadgeColor(obituary.status)">{{ obituary.status }}</app-badge>
     </header>
 
-    <p class="obituary-detail__error" *ngIf="actionError()">{{ actionError() }}</p>
+    <p class="obituary-detail__error" *ngIf="actionError()" role="alert">{{ actionError() }}</p>
 
     <section class="panel-card" *ngIf="!editing()">
       <div class="panel-card__body obituary-detail__profile">
@@ -40,12 +47,21 @@
           <p class="obituary-detail__epitaph" *ngIf="obituary.deceased.epitaph">
             "{{ obituary.deceased.epitaph }}"
           </p>
-          <div class="obituary-detail__biography" *ngIf="obituary.deceased.biography" [innerHTML]="obituary.deceased.biography"></div>
+          <div
+            class="obituary-detail__biography"
+            *ngIf="obituary.deceased.biography"
+            [innerHTML]="obituary.deceased.biography"
+          ></div>
         </div>
       </div>
 
       <div class="panel-card__body obituary-detail__actions">
-        <button *appHasPermission="'obituary:update'" type="button" class="btn-ghost" (click)="openEdit()">
+        <button
+          *appHasPermission="'obituary:update'"
+          type="button"
+          class="btn-ghost"
+          (click)="openEdit()"
+        >
           <mat-icon>edit</mat-icon>
           <span>Editar</span>
         </button>
@@ -55,6 +71,8 @@
             *appHasPermission="'obituary:publish'"
             type="button"
             class="btn-primary"
+            [disabled]="actionLoading()"
+            [attr.aria-busy]="actionLoading()"
             (click)="publish()"
           >
             <mat-icon>public</mat-icon>
@@ -78,20 +96,24 @@
           *appHasPermission="'messages:export'"
           type="button"
           class="btn-ghost"
+          [disabled]="bookLoading()"
+          [attr.aria-busy]="bookLoading()"
           (click)="downloadBookOfTributes()"
         >
           <mat-icon>menu_book</mat-icon>
-          <span>Generar libro de homenajes</span>
+          <span>{{ bookLoading() ? 'Generando…' : 'Generar libro de homenajes' }}</span>
         </button>
       </div>
 
-      <p class="obituary-detail__error" *ngIf="bookError()">{{ bookError() }}</p>
+      <p class="obituary-detail__error" *ngIf="bookError()" role="alert">{{ bookError() }}</p>
 
       <div class="panel-card__body obituary-detail__share" *ngIf="obituary.status === 'PUBLISHED'">
         <label class="obituary-detail__share-label">Enlace público</label>
         <div class="obituary-detail__share-row">
           <input class="obituary-detail__share-input" type="text" readonly [value]="publicUrl" />
-          <button type="button" class="btn-ghost btn-ghost--sm" (click)="copyPublicUrl()">Copiar</button>
+          <button type="button" class="btn-ghost btn-ghost--sm" (click)="copyPublicUrl()">
+            Copiar
+          </button>
         </div>
       </div>
     </section>
@@ -106,6 +128,7 @@
           [initialPhotoUrl]="obituary.deceased.photoUrl"
           [eventOptions]="eventOptions()"
           [errorMessage]="formError()"
+          [saving]="saving()"
           (save)="onSave($event)"
           (cancel)="closeEdit()"
         />
@@ -128,7 +151,7 @@
 </div>
 
 <ng-template #loadingState>
-  <p class="obituary-detail__loading">Cargando obituario...</p>
+  <p class="obituary-detail__loading" *ngIf="loading()" role="status">Cargando obituario...</p>
 </ng-template>
 
 <app-confirm-dialog
@@ -136,6 +159,7 @@
   title="Despublicar obituario"
   message="El obituario dejará de ser visible públicamente. Los mensajes y datos se conservan."
   confirmLabel="Despublicar"
+  [loading]="actionLoading()"
   (confirm)="confirmUnpublishAction()"
   (cancel)="cancelUnpublish()"
 />

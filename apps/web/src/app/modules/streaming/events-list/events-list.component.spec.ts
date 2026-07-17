@@ -2,7 +2,6 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { EventsListComponent } from './events-list.component';
 import { StreamingApiService, StreamingEvent } from '../../../core/services/streaming-api.service';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { of, throwError, Observable } from 'rxjs';
 
 const mockEvents: StreamingEvent[] = [
@@ -18,6 +17,7 @@ const mockEvents: StreamingEvent[] = [
     finishedAt: null,
     estimatedDuration: 120,
     isPublic: true,
+    hasAccessCode: false,
     streamKey: null,
     rtmpUrl: null,
     recordingUrl: null,
@@ -51,6 +51,7 @@ const mockEvents: StreamingEvent[] = [
     finishedAt: null,
     estimatedDuration: 90,
     isPublic: true,
+    hasAccessCode: false,
     streamKey: 'key-2',
     rtmpUrl: 'rtmp://example.com/live',
     recordingUrl: null,
@@ -84,6 +85,7 @@ const mockEvents: StreamingEvent[] = [
     finishedAt: '2026-07-14T12:00:00Z',
     estimatedDuration: 120,
     isPublic: true,
+    hasAccessCode: false,
     streamKey: null,
     rtmpUrl: null,
     recordingUrl: 'https://example.com/recording.mp4',
@@ -110,11 +112,7 @@ const mockEvents: StreamingEvent[] = [
 function configureTestingModule(apiMock: Partial<StreamingApiService>) {
   TestBed.configureTestingModule({
     imports: [EventsListComponent],
-    providers: [
-      provideRouter([]),
-      { provide: StreamingApiService, useValue: apiMock },
-      { provide: MatSnackBar, useValue: { open: vi.fn() } },
-    ],
+    providers: [provideRouter([]), { provide: StreamingApiService, useValue: apiMock }],
   });
 }
 
@@ -147,7 +145,7 @@ describe('EventsListComponent', () => {
   });
 
   it('should show error state when API fails', () => {
-    const findAll = vi.fn().mockReturnValue(throwError(() => ({ message: 'Network error' })));
+    const findAll = vi.fn().mockReturnValue(throwError(() => new Error('Network error')));
     configureTestingModule({ findAll });
     const fixture = TestBed.createComponent(EventsListComponent);
     const component = fixture.componentInstance;

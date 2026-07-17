@@ -1,5 +1,4 @@
 import { CommonModule } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -17,6 +16,8 @@ import {
   InvitationFormComponent,
   InvitationFormSubmission,
 } from '../invitation-form/invitation-form.component';
+import { NotificationService } from '../../../core/services/notification.service';
+import { getErrorMessage } from '../../../core/utils/error-message';
 
 export interface InvitationRow extends Invitation {
   eventTitle: string;
@@ -49,10 +50,13 @@ export class InvitationsListComponent implements OnInit {
   private readonly invitationsApi = inject(InvitationsApiService);
   private readonly streamingApi = inject(StreamingApiService);
   private readonly router = inject(Router);
+  private readonly notifications = inject(NotificationService);
 
   private readonly rawInvitations = signal<Invitation[]>([]);
   readonly total = signal(0);
   readonly loading = signal(false);
+  readonly loadError = signal('');
+  readonly saving = signal(false);
   readonly statusFilter = signal<InvitationStatus | ''>('');
 
   readonly showForm = signal(false);
@@ -79,12 +83,17 @@ export class InvitationsListComponent implements OnInit {
   ];
 
   ngOnInit(): void {
-    this.streamingApi.findAll().subscribe((events) => this.eventOptions.set(events));
+    this.streamingApi.findAll().subscribe({
+      next: (events) => this.eventOptions.set(events),
+      error: (error: unknown) =>
+        this.notifications.apiError(error, 'No se pudieron cargar los eventos disponibles'),
+    });
     this.load();
   }
 
   load(): void {
     this.loading.set(true);
+    this.loadError.set('');
     this.invitationsApi
       .list({ page: 1, limit: 100, status: this.statusFilter() || undefined })
       .subscribe({
@@ -93,7 +102,10 @@ export class InvitationsListComponent implements OnInit {
           this.total.set(result.total);
           this.loading.set(false);
         },
-        error: () => this.loading.set(false),
+        error: (error: unknown) => {
+          this.loading.set(false);
+          this.loadError.set(getErrorMessage(error, 'No se pudieron cargar las invitaciones'));
+        },
       });
   }
 
@@ -122,7 +134,9 @@ export class InvitationsListComponent implements OnInit {
   }
 
   onSave(submission: InvitationFormSubmission): void {
+    if (this.saving()) return;
     this.formError.set('');
+    this.saving.set(true);
     const { value } = submission;
 
     this.invitationsApi
@@ -134,18 +148,15 @@ export class InvitationsListComponent implements OnInit {
       })
       .subscribe({
         next: (created) => {
+          this.saving.set(false);
           this.showForm.set(false);
+          this.notifications.success('Invitación creada');
           void this.router.navigate(['/admin/invitations', created.id]);
         },
-        error: (error: HttpErrorResponse) => {
-          this.formError.set(this.extractErrorMessage(error, 'No se pudo crear la invitación'));
+        error: (error: unknown) => {
+          this.saving.set(false);
+          this.formError.set(getErrorMessage(error, 'No se pudo crear la invitación'));
         },
       });
-  }
-
-  private extractErrorMessage(error: HttpErrorResponse, fallback: string): string {
-    const message = (error.error as { message?: string | string[] } | null)?.message;
-    if (Array.isArray(message)) return message.join(', ');
-    return message ?? fallback;
   }
 }

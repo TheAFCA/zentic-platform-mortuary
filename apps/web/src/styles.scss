@@ -119,6 +119,53 @@ select {
   background: #9ca3af;
 }
 
+.zentic-notification {
+  --mdc-snackbar-container-shape: 0.75rem;
+  --mat-snack-bar-button-color: currentColor;
+  border: 1px solid transparent;
+  box-shadow: var(--shadow-xl);
+  font-weight: 600;
+}
+
+.zentic-notification--success {
+  --mdc-snackbar-container-color: var(--success-bg);
+  --mdc-snackbar-supporting-text-color: var(--success-text);
+  color: var(--success-text);
+  border-color: #86efac;
+}
+
+.zentic-notification--error {
+  --mdc-snackbar-container-color: var(--error-bg);
+  --mdc-snackbar-supporting-text-color: var(--error-text);
+  color: var(--error-text);
+  border-color: #fca5a5;
+}
+
+.zentic-notification--warning {
+  --mdc-snackbar-container-color: var(--warning-bg);
+  --mdc-snackbar-supporting-text-color: var(--warning-text);
+  color: var(--warning-text);
+  border-color: #fcd34d;
+}
+
+.zentic-notification--info {
+  --mdc-snackbar-container-color: #eff6ff;
+  --mdc-snackbar-supporting-text-color: #1e3a8a;
+  color: #1e3a8a;
+  border-color: #93c5fd;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 // Streaming — editorial ceremonial system
 // A restrained visual language for operators and families during a sensitive moment.
 .streaming-list-shell,

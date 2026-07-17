@@ -4,9 +4,9 @@ import { RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { StreamingApiService, StreamingEvent } from '../../../core/services/streaming-api.service';
 import { EventStatus } from '@zentic/shared-types';
+import { getErrorMessage } from '../../../core/utils/error-message';
 
 const STATUS_LABELS: Record<string, string> = {
   SCHEDULED: 'Programado',
@@ -29,14 +29,7 @@ const STATUS_ICONS: Record<string, string> = {
 @Component({
   selector: 'app-events-list',
   standalone: true,
-  imports: [
-    CommonModule,
-    RouterModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-  ],
+  imports: [CommonModule, RouterModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
   styles: [
     `
       :host {
@@ -448,7 +441,6 @@ const STATUS_ICONS: Record<string, string> = {
 })
 export class EventsListComponent {
   private readonly api = inject(StreamingApiService);
-  private readonly snackBar = inject(MatSnackBar);
 
   readonly loading = signal(true);
   readonly error = signal('');
@@ -497,8 +489,8 @@ export class EventsListComponent {
         this.updateCounts(events);
         this.loading.set(false);
       },
-      error: (err: { message?: string }) => {
-        this.error.set(err.message ?? 'Error al cargar eventos');
+      error: (error: unknown) => {
+        this.error.set(getErrorMessage(error, 'No se pudieron cargar los eventos'));
         this.loading.set(false);
       },
     });

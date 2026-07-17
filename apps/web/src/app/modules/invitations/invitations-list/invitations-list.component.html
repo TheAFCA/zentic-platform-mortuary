@@ -13,6 +13,7 @@
       <app-invitation-form
         [eventOptions]="eventOptions()"
         [errorMessage]="formError()"
+        [saving]="saving()"
         (save)="onSave($event)"
         (cancel)="closeForm()"
       />
@@ -51,11 +52,16 @@
       <app-data-table
         [columns]="columns"
         [rows]="invitations()"
+        [loading]="loading()"
+        [errorMessage]="loadError()"
+        (retry)="load()"
         emptyMessage="No hay invitaciones registradas"
       >
         <ng-template #rowActions let-invitation>
           <div class="invitations-table__actions">
-            <app-badge [color]="statusBadgeColor(invitation.status)">{{ invitation.status }}</app-badge>
+            <app-badge [color]="statusBadgeColor(invitation.status)">{{
+              invitation.status
+            }}</app-badge>
             <button type="button" class="btn-ghost btn-ghost--sm" (click)="openDetail(invitation)">
               Ver detalle
             </button>

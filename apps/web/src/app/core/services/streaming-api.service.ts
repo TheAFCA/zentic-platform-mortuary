@@ -18,6 +18,8 @@ export interface StreamingEvent {
   finishedAt: string | null;
   estimatedDuration: number | null;
   isPublic: boolean;
+  /** Indica si el evento requiere código sin exponer su hash. */
+  hasAccessCode: boolean;
   streamKey?: string | null;
   rtmpUrl?: string | null;
   recordingUrl: string | null;
