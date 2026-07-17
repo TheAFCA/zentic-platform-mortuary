@@ -65,6 +65,7 @@ export class StreamingSocketService implements OnDestroy {
   private viewerCountSubject = new BehaviorSubject<number>(0);
   private streamStatusSubject = new Subject<string>();
   private messagePendingSubject = new Subject<SocketMessage>();
+  private reconnectSubject = new Subject<void>();
 
   /** Observable de nuevos mensajes de homenaje aprobados */
   newMessage$: Observable<SocketMessage> = this.newMessageSubject.asObservable();
@@ -76,6 +77,8 @@ export class StreamingSocketService implements OnDestroy {
   streamStatus$: Observable<string> = this.streamStatusSubject.asObservable();
   /** Observable de mensajes pendientes de moderación (solo admin) */
   messagePending$: Observable<SocketMessage> = this.messagePendingSubject.asObservable();
+  /** Observable de reconexión del socket */
+  reconnect$: Observable<void> = this.reconnectSubject.asObservable();
 
   /**
    * Establece la conexión Socket.IO y se suscribe a la sala del evento.
@@ -118,6 +121,10 @@ export class StreamingSocketService implements OnDestroy {
 
     this.socket.on('message-pending', (data: { message: SocketMessage }) => {
       this.messagePendingSubject.next(data.message);
+    });
+
+    this.socket.on('reconnect', () => {
+      this.reconnectSubject.next();
     });
   }
 

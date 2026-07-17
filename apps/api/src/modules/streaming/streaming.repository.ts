@@ -194,7 +194,7 @@ export class StreamingRepository {
     estimatedDuration: number,
     excludeId?: string,
   ) {
-    const endTime = new Date(scheduledAt.getTime() + estimatedDuration * 60000);
+    const newEnd = new Date(scheduledAt.getTime() + estimatedDuration * 60000);
     return this.prisma.event.findFirst({
       where: {
         tenantId,
@@ -204,7 +204,35 @@ export class StreamingRepository {
           notIn: ['CANCELLED', 'FINISHED'],
         },
         id: excludeId ? { not: excludeId } : undefined,
-        scheduledAt: { lt: endTime },
+        AND: [
+          { scheduledAt: { lt: newEnd } },
+          {
+            estimatedDuration: {
+              not: null,
+            },
+          },
+        ],
+      },
+    });
+  }
+
+  async findOverlappingByRoomAndTimeRange(
+    tenantId: string,
+    roomId: string,
+    newStart: Date,
+    newEnd: Date,
+    excludeId?: string,
+  ) {
+    return this.prisma.event.findFirst({
+      where: {
+        tenantId,
+        roomId,
+        deletedAt: null,
+        status: {
+          notIn: ['CANCELLED', 'FINISHED'],
+        },
+        id: excludeId ? { not: excludeId } : undefined,
+        scheduledAt: { lt: newEnd },
       },
     });
   }
@@ -372,7 +400,7 @@ export class StreamingRepository {
   async findLeadsWithEmailByEvent(tenantId: string, eventId: string) {
     return this.prisma.lead.findMany({
       where: { tenantId, eventId, email: { not: null }, deletedAt: null },
-      select: { email: true, name: true },
+      select: { email: true, name: true, consent: true },
     });
   }
 

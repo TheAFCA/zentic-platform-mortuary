@@ -10,9 +10,11 @@ import {
   WsException,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { createAdapter } from '@socket.io/redis-adapter';
+import { Redis } from 'ioredis';
 import {
   JwtPayload,
   WsNewMessage,
@@ -23,25 +25,9 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventRoomDto } from './dto/event-room.dto';
 import { STREAM_ACCESS_COOKIE } from '../streaming/stream-access.service';
+import { REDIS_CLIENT } from '../redis/redis.module';
+import { DistributedRateLimiterService } from '../streaming/services/distributed-rate-limiter.service';
 
-/**
- * Gateway WebSocket para el módulo de Streaming.
- *
- * Gestiona la comunicación en tiempo real entre el servidor y los clientes
- * (viewers y administradores) durante eventos de transmisión en vivo.
- * Opera bajo el namespace `/events` y utiliza salas (rooms) por evento
- * para segmentar las comunicaciones.
- *
- * @remarks
- * Eventos del socket:
- * - `join-event` / `leave-event`: gestión de salas de viewers
- * - `join-admin` / `leave-admin`: gestión de salas de administración
- * - `new-message`: mensaje de homenaje aprobado
- * - `new-reaction`: reacción rápida
- * - `viewer-count`: actualización del contador de espectadores
- * - `stream-status`: cambio de estado del stream (LIVE/FINISHED)
- * - `message-pending`: nuevo mensaje esperando moderación (solo admins)
- */
 @WebSocketGateway({
   namespace: '/events',
   cors: {
@@ -57,19 +43,27 @@ export class NotificationsGateway
 
   private readonly logger = new Logger(NotificationsGateway.name);
 
-  /** eventId -> ids de sockets viewers (excluye administradores) conectados a ese evento. */
   private readonly eventViewers = new Map<string, Set<string>>();
-  /** socketId -> eventId, para saber a qué evento pertenecía un socket al desconectarse. */
   private readonly socketToEvent = new Map<string, string>();
+  private readonly VIEWER_PREFIX = 'ws:viewers:';
+  private readonly VIEWER_TTL = 120;
+  private pubClient: Redis;
+  private subClient: Redis;
 
   constructor(
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
-  ) {}
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    private readonly rateLimiter: DistributedRateLimiterService,
+  ) {
+    this.pubClient = redis;
+    this.subClient = redis.duplicate();
+  }
 
-  afterInit(_server: Server) {
-    this.logger.log('WebSocket gateway initialized');
+  afterInit(server: Server) {
+    server.adapter(createAdapter(this.pubClient, this.subClient));
+    this.logger.log('WebSocket gateway initialized with Redis adapter');
   }
 
   async handleConnection(client: Socket) {
@@ -78,13 +72,13 @@ export class NotificationsGateway
     if (user) this.socketData(client).user = user;
   }
 
-  handleDisconnect(client: Socket) {
+  async handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`);
     const eventId = this.socketToEvent.get(client.id);
     this.socketToEvent.delete(client.id);
     if (eventId) {
-      this.removeViewer(eventId, client.id);
-      this.broadcastCurrentViewerCount(eventId);
+      await this.removeViewer(eventId, client.id);
+      await this.broadcastCurrentViewerCount(eventId);
     }
   }
 
@@ -102,6 +96,14 @@ export class NotificationsGateway
     @MessageBody(new ValidationPipe({ whitelist: true, transform: true }))
     data: EventRoomDto,
   ) {
+    const isAllowed = await this.rateLimiter.checkRateLimit(
+      'admin_action',
+      this.rateLimiter.buildKey({ ip: client.handshake.address, sessionId: client.id }),
+    );
+    if (!isAllowed) {
+      throw new WsException('Demasiadas solicitudes. Intenta más tarde.');
+    }
+
     const event = await this.prisma.event.findFirst({
       where: { id: data.eventId, deletedAt: null },
       select: { tenantId: true, isPublic: true },
@@ -113,14 +115,15 @@ export class NotificationsGateway
     const previousEventId = this.socketToEvent.get(client.id);
     if (previousEventId && previousEventId !== data.eventId) {
       await client.leave(`event:${previousEventId}`);
-      this.removeViewer(previousEventId, client.id);
-      this.broadcastCurrentViewerCount(previousEventId);
+      await this.removeViewer(previousEventId, client.id);
+      await this.broadcastCurrentViewerCount(previousEventId);
     }
+
     await client.join(`event:${data.eventId}`);
     this.socketToEvent.set(client.id, data.eventId);
-    this.addViewer(data.eventId, client.id);
+    await this.addViewer(data.eventId, client.id);
     this.logger.log(`Client ${client.id} joined event room: ${data.eventId}`);
-    this.broadcastCurrentViewerCount(data.eventId);
+    await this.broadcastCurrentViewerCount(data.eventId);
   }
 
   /**
@@ -137,8 +140,8 @@ export class NotificationsGateway
   ) {
     await client.leave(`event:${data.eventId}`);
     this.socketToEvent.delete(client.id);
-    this.removeViewer(data.eventId, client.id);
-    this.broadcastCurrentViewerCount(data.eventId);
+    await this.removeViewer(data.eventId, client.id);
+    await this.broadcastCurrentViewerCount(data.eventId);
   }
 
   /**
@@ -155,6 +158,14 @@ export class NotificationsGateway
     @MessageBody(new ValidationPipe({ whitelist: true, transform: true }))
     data: EventRoomDto,
   ) {
+    const isAllowed = await this.rateLimiter.checkRateLimit(
+      'admin_action',
+      this.rateLimiter.buildKey({ ip: client.handshake.address, sessionId: client.id }),
+    );
+    if (!isAllowed) {
+      throw new WsException('Demasiadas solicitudes. Intenta más tarde.');
+    }
+
     const user =
       this.socketData(client).user ?? (await this.authenticateClient(client));
     if (!user || !this.canModerate(user)) {
@@ -177,9 +188,9 @@ export class NotificationsGateway
 
     this.socketData(client).user = user;
     await client.join(`event:${data.eventId}:admin`);
-    this.removeViewer(data.eventId, client.id);
+    await this.removeViewer(data.eventId, client.id);
     this.logger.log(`Admin ${client.id} joined admin room: ${data.eventId}`);
-    this.broadcastCurrentViewerCount(data.eventId);
+    await this.broadcastCurrentViewerCount(data.eventId);
   }
 
   /**
@@ -197,27 +208,65 @@ export class NotificationsGateway
     await client.leave(`event:${data.eventId}:admin`);
   }
 
-  private addViewer(eventId: string, socketId: string): void {
+  private async addViewer(eventId: string, socketId: string): Promise<void> {
     if (!this.eventViewers.has(eventId)) {
       this.eventViewers.set(eventId, new Set());
     }
     this.eventViewers.get(eventId)!.add(socketId);
+
+    const redisKey = `${this.VIEWER_PREFIX}${eventId}`;
+    await this.redis.sadd(redisKey, socketId);
+    await this.redis.expire(redisKey, this.VIEWER_TTL);
   }
 
-  private removeViewer(eventId: string, socketId: string): void {
+  private async removeViewer(eventId: string, socketId: string): Promise<void> {
     const viewers = this.eventViewers.get(eventId);
-    if (!viewers) return;
-    viewers.delete(socketId);
-    if (viewers.size === 0) this.eventViewers.delete(eventId);
+    if (viewers) {
+      viewers.delete(socketId);
+      if (viewers.size === 0) this.eventViewers.delete(eventId);
+    }
+
+    const redisKey = `${this.VIEWER_PREFIX}${eventId}`;
+    await this.redis.srem(redisKey, socketId);
   }
 
-  /**
-   * Emite el contador de espectadores actual de un evento (RF-STREAM-009).
-   * `tenantId` se deja vacío: el frontend solo consume `count` de este payload.
-   */
-  private broadcastCurrentViewerCount(eventId: string): void {
-    const count = this.eventViewers.get(eventId)?.size ?? 0;
+  private async broadcastCurrentViewerCount(eventId: string): Promise<void> {
+    const localCount = this.eventViewers.get(eventId)?.size ?? 0;
+
+    const redisKey = `${this.VIEWER_PREFIX}${eventId}`;
+    let redisCount = 0;
+    try {
+      redisCount = await this.redis.scard(redisKey);
+    } catch {
+      redisCount = localCount;
+    }
+
+    const count = Math.max(localCount, redisCount);
     this.broadcastViewerCount(eventId, { eventId, tenantId: '', count });
+
+    await this.debouncedSyncViewerCount(eventId, count);
+  }
+
+  private readonly syncTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+  private async debouncedSyncViewerCount(eventId: string, count: number): Promise<void> {
+    const existing = this.syncTimers.get(eventId);
+    if (existing) clearTimeout(existing);
+
+    this.syncTimers.set(
+      eventId,
+      setTimeout(async () => {
+        this.syncTimers.delete(eventId);
+        try {
+          await this.prisma.event.updateMany({
+            where: { id: eventId },
+            data: { viewerCount: count },
+          });
+        } catch (error) {
+          this.logger.warn(`Error syncing viewer count for ${eventId}: ${error}`);
+        }
+      }, 5000),
+    );
   }
 
   /**

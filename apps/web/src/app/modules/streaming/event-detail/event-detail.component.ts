@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DomSanitizer } from '@angular/platform-browser';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -818,6 +819,7 @@ export class EventDetailComponent {
   private readonly socket = inject(StreamingSocketService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly authState = inject(AuthStateService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly loading = signal(true);
   readonly error = signal('');
@@ -873,26 +875,30 @@ export class EventDetailComponent {
       this.eventId = id;
       this.loadEvent();
 
-      this.socket.newMessage$.subscribe((msg) => {
+      this.socket.newMessage$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((msg) => {
         this.messages.update((prev) => [...prev, msg as unknown as Message]);
       });
 
-      this.socket.viewerCount$.subscribe((count) => {
+      this.socket.viewerCount$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((count) => {
         this.viewerCount.set(count);
         this.event.update((e) => (e ? { ...e, viewerCount: count } : e));
       });
 
-      this.socket.streamStatus$.subscribe((status) => {
+      this.socket.streamStatus$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((status) => {
         this.event.update((e) => (e ? { ...e, status: status as EventStatus } : e));
       });
 
-      this.socket.messagePending$.subscribe((msg) => {
+      this.socket.messagePending$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((msg) => {
         this.pendingCount.update((c) => c + 1);
         if (this.showingPending()) {
           this.messages.update((prev) => [...prev, msg as unknown as Message]);
         }
       });
     }
+
+    this.destroyRef.onDestroy(() => {
+      this.socket.disconnect();
+    });
   }
 
   readonly canManage = computed(() => this.authState.hasPermission('streaming:manage'));
@@ -917,7 +923,7 @@ export class EventDetailComponent {
   }
 
   copyStreamKey(value: string): void {
-    this.api.auditStreamKeyCopy(this.eventId).subscribe({
+    this.api.auditStreamKeyCopy(this.eventId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => this.copyToClipboard(value),
       error: () =>
         this.snackBar.open('No fue posible registrar la copia', 'Cerrar', {
@@ -927,7 +933,7 @@ export class EventDetailComponent {
   }
 
   revealCredentials(): void {
-    this.api.revealCredentials(this.eventId).subscribe({
+    this.api.revealCredentials(this.eventId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (credentials) => {
         this.credentialsRevealed.set(true);
         this.event.update((event) => (event ? { ...event, ...credentials } : event));
@@ -940,7 +946,7 @@ export class EventDetailComponent {
   }
 
   rotateStreamKey(): void {
-    this.api.rotateStreamKey(this.eventId).subscribe({
+    this.api.rotateStreamKey(this.eventId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (credentials) => {
         this.credentialsRevealed.set(true);
         this.event.update((event) => (event ? { ...event, ...credentials } : event));
@@ -965,7 +971,7 @@ export class EventDetailComponent {
 
   startStream(): void {
     this.streamLoading.set(true);
-    this.api.startStream(this.eventId).subscribe({
+    this.api.startStream(this.eventId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (ev) => {
         this.event.set(ev);
         this.streamLoading.set(false);
@@ -981,7 +987,7 @@ export class EventDetailComponent {
 
   stopStream(): void {
     this.streamLoading.set(true);
-    this.api.stopStream(this.eventId).subscribe({
+    this.api.stopStream(this.eventId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (ev) => {
         this.event.set(ev);
         this.streamLoading.set(false);
@@ -997,7 +1003,7 @@ export class EventDetailComponent {
 
   loadMessages(): void {
     this.messagesLoading.set(true);
-    this.api.getMessages(this.eventId).subscribe({
+    this.api.getMessages(this.eventId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (msgs) => {
         this.messages.set(msgs);
         this.messagesLoading.set(false);
@@ -1008,7 +1014,7 @@ export class EventDetailComponent {
 
   loadPendingMessages(): void {
     this.messagesLoading.set(true);
-    this.api.getPendingMessages(this.eventId).subscribe({
+    this.api.getPendingMessages(this.eventId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (msgs) => {
         this.messages.set(msgs);
         this.pendingCount.set(msgs.length);
@@ -1023,7 +1029,7 @@ export class EventDetailComponent {
   }
 
   approveMessage(messageId: string): void {
-    this.api.approveMessage(this.eventId, messageId).subscribe({
+    this.api.approveMessage(this.eventId, messageId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.messages.update((prev) => prev.filter((m) => m.id !== messageId));
         this.pendingCount.update((c) => Math.max(0, c - 1));
@@ -1034,7 +1040,7 @@ export class EventDetailComponent {
   }
 
   rejectMessage(messageId: string): void {
-    this.api.rejectMessage(this.eventId, messageId).subscribe({
+    this.api.rejectMessage(this.eventId, messageId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.messages.update((prev) => prev.filter((m) => m.id !== messageId));
         this.pendingCount.update((c) => Math.max(0, c - 1));
@@ -1046,7 +1052,7 @@ export class EventDetailComponent {
 
   private loadEvent(): void {
     this.loading.set(true);
-    this.api.findOne(this.eventId).subscribe({
+    this.api.findOne(this.eventId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (ev) => {
         this.event.set(ev);
         this.loading.set(false);
@@ -1068,7 +1074,7 @@ export class EventDetailComponent {
   }
 
   private loadCredentials(): void {
-    this.api.getCredentials(this.eventId).subscribe({
+    this.api.getCredentials(this.eventId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (credentials) => {
         this.event.update((event) => (event ? { ...event, ...credentials } : event));
       },

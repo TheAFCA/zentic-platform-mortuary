@@ -366,7 +366,10 @@ describe('StreamingRepository', () => {
           deletedAt: null,
           status: { notIn: ['CANCELLED', 'FINISHED'] },
           id: undefined,
-          scheduledAt: { lt: expectedEndTime },
+          AND: [
+            { scheduledAt: { lt: expectedEndTime } },
+            { estimatedDuration: { not: null } },
+          ],
         },
       });
       expect(result).toEqual(mockOverlapEvent);
@@ -394,7 +397,10 @@ describe('StreamingRepository', () => {
           deletedAt: null,
           status: { notIn: ['CANCELLED', 'FINISHED'] },
           id: { not: 'event-1' },
-          scheduledAt: { lt: expectedEndTime },
+          AND: [
+            { scheduledAt: { lt: expectedEndTime } },
+            { estimatedDuration: { not: null } },
+          ],
         },
       });
       expect(result).toBeNull();
@@ -685,7 +691,7 @@ describe('StreamingRepository', () => {
     const tenantId = 'tenant-1';
 
     it('should call lead.findMany filtering by tenantId, eventId and non-null email', async () => {
-      const leads = [{ email: 'jane@test.com', name: 'Jane Doe' }];
+      const leads = [{ email: 'jane@test.com', name: 'Jane Doe', consent: true }];
       (prisma.lead.findMany as jest.Mock).mockResolvedValue(leads);
 
       const result = await repository.findLeadsWithEmailByEvent(
@@ -700,7 +706,7 @@ describe('StreamingRepository', () => {
           email: { not: null },
           deletedAt: null,
         },
-        select: { email: true, name: true },
+        select: { email: true, name: true, consent: true },
       });
       expect(result).toEqual(leads);
     });

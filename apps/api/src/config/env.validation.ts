@@ -59,6 +59,7 @@ const envSchema = z.object({
     .int()
     .positive()
     .default(7200),
+  ACCESS_CODE_HMAC_SECRET: z.string().min(16).default('zentic-access-code-secret'),
 
   // Storage
   STORAGE_PROVIDER: z.enum(['r2', 's3']).default('r2'),

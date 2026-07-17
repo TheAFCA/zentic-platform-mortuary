@@ -8,7 +8,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { randomBytes, createHash } from 'crypto';
+import { randomBytes, createHash, createHmac } from 'crypto';
 import { StreamingRepository } from './streaming.repository';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { EmailService } from '../email/email.service';
@@ -16,7 +16,13 @@ import {
   StreamProvider,
   StreamWebhookEvent,
   STREAM_PROVIDER_TOKEN,
+  UnknownProviderError,
+  NoSignalError,
 } from './providers/stream-provider.interface';
+import {
+  resolveProviderForEvent,
+  withProviderTimeout,
+} from './providers/stream-provider.factory';
 import { MuxStreamProvider } from './providers/mux-stream.provider';
 import { CloudflareStreamProvider } from './providers/cloudflare-stream.provider';
 import {
@@ -28,8 +34,12 @@ import {
 } from './dto';
 import { EventStatus, JwtPayload } from '@zentic/shared-types';
 import { Prisma } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
 import { Env } from '../../config/env.validation';
 import { StreamAccessService } from './stream-access.service';
+import { EventStateMachineService } from './domain/event-state-machine.service';
+import { TransitionContext } from './domain/event-state-machine.service';
+import { ProvisioningSagaService } from './domain/provisioning-saga.service';
 
 /**
  * Servicio principal del módulo de Streaming.
@@ -61,6 +71,9 @@ export class StreamingService {
     private readonly cloudflareProvider: CloudflareStreamProvider,
     private readonly emailService: EmailService,
     private readonly streamAccess: StreamAccessService,
+    private readonly stateMachine: EventStateMachineService,
+    private readonly prisma: PrismaService,
+    private readonly provisioningSaga: ProvisioningSagaService,
   ) {}
 
   // ── CRUD Events ────────────────────────────────────────────────────
@@ -284,12 +297,17 @@ export class StreamingService {
         throw new NotFoundException('Usuario asignado no encontrado');
     }
 
-    if (dto.roomId && dto.estimatedDuration) {
-      const overlapping = await this.repo.findByRoomAndTimeOverlap(
+    if (dto.roomId) {
+      const scheduledAt = new Date(dto.scheduledAt);
+      const newEnd = dto.estimatedDuration
+        ? new Date(scheduledAt.getTime() + dto.estimatedDuration * 60000)
+        : new Date(scheduledAt.getTime() + 60 * 60 * 1000);
+
+      const overlapping = await this.repo.findOverlappingByRoomAndTimeRange(
         tenantId,
         dto.roomId,
-        new Date(dto.scheduledAt),
-        dto.estimatedDuration,
+        scheduledAt,
+        newEnd,
       );
       if (overlapping) {
         throw new ConflictException('La sala está ocupada en ese horario');
@@ -339,27 +357,12 @@ export class StreamingService {
 
     const event = await this.repo.create(eventData);
 
-    const {
-      streamKey,
-      rtmpUrl,
-      providerStreamId,
-      playbackId,
-      playbackPolicy,
-      playbackUrl,
-    } = await this.provider.createLiveStream({
-      signedPlayback: !event.isPublic,
-    });
+    // Iniciar saga de aprovisionamiento asíncrona (LIFE-09, LIFE-10, LIFE-11, LIFE-12)
+    this.provisioningSaga
+      .provisionEvent(tenantId, event.id, eventData.isPublic ?? true)
+      .catch((err) => this.logger.error(`Provisioning saga failed: ${err}`));
 
-    const provisioned = await this.repo.update(tenantId, event.id, {
-      streamKey,
-      rtmpUrl,
-      provider: this.provider.name,
-      providerStreamId,
-      playbackId,
-      playbackPolicy,
-      ...(playbackUrl ? { recordingUrl: playbackUrl } : {}),
-    });
-    return this.withoutStreamingSecrets(provisioned);
+    return this.withoutStreamingSecrets(event);
   }
 
   async getPlayback(slug: string, accessToken?: string) {
@@ -398,6 +401,27 @@ export class StreamingService {
         dto.roomId,
       );
       if (!existingRoom) throw new NotFoundException('Sala no encontrada');
+    }
+
+    const effectiveRoomId = dto.roomId ?? event.roomId;
+    const effectiveScheduledAt = dto.scheduledAt
+      ? new Date(dto.scheduledAt)
+      : event.scheduledAt;
+    const effectiveDuration = dto.estimatedDuration ?? event.estimatedDuration;
+    if (effectiveRoomId && effectiveDuration) {
+      const newEnd = new Date(
+        effectiveScheduledAt.getTime() + effectiveDuration * 60000,
+      );
+      const overlapping = await this.repo.findOverlappingByRoomAndTimeRange(
+        tenantId,
+        effectiveRoomId,
+        effectiveScheduledAt,
+        newEnd,
+        id,
+      );
+      if (overlapping) {
+        throw new ConflictException('La sala está ocupada en ese horario');
+      }
     }
 
     if (dto.clientId !== undefined && dto.clientId) {
@@ -502,27 +526,53 @@ export class StreamingService {
   async startStream(tenantId: string, id: string) {
     const event = await this.findOneEntity(tenantId, id);
 
-    if (event.status !== 'SCHEDULED') {
+    if (event.status === 'LIVE') {
+      this.logger.log(`startStream idempotente: evento ${id} ya está en LIVE`);
+      return this.withoutStreamingSecrets(event);
+    }
+
+    const eventProvider = this.resolveProvider(event);
+    const transitionResult = await this.stateMachine.transitionIdempotent(
+      tenantId,
+      id,
+      event.status,
+      'LIVE',
+      'start_stream',
+      {
+        tenantId,
+        eventId: id,
+        actorId: event.assignedToId ?? undefined,
+        source: 'start_stream',
+      },
+    );
+
+    if (!transitionResult.success) {
       throw new BadRequestException(
-        `El evento está en estado "${event.status}", no se puede iniciar`,
+        transitionResult.error ?? 'No se pudo iniciar la transmisión',
       );
     }
 
     if (event.providerStreamId) {
-      const status = await this.provider.getStreamStatus(
-        event.providerStreamId,
-      );
-      if (status !== 'active') {
-        throw new BadRequestException(
-          'No se detecta señal de video. Verifica la configuración del OBS.',
+      try {
+        const status = await withProviderTimeout(
+          eventProvider,
+          'getStreamStatus',
+          () => eventProvider.getStreamStatus(event.providerStreamId!),
+        );
+        if (status !== 'active') {
+          throw new NoSignalError(event.providerStreamId);
+        }
+      } catch (error) {
+        if (error instanceof NoSignalError) {
+          throw new BadRequestException(
+            'No se detecta señal de video. Verifica la configuración del OBS.',
+          );
+        }
+        this.logger.warn(
+          `No se pudo verificar estado del proveedor para evento ${id}: ${error}`,
         );
       }
     }
-
-    const updated = await this.repo.update(tenantId, id, {
-      status: 'LIVE',
-      startedAt: new Date(),
-    });
 
     this.gateway.broadcastStreamStatus(id, {
       eventId: id,
@@ -533,6 +583,7 @@ export class StreamingService {
     await this.notifyLeadsStreamStarted(tenantId, event.slug, event.title, id);
 
     this.logger.log(`Stream started: ${id}`);
+    const updated = await this.findOneEntity(tenantId, id);
     return this.withoutStreamingSecrets(updated);
   }
 
@@ -550,19 +601,23 @@ export class StreamingService {
     const leads = await this.repo.findLeadsWithEmailByEvent(tenantId, eventId);
     if (!leads.length) return;
 
+    const consentingLeads = leads.filter(
+      (l): l is typeof l & { email: string } => l.consent === true && !!l.email,
+    );
+
+    if (!consentingLeads.length) return;
+
     const frontendUrl = this.config.get<string>('FRONTEND_URL');
     const eventUrl = `${frontendUrl}/e/${slug}`;
 
     const results = await Promise.allSettled(
-      leads
-        .filter((lead): lead is typeof lead & { email: string } => !!lead.email)
-        .map((lead) =>
-          this.emailService.sendStreamStartedEmail({
-            to: lead.email,
-            eventTitle,
-            eventUrl,
-          }),
-        ),
+      consentingLeads.map((lead) =>
+        this.emailService.sendStreamStartedEmail({
+          to: lead.email,
+          eventTitle,
+          eventUrl,
+        }),
+      ),
     );
 
     for (const result of results) {
@@ -586,20 +641,51 @@ export class StreamingService {
   async stopStream(tenantId: string, id: string) {
     const event = await this.findOneEntity(tenantId, id);
 
-    if (event.status !== 'LIVE' && event.status !== 'PAUSED') {
+    if (event.status === 'FINISHED') {
+      this.logger.log(`stopStream idempotente: evento ${id} ya está en FINISHED`);
+      return this.withoutStreamingSecrets(event);
+    }
+
+    if (event.status !== 'LIVE' && event.status !== 'PAUSED' && event.status !== 'INTERRUPTED') {
       throw new BadRequestException(
         `El evento está en estado "${event.status}", no se puede finalizar`,
       );
     }
 
-    if (event.providerStreamId) {
-      await this.provider.disableLiveStream(event.providerStreamId);
+    const eventProvider = this.resolveProvider(event);
+    const transitionResult = await this.stateMachine.transitionIdempotent(
+      tenantId,
+      id,
+      event.status,
+      'FINISHED',
+      'stop_stream',
+      {
+        tenantId,
+        eventId: id,
+        actorId: event.assignedToId ?? undefined,
+        source: 'stop_stream',
+      },
+    );
+
+    if (!transitionResult.success) {
+      throw new BadRequestException(
+        transitionResult.error ?? 'No se pudo finalizar la transmisión',
+      );
     }
 
-    const updated = await this.repo.update(tenantId, id, {
-      status: 'FINISHED',
-      finishedAt: new Date(),
-    });
+    if (event.providerStreamId) {
+      try {
+        await withProviderTimeout(
+          eventProvider,
+          'disableLiveStream',
+          () => eventProvider.disableLiveStream(event.providerStreamId!),
+        );
+      } catch (error) {
+        this.logger.warn(
+          `Error al deshabilitar stream remoto ${event.providerStreamId}: ${error}`,
+        );
+      }
+    }
 
     this.gateway.broadcastStreamStatus(id, {
       eventId: id,
@@ -608,6 +694,87 @@ export class StreamingService {
     });
 
     this.logger.log(`Stream finished: ${id}`);
+    const updated = await this.findOneEntity(tenantId, id);
+    return this.withoutStreamingSecrets(updated);
+  }
+
+  async pauseStream(tenantId: string, id: string) {
+    const event = await this.findOneEntity(tenantId, id);
+
+    if (event.status !== 'LIVE') {
+      throw new BadRequestException(
+        `El evento está en estado "${event.status}", no se puede pausar`,
+      );
+    }
+
+    const transitionResult = await this.stateMachine.transitionIdempotent(
+      tenantId,
+      id,
+      event.status,
+      'PAUSED',
+      'pause_stream',
+      {
+        tenantId,
+        eventId: id,
+        actorId: event.assignedToId ?? undefined,
+        source: 'pause_stream',
+      },
+    );
+
+    if (!transitionResult.success) {
+      throw new BadRequestException(
+        transitionResult.error ?? 'No se pudo pausar la transmisión',
+      );
+    }
+
+    this.gateway.broadcastStreamStatus(id, {
+      eventId: id,
+      tenantId,
+      status: EventStatus.PAUSED,
+    });
+
+    this.logger.log(`Stream paused: ${id}`);
+    const updated = await this.findOneEntity(tenantId, id);
+    return this.withoutStreamingSecrets(updated);
+  }
+
+  async resumeStream(tenantId: string, id: string) {
+    const event = await this.findOneEntity(tenantId, id);
+
+    if (event.status !== 'PAUSED') {
+      throw new BadRequestException(
+        `El evento está en estado "${event.status}", no se puede reanudar`,
+      );
+    }
+
+    const transitionResult = await this.stateMachine.transitionIdempotent(
+      tenantId,
+      id,
+      event.status,
+      'LIVE',
+      'resume_stream',
+      {
+        tenantId,
+        eventId: id,
+        actorId: event.assignedToId ?? undefined,
+        source: 'resume_stream',
+      },
+    );
+
+    if (!transitionResult.success) {
+      throw new BadRequestException(
+        transitionResult.error ?? 'No se pudo reanudar la transmisión',
+      );
+    }
+
+    this.gateway.broadcastStreamStatus(id, {
+      eventId: id,
+      tenantId,
+      status: EventStatus.LIVE,
+    });
+
+    this.logger.log(`Stream resumed: ${id}`);
+    const updated = await this.findOneEntity(tenantId, id);
     return this.withoutStreamingSecrets(updated);
   }
 
@@ -654,6 +821,28 @@ export class StreamingService {
       throw new NotFoundException('Evento no encontrado');
 
     await this.assertViewerAccess(event, accessToken);
+
+    if (event.status !== 'LIVE') {
+      throw new BadRequestException(
+        'No se pueden enviar mensajes en el estado actual del evento',
+      );
+    }
+
+    const recentCutoff = new Date(Date.now() - 60 * 1000);
+    const recentMessage = await this.prisma.message.findFirst({
+      where: {
+        eventId: event.id,
+        authorName: dto.authorName,
+        content: dto.content,
+        createdAt: { gte: recentCutoff },
+        deletedAt: null,
+      },
+    });
+    if (recentMessage) {
+      throw new BadRequestException(
+        'Ya enviaste un mensaje similar recientemente',
+      );
+    }
 
     const message = await this.repo.createMessage({
       authorName: dto.authorName,
@@ -711,6 +900,14 @@ export class StreamingService {
     approvedByUserId: string,
   ) {
     await this.findOneEntity(tenantId, eventId);
+
+    const existingMessage = await this.prisma.message.findFirst({
+      where: { id: messageId, eventId, tenantId, deletedAt: null },
+    });
+    if (!existingMessage || existingMessage.status !== 'PENDING') {
+      throw new BadRequestException('El mensaje ya fue procesado');
+    }
+
     const message = await this.repo.approveMessage(
       tenantId,
       eventId,
@@ -794,6 +991,12 @@ export class StreamingService {
 
     await this.assertViewerAccess(event, accessToken);
 
+    if (event.status !== 'LIVE') {
+      throw new BadRequestException(
+        'No se pueden enviar mensajes en el estado actual del evento',
+      );
+    }
+
     if (clientIp) {
       const now = Date.now();
       const lastReaction = this.reactionCooldowns.get(clientIp) ?? 0;
@@ -864,36 +1067,83 @@ export class StreamingService {
 
   /**
    * Aplica el efecto de un evento de webhook ya verificado y normalizado.
-   * Solo `recording.ready` produce un cambio; los demás son informativos
-   * (el estado LIVE/FINISHED lo controla el operador desde el panel).
-   * Idempotente: reescribir los mismos campos no tiene efecto secundario
-   * si el proveedor reenvía el mismo evento.
+   * - `recording.ready`: actualiza la grabación (ya existente)
+   * - `stream.active`: sincroniza estado a LIVE si es necesario (LIFE-07)
+   * - `stream.idle`: maneja pérdida de señal (LIFE-06, LIFE-07)
+   * Idempotente: reescribir los mismos campos no tiene efecto secundario.
    */
   private async processProviderWebhookEvent(
     event: StreamWebhookEvent | null,
   ): Promise<void> {
-    if (!event || event.type !== 'recording.ready') return;
+    if (!event) return;
 
     const found = await this.repo.findByProviderStreamId(
       event.providerStreamId,
     );
     if (!found) return;
 
-    const recordingExpiry =
-      found.tenant.plan === 'ENTERPRISE'
-        ? null
-        : new Date(
-            Date.now() +
-              (found.tenant.plan === 'PRO' ? 90 : 30) * 24 * 60 * 60 * 1000,
+    switch (event.type) {
+      case 'stream.active': {
+        if (found.status === 'SCHEDULED' || found.status === 'PAUSED' || found.status === 'INTERRUPTED') {
+          this.logger.log(
+            `Webhook stream.active: sincronizando evento ${found.id} a LIVE`,
           );
+          await this.stateMachine.transitionIdempotent(
+            found.tenantId,
+            found.id,
+            found.status,
+            'LIVE',
+            'signal_recovered',
+            { tenantId: found.tenantId, eventId: found.id, source: 'webhook' },
+          ).catch((err) =>
+            this.logger.warn(
+              `Error sincronizando stream.active para ${found.id}: ${err}`,
+            ),
+          );
+        }
+        break;
+      }
 
-    await this.repo.update(found.tenantId, found.id, {
-      recordingUrl: event.recordingUrl ?? undefined,
-      playbackId: event.playbackId,
-      playbackPolicy: event.playbackPolicy,
-      recordingReady: true,
-      recordingExpiry,
-    });
+      case 'stream.idle': {
+        if (found.status === 'LIVE' || found.status === 'PAUSED') {
+          this.logger.warn(
+            `Webhook stream.idle: señal perdida para evento ${found.id}`,
+          );
+          await this.stateMachine.transitionIdempotent(
+            found.tenantId,
+            found.id,
+            found.status,
+            'INTERRUPTED',
+            'signal_lost',
+            { tenantId: found.tenantId, eventId: found.id, source: 'webhook' },
+          ).catch((err) =>
+            this.logger.warn(
+              `Error marcando stream.idle para ${found.id}: ${err}`,
+            ),
+          );
+        }
+        break;
+      }
+
+      case 'recording.ready': {
+        const recordingExpiry =
+          found.tenant.plan === 'ENTERPRISE'
+            ? null
+            : new Date(
+                Date.now() +
+                  (found.tenant.plan === 'PRO' ? 90 : 30) * 24 * 60 * 60 * 1000,
+              );
+
+        await this.repo.update(found.tenantId, found.id, {
+          recordingUrl: event.recordingUrl ?? undefined,
+          playbackId: event.playbackId,
+          playbackPolicy: event.playbackPolicy,
+          recordingReady: true,
+          recordingExpiry,
+        });
+        break;
+      }
+    }
   }
 
   // ── Access code ────────────────────────────────────────────────────
@@ -927,11 +1177,13 @@ export class StreamingService {
       throw new ForbiddenException('Código de acceso incorrecto');
     }
 
-    if (dto.name || dto.email) {
+    if ((dto.name || dto.email) && dto.consent === true) {
       await this.repo.createLead({
         name: dto.name ?? 'Anónimo',
         email: dto.email,
         consent: dto.consent ?? false,
+        consentVersion: dto.consentVersion,
+        consentSource: dto.consentSource,
         source: 'DIRECT',
         tenant: { connect: { id: event.tenantId } },
         event: { connect: { id: event.id } },
@@ -974,7 +1226,8 @@ export class StreamingService {
    * @returns Hash SHA-256 del código
    */
   private hashAccessCode(code: string): string {
-    return createHash('sha256').update(code).digest('hex');
+    const secret = this.config.get<string>('ACCESS_CODE_HMAC_SECRET') ?? 'zentic-access-code-secret';
+    return createHmac('sha256', secret).update(code).digest('hex');
   }
 
   private async assertViewerAccess(
@@ -1045,6 +1298,19 @@ export class StreamingService {
       playbackPolicy: 'signed',
     });
     return this.cloudflareProvider.getPlaybackUrl(playbackId, 'signed');
+  }
+
+  /**
+   * Resuelve el proveedor de streaming para un evento específico (PROV-01).
+   * Usa `event.provider` si está definido, o el proveedor por defecto.
+   */
+  private resolveProvider(event: { provider: string | null }): StreamProvider {
+    return resolveProviderForEvent(
+      event,
+      this.muxProvider,
+      this.cloudflareProvider,
+      this.provider,
+    );
   }
 
   private maskSecret(secret: string | null): string | null {

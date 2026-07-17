@@ -219,7 +219,7 @@ describe('StreamingRepository — multi-tenant isolation', () => {
           email: { not: null },
           deletedAt: null,
         },
-        select: { email: true, name: true },
+        select: { email: true, name: true, consent: true },
       });
     });
   });

@@ -21,7 +21,11 @@ export type PlayerMode = 'live' | 'recording';
   imports: [CommonModule, MatIconModule],
   template: `
     @if (src(); as url) {
-      <div class="hls-player">
+      <div
+        class="hls-player"
+        role="application"
+        aria-label="Reproductor de video {{ mode() === 'live' ? 'en vivo' : 'grabación' }}"
+      >
         <video
           #videoEl
           controls
@@ -31,7 +35,7 @@ export type PlayerMode = 'live' | 'recording';
           [attr.poster]="posterUrl() || null"
         ></video>
 
-        <div class="hls-player__overlay">
+        <div class="hls-player__overlay" aria-live="polite" aria-atomic="true">
           @if (status() !== 'ready') {
             @switch (status()) {
               @case ('loading') {

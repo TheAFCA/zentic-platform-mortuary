@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { NotificationsGateway } from './notifications.gateway';
+import { DistributedRateLimiterService } from '../streaming/services/distributed-rate-limiter.service';
 
 @Module({
   imports: [
@@ -12,7 +13,7 @@ import { NotificationsGateway } from './notifications.gateway';
       }),
     }),
   ],
-  providers: [NotificationsGateway],
+  providers: [NotificationsGateway, DistributedRateLimiterService],
   exports: [NotificationsGateway],
 })
 export class NotificationsModule {}

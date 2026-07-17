@@ -38,6 +38,8 @@ enum TenantPlan {
 
 enum EventStatus {
   SCHEDULED
+  PROVISIONING
+  PROVISION_FAILED
   LIVE
   PAUSED
   FINISHED
@@ -174,6 +176,7 @@ model User {
   passwordResets PasswordReset[]
   permissions    UserPermission[]
   assignedEvents Event[]
+  eventTransitions EventStateTransition[]
 
   @@unique([email, tenantId])
   @@index([tenantId])
@@ -340,12 +343,33 @@ model Event {
 
   messages Message[]
   leads    Lead[]
+  stateTransitions EventStateTransition[]
 
   @@index([tenantId])
   @@index([tenantId, createdAt])
   @@index([tenantId, status])
   @@index([tenantId, clientId])
   @@index([assignedToId])
+}
+
+model EventStateTransition {
+  id             String        @id @default(cuid())
+  tenantId       String
+  eventId        String
+  event          Event         @relation(fields: [eventId], references: [id])
+  fromStatus     EventStatus
+  toStatus       EventStatus
+  trigger        String?
+  actorId        String?
+  actor          User?         @relation(fields: [actorId], references: [id])
+  actorRole      String?
+  source         String        @default("manual")
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+
+  @@index([tenantId])
+  @@index([eventId])
+  @@index([eventId, createdAt])
 }
 
 model Message {
@@ -455,8 +479,10 @@ model Lead {
   phone      String?
   source     LeadSource @default(DIRECT)
   status     LeadStatus @default(NEW)
-  consent    Boolean    @default(false)
-  createdAt  DateTime   @default(now())
+  consent        Boolean    @default(false)
+  consentVersion String?
+  consentSource  String?
+  createdAt      DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
   deletedAt  DateTime?
 

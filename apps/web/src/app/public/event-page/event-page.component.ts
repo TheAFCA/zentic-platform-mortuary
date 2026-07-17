@@ -11,6 +11,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { StreamingApiService, PublicEvent } from '../../core/services/streaming-api.service';
 import {
   StreamingSocketService,
@@ -392,6 +393,7 @@ export class EventPageComponent {
   private eventId = '';
   private playbackRefreshTimer: ReturnType<typeof setInterval> | null = null;
   private playbackRefreshInFlight = false;
+  private lastMessageTimestamp = '';
 
   constructor() {
     this.slug = this.route.snapshot.paramMap.get('slug') ?? '';
@@ -401,6 +403,7 @@ export class EventPageComponent {
       this.messages.update((prev) =>
         prev.some((current) => current.id === msg.id) ? prev : [...prev, msg],
       );
+      this.lastMessageTimestamp = msg.createdAt;
     });
 
     this.socket.viewerCount$.subscribe((count) => {
@@ -545,8 +548,8 @@ export class EventPageComponent {
           this.eventId = res.eventId;
           this.loadPublicEvent();
         },
-        error: (err: { message?: string }) => {
-          this.accessError.set(err.message ?? 'Código incorrecto');
+        error: (err: { error?: { message?: string }; message?: string }) => {
+          this.accessError.set(err.error?.message ?? err.message ?? 'Código incorrecto');
           this.accessLoading.set(false);
         },
       });
@@ -571,9 +574,9 @@ export class EventPageComponent {
           this.messageSending.set(false);
           this.snackBar.open('Mensaje enviado', 'Cerrar', { duration: 2000 });
         },
-        error: () => {
+        error: (err: { error?: { message?: string }; message?: string }) => {
           this.messageSending.set(false);
-          this.snackBar.open('Error al enviar mensaje', 'Cerrar', {
+          this.snackBar.open(err.error?.message ?? err.message ?? 'Error al enviar mensaje', 'Cerrar', {
             duration: 2000,
           });
         },
@@ -626,6 +629,10 @@ export class EventPageComponent {
   /** Conecta al Socket.IO para recibir actualizaciones en tiempo real */
   private connectSocket(): void {
     this.socket.connect(this.eventId);
+
+    this.socket.reconnect$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.loadMessages();
+    });
   }
 
   private loadMessages(): void {
