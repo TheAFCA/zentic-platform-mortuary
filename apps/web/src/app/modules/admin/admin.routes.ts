@@ -28,6 +28,11 @@ export const ADMIN_ROUTES: Routes = [
           import('../invitations/invitations.routes').then((m) => m.INVITATIONS_ROUTES),
       },
       {
+        path: 'tribute-book',
+        loadChildren: () =>
+          import('../tribute-book/tribute-book.routes').then((m) => m.TRIBUTE_BOOK_ROUTES),
+      },
+      {
         path: 'leads',
         loadChildren: () => import('../leads/leads.routes').then((m) => m.LEADS_ROUTES),
       },

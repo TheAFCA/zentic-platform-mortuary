@@ -1,0 +1,49 @@
+<div class="history-page">
+  <header class="history-page__header">
+    <a routerLink="/admin/tribute-book" class="btn-ghost btn-ghost--sm">
+      <mat-icon>arrow_back</mat-icon>
+      <span>Volver a mensajes</span>
+    </a>
+    <p class="history-page__eyebrow">Libro de Homenajes</p>
+    <h1 class="history-page__title">Historial de generaciones</h1>
+  </header>
+
+  <p class="history-page__error" *ngIf="error()">{{ error() }}</p>
+
+  <section class="panel-card">
+    <div class="panel-card__header">
+      <h2>Libros generados</h2>
+    </div>
+
+    <div class="panel-card__body panel-card__body--flush">
+      <app-data-table
+        [columns]="columns"
+        [rows]="generations()"
+        emptyMessage="Todavía no se ha generado ningún libro de homenajes"
+      >
+        <ng-template #rowActions let-generation>
+          <div class="history-table__actions">
+            <app-badge [color]="statusBadgeColor(generation.status)">{{ generation.status }}</app-badge>
+            <button
+              *ngIf="generation.status === 'READY'"
+              type="button"
+              class="btn-ghost btn-ghost--sm"
+              [disabled]="downloadingId() === generation.id"
+              (click)="download(generation)"
+            >
+              Descargar
+            </button>
+            <button
+              *ngIf="generation.status === 'ERROR'"
+              type="button"
+              class="btn-ghost btn-ghost--sm"
+              (click)="retry(generation)"
+            >
+              Reintentar
+            </button>
+          </div>
+        </ng-template>
+      </app-data-table>
+    </div>
+  </section>
+</div>

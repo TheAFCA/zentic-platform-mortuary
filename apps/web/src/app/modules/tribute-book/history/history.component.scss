@@ -1,0 +1,71 @@
+@use '../../../shared/styles/panel' as panel;
+
+.history-page {
+  display: grid;
+  gap: 1rem;
+  max-width: 72rem;
+}
+
+.history-page__header {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.history-page__eyebrow {
+  @include panel.eyebrow;
+}
+
+.history-page__title {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: panel.$ink;
+}
+
+.history-page__error {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
+
+.panel-card {
+  @include panel.panel-card;
+}
+
+.panel-card__header {
+  padding: 1.35rem 1.5rem 0.75rem;
+}
+
+.panel-card__header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: panel.$ink;
+}
+
+.panel-card__body {
+  padding: 0.75rem 1.5rem 1.5rem;
+}
+
+.panel-card__body--flush {
+  padding: 0.5rem 0 0.25rem;
+}
+
+.btn-ghost {
+  @include panel.ghost-button;
+}
+
+.btn-ghost--sm {
+  min-height: 2.25rem;
+  padding: 0 0.9rem;
+  font-size: 0.85rem;
+}
+
+.history-table__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}

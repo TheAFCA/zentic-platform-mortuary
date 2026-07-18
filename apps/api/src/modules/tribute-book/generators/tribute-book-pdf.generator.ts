@@ -7,9 +7,21 @@ import PDFDocument = require('pdfkit');
 import { FilesService } from '../../files/files.service';
 import { PdfGenerator } from './pdf-generator.interface';
 
+// Ver el comentario equivalente en invitations/services/invitation-image.service.ts: sharp
+// publica un paquete dual ESM/CJS que ningún import estándar tipa correctamente bajo nuestro
+// tsconfig CJS.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const sharpFactory = require('sharp') as (input: Buffer) => SharpPipeline;
+
+interface SharpPipeline {
+  png(): SharpPipeline;
+  toBuffer(): Promise<Buffer>;
+}
+
 export interface TributeBookMessage {
   authorName: string;
   content: string;
+  iconType: string | null;
   createdAt: Date;
 }
 
@@ -33,6 +45,21 @@ const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
   month: 'long',
   year: 'numeric',
 };
+
+// Los emoji del selector de íconos (❤️🕯️🌸🕊️) no son representables con las fuentes
+// estándar de pdfkit (WinAnsiEncoding) — se usa una etiqueta en español en su lugar.
+const ICON_LABELS: Record<string, string> = {
+  HEART: 'Corazón',
+  CANDLE: 'Vela',
+  FLOWER: 'Flor',
+  DOVE: 'Paloma',
+  CROSS: 'Cruz',
+};
+
+function iconLabel(iconType: string | null): string | null {
+  if (!iconType) return null;
+  return ICON_LABELS[iconType.toUpperCase()] ?? null;
+}
 
 @Injectable()
 export class TributeBookPdfGenerator implements PdfGenerator<TributeBookContext> {
@@ -67,7 +94,9 @@ export class TributeBookPdfGenerator implements PdfGenerator<TributeBookContext>
     const centerX = doc.page.width / 2;
     const fullName = `${deceased.firstName} ${deceased.lastName}`;
     const photoBuffer = deceased.photoUrl
-      ? await this.filesService.readLocalFile(deceased.photoUrl)
+      ? await this.toEmbeddableImage(
+          await this.filesService.readLocalFile(deceased.photoUrl),
+        )
       : null;
 
     const photoSize = 200;
@@ -142,7 +171,11 @@ export class TributeBookPdfGenerator implements PdfGenerator<TributeBookContext>
         doc.addPage();
       }
 
-      doc.fontSize(12).font('Helvetica-Bold').text(message.authorName);
+      const label = iconLabel(message.iconType);
+      const authorLine = label
+        ? `${message.authorName}  ·  ${label}`
+        : message.authorName;
+      doc.fontSize(12).font('Helvetica-Bold').text(authorLine);
       doc
         .font('Helvetica')
         .fontSize(9)
@@ -157,7 +190,9 @@ export class TributeBookPdfGenerator implements PdfGenerator<TributeBookContext>
     context: TributeBookContext,
   ): Promise<void> {
     const logoBuffer = context.tenantLogoUrl
-      ? await this.filesService.readLocalFile(context.tenantLogoUrl)
+      ? await this.toEmbeddableImage(
+          await this.filesService.readLocalFile(context.tenantLogoUrl),
+        )
       : null;
     const centerX = doc.page.width / 2;
     const logoSize = 120;
@@ -172,6 +207,18 @@ export class TributeBookPdfGenerator implements PdfGenerator<TributeBookContext>
     }
 
     doc.fontSize(14).text(context.tenantName, { align: 'center' });
+  }
+
+  /**
+   * pdfkit solo puede embeber JPEG y PNG — las fotos/logos subidos como WEBP (formato aceptado
+   * por FilesService.upload) rompían la generación con "Unknown image format". Se normaliza
+   * siempre a PNG antes de pasarlo a `doc.image()`, sin importar el formato de origen.
+   */
+  private async toEmbeddableImage(
+    buffer: Buffer | null,
+  ): Promise<Buffer | null> {
+    if (!buffer) return null;
+    return sharpFactory(buffer).png().toBuffer();
   }
 
   private renderInitialsCircle(

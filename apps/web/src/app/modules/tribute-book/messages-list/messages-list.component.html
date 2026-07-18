@@ -1,0 +1,152 @@
+<div class="messages-page">
+  <header class="messages-page__header">
+    <p class="messages-page__eyebrow">Libro de Homenajes</p>
+    <h1 class="messages-page__title">Mensajes de homenaje</h1>
+    <p class="messages-page__subtitle">
+      Modera los mensajes de condolencias de streaming y obituarios en un solo lugar
+    </p>
+  </header>
+
+  <p class="messages-page__error" *ngIf="error()">{{ error() }}</p>
+
+  <section class="panel-card">
+    <div class="panel-card__header panel-card__header--split">
+      <div>
+        <h2>Mensajes</h2>
+        <p class="panel-card__count">{{ total() }} mensaje(s)</p>
+      </div>
+      <div class="messages-page__actions">
+        <select
+          class="messages-page__filter"
+          [ngModel]="statusFilter()"
+          (ngModelChange)="statusFilter.set($event); onFilterChange()"
+          [ngModelOptions]="{ standalone: true }"
+        >
+          <option value="">Todos los estados</option>
+          <option *ngFor="let status of statuses" [value]="status">{{ status }}</option>
+        </select>
+
+        <select
+          class="messages-page__filter"
+          [ngModel]="originFilter()"
+          (ngModelChange)="originFilter.set($event); onFilterChange()"
+          [ngModelOptions]="{ standalone: true }"
+        >
+          <option value="">Todos los orígenes</option>
+          <option value="STREAMING">Streaming</option>
+          <option value="OBITUARY">Obituario</option>
+        </select>
+
+        <button type="button" class="btn-ghost btn-ghost--sm" (click)="toggleTrashed()">
+          <mat-icon>{{ trashed() ? 'inventory_2' : 'delete_outline' }}</mat-icon>
+          <span>{{ trashed() ? 'Ver activos' : 'Ver papelera' }}</span>
+        </button>
+
+        <a routerLink="/admin/tribute-book/history" class="btn-ghost btn-ghost--sm">
+          <mat-icon>history</mat-icon>
+          <span>Historial</span>
+        </a>
+
+        <button
+          *appHasPermission="'messages:export'"
+          type="button"
+          class="btn-primary"
+          [disabled]="!canGenerate"
+          [title]="canGenerate ? '' : 'Filtra por un evento u obituario para generar su libro'"
+          (click)="openGenerateDialog()"
+        >
+          <mat-icon>menu_book</mat-icon>
+          <span>Generar libro de homenajes</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="panel-card__body messages-page__bulk-bar" *ngIf="selectedIds().size > 0 && !trashed()">
+      <span>{{ selectedIds().size }} seleccionado(s)</span>
+      <button
+        *appHasPermission="'messages:approve'"
+        type="button"
+        class="btn-primary btn-primary--sm"
+        [disabled]="bulkApproving()"
+        (click)="bulkApprove()"
+      >
+        Aprobar seleccionados
+      </button>
+    </div>
+
+    <div class="panel-card__body panel-card__body--flush">
+      <app-data-table
+        [columns]="columns"
+        [rows]="messages()"
+        [selectable]="!trashed()"
+        [rowId]="rowId"
+        [selectedIds]="selectedIds()"
+        (selectionChange)="onSelectionChange($event)"
+        emptyMessage="No hay mensajes para mostrar"
+      >
+        <ng-template #rowActions let-message>
+          <div class="messages-table__actions">
+            <app-badge [color]="statusBadgeColor(message.status)">{{ message.status }}</app-badge>
+
+            <ng-container *ngIf="!trashed()">
+              <ng-container *ngIf="message.status === 'PENDING'">
+                <button
+                  *appHasPermission="'messages:approve'"
+                  type="button"
+                  class="btn-ghost btn-ghost--sm"
+                  (click)="approve(message)"
+                >
+                  Aprobar
+                </button>
+                <button
+                  *appHasPermission="'messages:approve'"
+                  type="button"
+                  class="btn-ghost btn-ghost--sm"
+                  (click)="reject(message)"
+                >
+                  Rechazar
+                </button>
+              </ng-container>
+              <button
+                *appHasPermission="'messages:delete'"
+                type="button"
+                class="btn-ghost btn-ghost--sm"
+                (click)="remove(message)"
+              >
+                Eliminar
+              </button>
+            </ng-container>
+
+            <button
+              *ngIf="trashed()"
+              type="button"
+              class="btn-ghost btn-ghost--sm"
+              (click)="restore(message)"
+            >
+              Restaurar
+            </button>
+          </div>
+        </ng-template>
+      </app-data-table>
+    </div>
+  </section>
+</div>
+
+<app-confirm-dialog
+  [open]="showGenerateDialog()"
+  title="Generar Libro de Homenajes"
+  message="El libro se genera de forma asíncrona; podrás descargarlo desde el historial cuando esté listo."
+  confirmLabel="Generar PDF"
+  (confirm)="confirmGenerate()"
+  (cancel)="cancelGenerate()"
+>
+  <label class="messages-page__checkbox">
+    <input type="checkbox" [(ngModel)]="includeStreamingMessages" [ngModelOptions]="{ standalone: true }" />
+    Incluir mensajes de streaming
+  </label>
+  <label class="messages-page__checkbox">
+    <input type="checkbox" [(ngModel)]="includeObituaryMessages" [ngModelOptions]="{ standalone: true }" />
+    Incluir mensajes de obituario
+  </label>
+  <p class="messages-page__error" *ngIf="generateError()">{{ generateError() }}</p>
+</app-confirm-dialog>

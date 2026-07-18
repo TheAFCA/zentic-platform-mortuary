@@ -17,14 +17,12 @@ import {
   ObituaryRepository,
   ObituaryWithDeceased,
 } from './obituary.repository';
-import { PdfFactory } from './factories/pdf.factory';
 import { DeceasedPhotoService } from './services/deceased-photo.service';
 import { FilesService } from '../files/files.service';
 
 describe('ObituaryService', () => {
   let service: ObituaryService;
   let obituaryRepo: jest.Mocked<ObituaryRepository>;
-  let pdfFactory: jest.Mocked<PdfFactory>;
   let deceasedPhotoService: jest.Mocked<DeceasedPhotoService>;
   let filesService: jest.Mocked<FilesService>;
 
@@ -105,6 +103,7 @@ describe('ObituaryService', () => {
     content: 'Un abrazo enorme',
     iconType: null,
     status: MessageStatus.PENDING,
+    rejectedReason: null,
     approvedBy: null,
     approvedAt: null,
     createdAt: new Date('2026-07-01T00:00:00.000Z'),
@@ -132,17 +131,9 @@ describe('ObituaryService', () => {
             softDelete: jest.fn(),
             findEventById: jest.fn(),
             listEventsForTenant: jest.fn(),
-            findTenantBrand: jest.fn(),
             findApprovedMessages: jest.fn(),
-            findMessages: jest.fn(),
-            findMessageById: jest.fn(),
             createMessage: jest.fn(),
-            setMessageStatus: jest.fn(),
           },
-        },
-        {
-          provide: PdfFactory,
-          useValue: { create: jest.fn() },
         },
         {
           provide: DeceasedPhotoService,
@@ -161,7 +152,6 @@ describe('ObituaryService', () => {
 
     service = module.get(ObituaryService);
     obituaryRepo = module.get(ObituaryRepository);
-    pdfFactory = module.get(PdfFactory);
     deceasedPhotoService = module.get(DeceasedPhotoService);
     filesService = module.get(FilesService);
   });
@@ -215,26 +205,6 @@ describe('ObituaryService', () => {
       await service.listAvailableEvents(TENANT_ID);
 
       expect(obituaryRepo.listEventsForTenant).toHaveBeenCalledWith(TENANT_ID);
-    });
-  });
-
-  describe('listMessages', () => {
-    it('returns mapped messages for an existing obituary', async () => {
-      obituaryRepo.findById.mockResolvedValue(obituaryRecord());
-      obituaryRepo.findMessages.mockResolvedValue([messageRecord()]);
-
-      const result = await service.listMessages(TENANT_ID, 'obituary-1', {});
-
-      expect(result).toHaveLength(1);
-      expect(result[0].authorName).toBe('Juan Pérez');
-    });
-
-    it('throws NotFoundException when the obituary does not exist', async () => {
-      obituaryRepo.findById.mockResolvedValue(null);
-
-      await expect(
-        service.listMessages(TENANT_ID, 'missing', {}),
-      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -596,112 +566,6 @@ describe('ObituaryService', () => {
           content: 'Hola',
         }),
       ).rejects.toThrow(NotFoundException);
-    });
-  });
-
-  describe('approveMessage / rejectMessage', () => {
-    it('approves a pending message and records the actor', async () => {
-      obituaryRepo.findMessageById
-        .mockResolvedValueOnce(messageRecord())
-        .mockResolvedValueOnce(
-          messageRecord({ status: MessageStatus.APPROVED }),
-        );
-
-      await service.approveMessage(
-        TENANT_ID,
-        'obituary-1',
-        'message-1',
-        'user-1',
-      );
-
-      expect(obituaryRepo.setMessageStatus).toHaveBeenCalledWith(
-        TENANT_ID,
-        'obituary-1',
-        'message-1',
-        MessageStatus.APPROVED,
-        'user-1',
-      );
-    });
-
-    it('rejects a pending message', async () => {
-      obituaryRepo.findMessageById
-        .mockResolvedValueOnce(messageRecord())
-        .mockResolvedValueOnce(
-          messageRecord({ status: MessageStatus.REJECTED }),
-        );
-
-      await service.rejectMessage(
-        TENANT_ID,
-        'obituary-1',
-        'message-1',
-        'user-1',
-      );
-
-      expect(obituaryRepo.setMessageStatus).toHaveBeenCalledWith(
-        TENANT_ID,
-        'obituary-1',
-        'message-1',
-        MessageStatus.REJECTED,
-        'user-1',
-      );
-    });
-
-    it('throws NotFoundException for a message that does not exist', async () => {
-      obituaryRepo.findMessageById.mockResolvedValue(null);
-
-      await expect(
-        service.approveMessage(TENANT_ID, 'obituary-1', 'missing', 'user-1'),
-      ).rejects.toThrow(NotFoundException);
-    });
-  });
-
-  describe('generateBookOfTributes', () => {
-    it('throws BadRequestException when there are no approved messages (RN-OBT-008)', async () => {
-      obituaryRepo.findById.mockResolvedValue(obituaryRecord());
-      obituaryRepo.findApprovedMessages.mockResolvedValue([]);
-
-      await expect(
-        service.generateBookOfTributes(TENANT_ID, 'obituary-1'),
-      ).rejects.toThrow(
-        'Aún no hay mensajes aprobados para incluir en el libro',
-      );
-    });
-
-    it('throws BadRequestException when there are more than 500 approved messages', async () => {
-      obituaryRepo.findById.mockResolvedValue(obituaryRecord());
-      obituaryRepo.findApprovedMessages.mockResolvedValue(
-        Array.from({ length: 501 }, () =>
-          messageRecord({ status: MessageStatus.APPROVED }),
-        ),
-      );
-
-      await expect(
-        service.generateBookOfTributes(TENANT_ID, 'obituary-1'),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('generates a PDF buffer with the expected filename', async () => {
-      obituaryRepo.findById.mockResolvedValue(obituaryRecord());
-      obituaryRepo.findApprovedMessages.mockResolvedValue([
-        messageRecord({ status: MessageStatus.APPROVED }),
-      ]);
-      obituaryRepo.findTenantBrand.mockResolvedValue({
-        name: 'Funeraria Demo',
-        logoUrl: null,
-      });
-      const generator = {
-        generate: jest.fn().mockResolvedValue(Buffer.from('%PDF-1.4')),
-      };
-      pdfFactory.create.mockReturnValue(generator);
-
-      const result = await service.generateBookOfTributes(
-        TENANT_ID,
-        'obituary-1',
-      );
-
-      expect(pdfFactory.create).toHaveBeenCalledWith('TRIBUTE_BOOK');
-      expect(result.filename).toBe('libro-homenajes-maria-lopez-a1b2-2026.pdf');
-      expect(result.buffer.toString()).toBe('%PDF-1.4');
     });
   });
 
