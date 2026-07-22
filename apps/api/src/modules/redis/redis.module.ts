@@ -12,11 +12,14 @@ export const REDIS_CLIENT = Symbol('REDIS_CLIENT');
       provide: REDIS_CLIENT,
       inject: [ConfigService],
       useFactory: (config: ConfigService<Env>) => {
-        return new Redis(config.get<string>('REDIS_URL') ?? 'redis://localhost:6379', {
-          lazyConnect: true,
-          maxRetriesPerRequest: 3,
-          retryStrategy: (times) => Math.min(times * 200, 3000),
-        });
+        return new Redis(
+          config.get<string>('REDIS_URL') ?? 'redis://localhost:6379',
+          {
+            lazyConnect: true,
+            maxRetriesPerRequest: 3,
+            retryStrategy: (times) => Math.min(times * 200, 3000),
+          },
+        );
       },
     },
   ],

@@ -83,7 +83,7 @@ async function bootstrap() {
     hasMuxWebhookSecret: Boolean(config.get<string>('MUX_WEBHOOK_SECRET')),
     hasMuxPlaybackSigning: Boolean(
       config.get<string>('MUX_SIGNING_KEY_ID') &&
-        config.get<string>('MUX_PRIVATE_KEY'),
+      config.get<string>('MUX_PRIVATE_KEY'),
     ),
   });
   if (nodeEnv !== 'production') {

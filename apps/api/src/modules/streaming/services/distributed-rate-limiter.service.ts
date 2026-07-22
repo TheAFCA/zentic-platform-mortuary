@@ -19,9 +19,7 @@ export class DistributedRateLimiterService {
     admin_action: { windowMs: 60_000, maxAttempts: 60, keyPrefix: 'rl:admin' },
   };
 
-  constructor(
-    @Inject(REDIS_CLIENT) private readonly redis: Redis,
-  ) {}
+  constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {}
 
   /**
    * Verifica si una acción está dentro del límite de tasa.
@@ -68,7 +66,11 @@ export class DistributedRateLimiterService {
    * Construye una clave compuesta para rate limiting (MOD-03).
    * Combina IP, evento y sesión.
    */
-  buildKey(params: { ip?: string; eventId?: string; sessionId?: string }): string {
+  buildKey(params: {
+    ip?: string;
+    eventId?: string;
+    sessionId?: string;
+  }): string {
     const parts: string[] = [];
     if (params.ip) parts.push(`ip:${params.ip}`);
     if (params.eventId) parts.push(`event:${params.eventId}`);

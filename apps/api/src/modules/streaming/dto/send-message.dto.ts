@@ -16,4 +16,3 @@ export class SendMessageDto {
   @IsOptional()
   iconType?: string;
 }
-

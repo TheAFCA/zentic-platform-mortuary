@@ -691,7 +691,9 @@ describe('StreamingRepository', () => {
     const tenantId = 'tenant-1';
 
     it('should call lead.findMany filtering by tenantId, eventId and non-null email', async () => {
-      const leads = [{ email: 'jane@test.com', name: 'Jane Doe', consent: true }];
+      const leads = [
+        { email: 'jane@test.com', name: 'Jane Doe', consent: true },
+      ];
       (prisma.lead.findMany as jest.Mock).mockResolvedValue(leads);
 
       const result = await repository.findLeadsWithEmailByEvent(

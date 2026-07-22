@@ -107,7 +107,10 @@ export class NotificationsGateway
   ) {
     const isAllowed = await this.rateLimiter.checkRateLimit(
       'admin_action',
-      this.rateLimiter.buildKey({ ip: client.handshake.address, sessionId: client.id }),
+      this.rateLimiter.buildKey({
+        ip: client.handshake.address,
+        sessionId: client.id,
+      }),
     );
     if (!isAllowed) {
       throw new WsException('Demasiadas solicitudes. Intenta más tarde.');
@@ -169,7 +172,10 @@ export class NotificationsGateway
   ) {
     const isAllowed = await this.rateLimiter.checkRateLimit(
       'admin_action',
-      this.rateLimiter.buildKey({ ip: client.handshake.address, sessionId: client.id }),
+      this.rateLimiter.buildKey({
+        ip: client.handshake.address,
+        sessionId: client.id,
+      }),
     );
     if (!isAllowed) {
       throw new WsException('Demasiadas solicitudes. Intenta más tarde.');
@@ -256,24 +262,34 @@ export class NotificationsGateway
     await this.debouncedSyncViewerCount(eventId, count);
   }
 
-  private readonly syncTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly syncTimers = new Map<
+    string,
+    ReturnType<typeof setTimeout>
+  >();
 
-  private async debouncedSyncViewerCount(eventId: string, count: number): Promise<void> {
+  private async debouncedSyncViewerCount(
+    eventId: string,
+    count: number,
+  ): Promise<void> {
     const existing = this.syncTimers.get(eventId);
     if (existing) clearTimeout(existing);
 
     this.syncTimers.set(
       eventId,
-      setTimeout(async () => {
+      setTimeout(() => {
         this.syncTimers.delete(eventId);
-        try {
-          await this.prisma.event.updateMany({
-            where: { id: eventId },
-            data: { viewerCount: count },
+        void Promise.resolve()
+          .then(() =>
+            this.prisma.event.updateMany({
+              where: { id: eventId },
+              data: { viewerCount: count },
+            }),
+          )
+          .catch((error) => {
+            this.logger.warn(
+              `Error syncing viewer count for ${eventId}: ${error}`,
+            );
           });
-        } catch (error) {
-          this.logger.warn(`Error syncing viewer count for ${eventId}: ${error}`);
-        }
       }, 5000),
     );
   }

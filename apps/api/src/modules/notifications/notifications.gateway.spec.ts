@@ -44,8 +44,31 @@ describe('NotificationsGateway', () => {
           useValue: { getOrThrow: jest.fn().mockReturnValue('jwt-secret') },
         },
         { provide: PrismaService, useValue: prisma },
-        { provide: DistributedRateLimiterService, useValue: { checkRateLimit: jest.fn().mockResolvedValue(true), buildKey: jest.fn().mockReturnValue('test-key') } },
-        { provide: REDIS_CLIENT, useValue: { sadd: jest.fn().mockResolvedValue(1), srem: jest.fn().mockResolvedValue(1), scard: jest.fn().mockResolvedValue(0), expire: jest.fn().mockResolvedValue(1), duplicate: () => ({ sadd: jest.fn().mockResolvedValue(1), srem: jest.fn().mockResolvedValue(1), scard: jest.fn().mockResolvedValue(0), expire: jest.fn().mockResolvedValue(1), subscribe: jest.fn(), on: jest.fn(), psubscribe: jest.fn() }) } },
+        {
+          provide: DistributedRateLimiterService,
+          useValue: {
+            checkRateLimit: jest.fn().mockResolvedValue(true),
+            buildKey: jest.fn().mockReturnValue('test-key'),
+          },
+        },
+        {
+          provide: REDIS_CLIENT,
+          useValue: {
+            sadd: jest.fn().mockResolvedValue(1),
+            srem: jest.fn().mockResolvedValue(1),
+            scard: jest.fn().mockResolvedValue(0),
+            expire: jest.fn().mockResolvedValue(1),
+            duplicate: () => ({
+              sadd: jest.fn().mockResolvedValue(1),
+              srem: jest.fn().mockResolvedValue(1),
+              scard: jest.fn().mockResolvedValue(0),
+              expire: jest.fn().mockResolvedValue(1),
+              subscribe: jest.fn(),
+              on: jest.fn(),
+              psubscribe: jest.fn(),
+            }),
+          },
+        },
       ],
     }).compile();
 

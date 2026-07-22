@@ -15,7 +15,13 @@ import {
 import { Type } from 'class-transformer';
 import { ModerationMode } from '@zentic/shared-types';
 
-const VALID_CEREMONY_TYPES = ['VELATORIO', 'CREMACION', 'ENTIERRO', 'MISA', 'OTRO'] as const;
+const VALID_CEREMONY_TYPES = [
+  'VELATORIO',
+  'CREMACION',
+  'ENTIERRO',
+  'MISA',
+  'OTRO',
+] as const;
 
 class CreateDeceasedDto {
   @IsString()

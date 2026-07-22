@@ -24,7 +24,9 @@ export class ProviderTimeoutError extends Error {
     public readonly operation: string,
     public readonly timeoutMs: number,
   ) {
-    super(`Proveedor ${providerName}: timeouterror en ${operation} después de ${timeoutMs}ms`);
+    super(
+      `Proveedor ${providerName}: timeouterror en ${operation} después de ${timeoutMs}ms`,
+    );
     this.name = 'ProviderTimeoutError';
   }
 }
@@ -35,7 +37,9 @@ export class ProviderUnavailableError extends Error {
     public readonly operation: string,
     public readonly cause?: Error,
   ) {
-    super(`Proveedor ${providerName} no disponible en ${operation}: ${cause?.message ?? 'desconocido'}`);
+    super(
+      `Proveedor ${providerName} no disponible en ${operation}: ${cause?.message ?? 'desconocido'}`,
+    );
     this.name = 'ProviderUnavailableError';
   }
 }
@@ -49,7 +53,9 @@ export class NoSignalError extends Error {
 
 export class UnknownProviderError extends Error {
   constructor(provider: string) {
-    super(`Proveedor de streaming desconocido: "${provider}". Los proveedores válidos son: mux, cloudflare.`);
+    super(
+      `Proveedor de streaming desconocido: "${provider}". Los proveedores válidos son: mux, cloudflare.`,
+    );
     this.name = 'UnknownProviderError';
   }
 }

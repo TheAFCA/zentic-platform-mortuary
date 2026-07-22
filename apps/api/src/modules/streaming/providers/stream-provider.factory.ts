@@ -3,7 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import { Env } from '../../../config/env.validation';
 import { MuxStreamProvider } from './mux-stream.provider';
 import { CloudflareStreamProvider } from './cloudflare-stream.provider';
-import { STREAM_PROVIDER_TOKEN, StreamProvider, UnknownProviderError } from './stream-provider.interface';
+import {
+  STREAM_PROVIDER_TOKEN,
+  StreamProvider,
+  UnknownProviderError,
+} from './stream-provider.interface';
 import { Event } from '@prisma/client';
 
 export const streamProviderFactory: FactoryProvider = {
@@ -59,7 +63,9 @@ export async function withProviderTimeout<T>(
       fn(),
       new Promise<never>((_, reject) => {
         controller.signal.addEventListener('abort', () => {
-          reject(new Error(`Provider operation timed out after ${timeoutMs}ms`));
+          reject(
+            new Error(`Provider operation timed out after ${timeoutMs}ms`),
+          );
         });
       }),
     ]);
