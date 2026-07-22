@@ -93,19 +93,15 @@
         </ng-container>
 
         <button
-          *appHasPermission="'messages:export'"
+          *appHasPermission="'messages:read'"
           type="button"
           class="btn-ghost"
-          [disabled]="bookLoading()"
-          [attr.aria-busy]="bookLoading()"
-          (click)="downloadBookOfTributes()"
+          (click)="openTributeBook()"
         >
           <mat-icon>menu_book</mat-icon>
-          <span>{{ bookLoading() ? 'Generando…' : 'Generar libro de homenajes' }}</span>
+          <span>Ver mensajes de homenaje</span>
         </button>
       </div>
-
-      <p class="obituary-detail__error" *ngIf="bookError()" role="alert">{{ bookError() }}</p>
 
       <div class="panel-card__body obituary-detail__share" *ngIf="obituary.status === 'PUBLISHED'">
         <label class="obituary-detail__share-label">Enlace público</label>
@@ -131,19 +127,6 @@
           [saving]="saving()"
           (save)="onSave($event)"
           (cancel)="closeEdit()"
-        />
-      </div>
-    </section>
-
-    <section class="panel-card">
-      <div class="panel-card__header">
-        <h2>Mensajes de condolencias</h2>
-      </div>
-      <div class="panel-card__body">
-        <app-messages-moderation
-          [messages]="messages()"
-          (approve)="approveMessage($event)"
-          (reject)="rejectMessage($event)"
         />
       </div>
     </section>

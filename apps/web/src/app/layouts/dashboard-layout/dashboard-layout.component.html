@@ -51,6 +51,13 @@
             >
               <mat-icon>{{ item.icon }}</mat-icon>
               <span>{{ item.label }}</span>
+              <span
+                *ngIf="item.badgeCount && item.badgeCount() > 0"
+                class="dashboard-layout__nav-badge"
+                data-testid="nav-badge"
+              >
+                {{ item.badgeCount() }}
+              </span>
             </a>
           </ng-container>
         </div>

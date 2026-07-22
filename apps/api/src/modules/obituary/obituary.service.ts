@@ -7,7 +7,6 @@ import {
 import {
   Deceased as DeceasedRecord,
   Event as EventRecord,
-  MessageStatus,
   ObituaryMessage as ObituaryMessageRecord,
   ObituaryStatus,
 } from '@prisma/client';
@@ -34,14 +33,9 @@ import { CreateObituaryDto } from './dto/create-obituary.dto';
 import { UpdateObituaryDto } from './dto/update-obituary.dto';
 import { ListObituariesQueryDto } from './dto/list-obituaries-query.dto';
 import { CreateObituaryMessageDto } from './dto/create-obituary-message.dto';
-import { ListObituaryMessagesQueryDto } from './dto/list-obituary-messages-query.dto';
 import { generateObituarySlug } from './utils/slug.util';
-import { PdfFactory } from './factories/pdf.factory';
 import { DeceasedPhotoService } from './services/deceased-photo.service';
 import { FilesService, UploadableFile } from '../files/files.service';
-
-// Caso borde §12 del spec: procesamiento en background diferido, no implementado en esta rama.
-const MAX_MESSAGES_FOR_SYNC_PDF = 500;
 
 interface RequiredFieldRule {
   isSatisfied: (deceased: DeceasedRecord) => boolean;
@@ -61,7 +55,6 @@ const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
 export class ObituaryService {
   constructor(
     private readonly obituaryRepo: ObituaryRepository,
-    private readonly pdfFactory: PdfFactory,
     private readonly deceasedPhotoService: DeceasedPhotoService,
     private readonly filesService: FilesService,
   ) {}
@@ -315,56 +308,6 @@ export class ObituaryService {
     return { obituary: this.toObituary(updated!), lowResolutionWarning };
   }
 
-  async generateBookOfTributes(
-    tenantId: string,
-    id: string,
-  ): Promise<{ buffer: Buffer; filename: string }> {
-    assertTenantContext(tenantId);
-    const existing = await this.obituaryRepo.findById(tenantId, id);
-    if (!existing) throw new NotFoundException('Obituario no encontrado');
-
-    // RN-OBT-008: el libro de homenajes solo incluye mensajes aprobados.
-    const approvedMessages = await this.obituaryRepo.findApprovedMessages(
-      tenantId,
-      existing.id,
-    );
-    if (approvedMessages.length === 0) {
-      throw new BadRequestException(
-        'Aún no hay mensajes aprobados para incluir en el libro',
-      );
-    }
-    if (approvedMessages.length > MAX_MESSAGES_FOR_SYNC_PDF) {
-      throw new BadRequestException(
-        'El obituario supera los 500 mensajes aprobados; contacta a soporte para generar el libro',
-      );
-    }
-
-    const brand = await this.obituaryRepo.findTenantBrand(tenantId);
-    const buffer = await this.pdfFactory.create('TRIBUTE_BOOK').generate({
-      deceased: {
-        firstName: existing.deceased.firstName,
-        lastName: existing.deceased.lastName,
-        birthDate: existing.deceased.birthDate,
-        deathDate: existing.deceased.deathDate,
-        epitaph: existing.deceased.epitaph,
-        photoUrl: existing.deceased.photoUrl,
-      },
-      tenantName: brand?.name ?? '',
-      tenantLogoUrl: brand?.logoUrl ?? null,
-      messages: approvedMessages.map((message) => ({
-        authorName: message.authorName,
-        content: message.content,
-        createdAt: message.createdAt,
-      })),
-    });
-
-    const deathYear =
-      existing.deceased.deathDate?.getFullYear() ?? new Date().getFullYear();
-    const filename = `libro-homenajes-${existing.slug}-${deathYear}.pdf`;
-
-    return { buffer, filename };
-  }
-
   async submitMessage(
     tenantId: string,
     slug: string,
@@ -390,83 +333,6 @@ export class ObituaryService {
     );
 
     return this.toObituaryMessage(created);
-  }
-
-  async listMessages(
-    tenantId: string,
-    obituaryId: string,
-    query: ListObituaryMessagesQueryDto,
-  ): Promise<ObituaryMessage[]> {
-    assertTenantContext(tenantId);
-    const obituary = await this.obituaryRepo.findById(tenantId, obituaryId);
-    if (!obituary) throw new NotFoundException('Obituario no encontrado');
-
-    const messages = await this.obituaryRepo.findMessages(
-      tenantId,
-      obituaryId,
-      { status: query.status },
-    );
-    return messages.map((message) => this.toObituaryMessage(message));
-  }
-
-  approveMessage(
-    tenantId: string,
-    obituaryId: string,
-    messageId: string,
-    actorId: string,
-  ): Promise<ObituaryMessage> {
-    return this.setMessageStatus(
-      tenantId,
-      obituaryId,
-      messageId,
-      actorId,
-      MessageStatus.APPROVED,
-    );
-  }
-
-  rejectMessage(
-    tenantId: string,
-    obituaryId: string,
-    messageId: string,
-    actorId: string,
-  ): Promise<ObituaryMessage> {
-    return this.setMessageStatus(
-      tenantId,
-      obituaryId,
-      messageId,
-      actorId,
-      MessageStatus.REJECTED,
-    );
-  }
-
-  private async setMessageStatus(
-    tenantId: string,
-    obituaryId: string,
-    messageId: string,
-    actorId: string,
-    status: MessageStatus,
-  ): Promise<ObituaryMessage> {
-    assertTenantContext(tenantId);
-    const message = await this.obituaryRepo.findMessageById(
-      tenantId,
-      obituaryId,
-      messageId,
-    );
-    if (!message) throw new NotFoundException('Mensaje no encontrado');
-
-    await this.obituaryRepo.setMessageStatus(
-      tenantId,
-      obituaryId,
-      messageId,
-      status,
-      actorId,
-    );
-    const updated = await this.obituaryRepo.findMessageById(
-      tenantId,
-      obituaryId,
-      messageId,
-    );
-    return this.toObituaryMessage(updated!);
   }
 
   private async assertEventBelongsToTenant(

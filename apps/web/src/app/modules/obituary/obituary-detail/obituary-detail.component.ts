@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { Obituary, ObituaryMessage, ObituaryStatus } from '@zentic/shared-types';
+import { Obituary, ObituaryStatus } from '@zentic/shared-types';
 import {
   ObituariesApiService,
   ObituaryEventOption,
@@ -16,7 +16,6 @@ import {
   ObituaryFormSubmission,
   ObituaryFormValue,
 } from '../obituary-form/obituary-form.component';
-import { MessagesModerationComponent } from '../messages-moderation/messages-moderation.component';
 import { FeedbackBannerComponent } from '../../../shared/molecules/feedback-banner/feedback-banner.component';
 import { NotificationService } from '../../../core/services/notification.service';
 import { getErrorMessage } from '../../../core/utils/error-message';
@@ -32,7 +31,6 @@ import { getErrorMessage } from '../../../core/utils/error-message';
     BadgeComponent,
     ConfirmDialogComponent,
     ObituaryFormComponent,
-    MessagesModerationComponent,
     FeedbackBannerComponent,
   ],
   templateUrl: './obituary-detail.component.html',
@@ -45,20 +43,17 @@ export class ObituaryDetailComponent implements OnInit {
   private readonly notifications = inject(NotificationService);
 
   readonly obituary = signal<Obituary | null>(null);
-  readonly messages = signal<ObituaryMessage[]>([]);
   readonly eventOptions = signal<ObituaryEventOption[]>([]);
   readonly loading = signal(true);
   readonly loadError = signal('');
   readonly saving = signal(false);
   readonly actionLoading = signal(false);
-  readonly bookLoading = signal(false);
 
   readonly editing = signal(false);
   readonly formError = signal('');
 
   readonly confirmUnpublish = signal(false);
   readonly actionError = signal('');
-  readonly bookError = signal('');
 
   get publicUrl(): string {
     const obituary = this.obituary();
@@ -91,20 +86,11 @@ export class ObituaryDetailComponent implements OnInit {
       next: (obituary) => {
         this.obituary.set(obituary);
         this.loading.set(false);
-        this.loadMessages(obituary.id);
       },
       error: (error: unknown) => {
         this.loading.set(false);
         this.loadError.set(getErrorMessage(error, 'No se pudo cargar el obituario'));
       },
-    });
-  }
-
-  loadMessages(id: string): void {
-    this.obituariesApi.listMessages(id).subscribe({
-      next: (messages) => this.messages.set(messages),
-      error: (error: unknown) =>
-        this.notifications.apiError(error, 'No se pudieron cargar los mensajes'),
     });
   }
 
@@ -238,56 +224,11 @@ export class ObituaryDetailComponent implements OnInit {
     });
   }
 
-  approveMessage(messageId: string): void {
+  openTributeBook(): void {
     const obituary = this.obituary();
     if (!obituary) return;
-    this.obituariesApi.approveMessage(obituary.id, messageId).subscribe({
-      next: () => {
-        this.notifications.success('Mensaje aprobado');
-        this.loadMessages(obituary.id);
-      },
-      error: (error: unknown) =>
-        this.notifications.apiError(error, 'No se pudo aprobar el mensaje'),
-    });
-  }
-
-  rejectMessage(messageId: string): void {
-    const obituary = this.obituary();
-    if (!obituary) return;
-    this.obituariesApi.rejectMessage(obituary.id, messageId).subscribe({
-      next: () => {
-        this.notifications.success('Mensaje rechazado');
-        this.loadMessages(obituary.id);
-      },
-      error: (error: unknown) =>
-        this.notifications.apiError(error, 'No se pudo rechazar el mensaje'),
-    });
-  }
-
-  downloadBookOfTributes(): void {
-    const obituary = this.obituary();
-    if (!obituary || this.bookLoading()) return;
-
-    this.bookError.set('');
-    this.bookLoading.set(true);
-    this.obituariesApi.downloadBookOfTributes(obituary.id).subscribe({
-      next: (blob) => {
-        this.bookLoading.set(false);
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        const deathYear = obituary.deceased.deathDate
-          ? new Date(obituary.deceased.deathDate).getFullYear()
-          : new Date().getFullYear();
-        link.href = url;
-        link.download = `libro-homenajes-${obituary.slug}-${deathYear}.pdf`;
-        link.click();
-        URL.revokeObjectURL(url);
-        this.notifications.success('Libro de homenajes descargado');
-      },
-      error: (error: unknown) => {
-        this.bookLoading.set(false);
-        this.bookError.set(getErrorMessage(error, 'No se pudo generar el libro de homenajes'));
-      },
+    void this.router.navigate(['/admin/tribute-book'], {
+      queryParams: { origin: 'OBITUARY', obituaryId: obituary.id },
     });
   }
 

@@ -91,11 +91,11 @@
         <section class="obituary-page__condolences">
           <h2>Mensajes de condolencia</h2>
 
-          <div class="obituary-page__message" *ngFor="let message of obituary.approvedMessages">
+          <div class="obituary-page__message" *ngFor="let message of liveMessages()">
             <strong>{{ message.authorName }}</strong>
             <p>{{ message.content }}</p>
           </div>
-          <p class="obituary-page__empty" *ngIf="obituary.approvedMessages.length === 0">
+          <p class="obituary-page__empty" *ngIf="liveMessages().length === 0">
             Sé el primero en dejar un mensaje de condolencia.
           </p>
 

@@ -115,6 +115,7 @@
       "modules/clients/**/*.ts",
       "modules/venues/**/*.ts",
       "modules/obituary/**/*.ts",
+      "modules/tribute-book/**/*.ts",
       "!**/*.spec.ts",
       "!main.ts",
       "!app.module.ts",
@@ -131,6 +132,7 @@
       "!modules/clients/clients.controller.ts",
       "!modules/venues/venues.controller.ts",
       "!modules/obituary/obituary.controller.ts",
+      "!modules/tribute-book/tribute-book.controller.ts",
       "!modules/**/controllers/**",
       "!modules/leads/**",
       "!modules/notifications/**",
@@ -141,6 +143,7 @@
       "!modules/clients/dto/**",
       "!modules/venues/dto/**",
       "!modules/obituary/dto/**",
+      "!modules/tribute-book/dto/**",
       "!prisma/**"
     ],
     "coverageThreshold": {

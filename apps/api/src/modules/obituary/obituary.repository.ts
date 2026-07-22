@@ -51,10 +51,6 @@ export interface CreateObituaryMessageData {
   iconType?: string;
 }
 
-export interface MessageListFilters {
-  status?: MessageStatus;
-}
-
 @Injectable()
 export class ObituaryRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -219,32 +215,6 @@ export class ObituaryRepository {
     });
   }
 
-  findMessages(
-    tenantId: string,
-    obituaryId: string,
-    filters: MessageListFilters,
-  ): Promise<ObituaryMessage[]> {
-    return this.prisma.obituaryMessage.findMany({
-      where: {
-        obituaryId,
-        tenantId,
-        deletedAt: null,
-        ...(filters.status ? { status: filters.status } : {}),
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  findMessageById(
-    tenantId: string,
-    obituaryId: string,
-    messageId: string,
-  ): Promise<ObituaryMessage | null> {
-    return this.prisma.obituaryMessage.findFirst({
-      where: { id: messageId, obituaryId, tenantId, deletedAt: null },
-    });
-  }
-
   createMessage(
     tenantId: string,
     obituaryId: string,
@@ -252,19 +222,6 @@ export class ObituaryRepository {
   ): Promise<ObituaryMessage> {
     return this.prisma.obituaryMessage.create({
       data: { tenantId, obituaryId, ...data },
-    });
-  }
-
-  async setMessageStatus(
-    tenantId: string,
-    obituaryId: string,
-    messageId: string,
-    status: MessageStatus,
-    approvedBy: string,
-  ): Promise<void> {
-    await this.prisma.obituaryMessage.updateMany({
-      where: { id: messageId, obituaryId, tenantId, deletedAt: null },
-      data: { status, approvedBy, approvedAt: new Date() },
     });
   }
 

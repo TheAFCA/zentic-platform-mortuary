@@ -58,6 +58,12 @@ enum MessageStatus {
   REJECTED
 }
 
+enum TributeBookStatus {
+  PROCESSING
+  READY
+  ERROR
+}
+
 enum ObituaryStatus {
   DRAFT
   PUBLISHED
@@ -127,6 +133,7 @@ model Tenant {
   rooms               Room[]
   auditLogs           AuditLog[]
   permissionAuditLogs PermissionAuditLog[]
+  tributeBookGenerations TributeBookGeneration[]
 }
 
 model TenantBrandConfig {
@@ -358,6 +365,7 @@ model Event {
   leads    Lead[]
   invitations Invitation[]
   stateTransitions EventStateTransition[]
+  tributeBookGenerations TributeBookGeneration[]
 
   @@index([tenantId])
   @@index([tenantId, createdAt])
@@ -404,6 +412,7 @@ model Message {
   deletedAt      DateTime?
 
   @@index([tenantId])
+  @@index([tenantId, createdAt])
   @@index([eventId])
   @@index([eventId, status])
 }
@@ -430,6 +439,7 @@ model Obituary {
   deletedAt   DateTime?
 
   messages ObituaryMessage[]
+  tributeBookGenerations TributeBookGeneration[]
 
   @@index([tenantId])
   @@index([tenantId, createdAt])
@@ -437,22 +447,50 @@ model Obituary {
 }
 
 model ObituaryMessage {
-  id         String        @id @default(cuid())
-  tenantId   String
-  obituaryId String
-  obituary   Obituary      @relation(fields: [obituaryId], references: [id])
-  authorName String
-  content    String        @db.Text
-  iconType   String?
-  status     MessageStatus @default(PENDING)
-  approvedBy String?
-  approvedAt DateTime?
-  createdAt  DateTime      @default(now())
-  deletedAt  DateTime?
+  id             String        @id @default(cuid())
+  tenantId       String
+  obituaryId     String
+  obituary       Obituary      @relation(fields: [obituaryId], references: [id])
+  authorName     String
+  content        String        @db.Text
+  iconType       String?
+  status         MessageStatus @default(PENDING)
+  rejectedReason String?
+  approvedBy     String?
+  approvedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  deletedAt      DateTime?
 
   @@index([obituaryId])
   @@index([obituaryId, status])
   @@index([tenantId])
+  @@index([tenantId, createdAt])
+}
+
+// =============================================================================
+// LIBRO DE HOMENAJES
+// =============================================================================
+
+model TributeBookGeneration {
+  id           String             @id @default(cuid())
+  tenantId     String
+  tenant       Tenant             @relation(fields: [tenantId], references: [id])
+  eventId      String?
+  event        Event?             @relation(fields: [eventId], references: [id])
+  obituaryId   String?
+  obituary     Obituary?          @relation(fields: [obituaryId], references: [id])
+  generatedBy  String
+  status       TributeBookStatus  @default(PROCESSING)
+  pdfUrl       String?
+  errorMessage String?
+  expiresAt    DateTime?
+  messageCount Int                @default(0)
+  createdAt    DateTime           @default(now())
+
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@index([eventId])
+  @@index([obituaryId])
 }
 
 // =============================================================================

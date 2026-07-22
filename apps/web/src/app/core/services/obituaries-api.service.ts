@@ -1,7 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import {
-  MessageStatus,
   Obituary,
   ObituaryMessage,
   ObituaryStatus,
@@ -108,32 +107,6 @@ export class ObituariesApiService {
     const formData = new FormData();
     formData.append('file', file);
     return this.http.post<UploadPhotoResult>(`${this.baseUrl}/${id}/photo`, formData);
-  }
-
-  listMessages(id: string, status?: MessageStatus) {
-    return this.http.get<ObituaryMessage[]>(`${this.baseUrl}/${id}/messages`, {
-      params: status ? new HttpParams().set('status', status) : undefined,
-    });
-  }
-
-  approveMessage(id: string, messageId: string) {
-    return this.http.patch<ObituaryMessage>(
-      `${this.baseUrl}/${id}/messages/${messageId}/approve`,
-      {},
-    );
-  }
-
-  rejectMessage(id: string, messageId: string) {
-    return this.http.patch<ObituaryMessage>(
-      `${this.baseUrl}/${id}/messages/${messageId}/reject`,
-      {},
-    );
-  }
-
-  downloadBookOfTributes(id: string) {
-    return this.http.get(`${this.baseUrl}/${id}/book-of-tributes`, {
-      responseType: 'blob',
-    });
   }
 
   // --- Rutas públicas (sin autenticación) — usadas por la página pública del obituario ---

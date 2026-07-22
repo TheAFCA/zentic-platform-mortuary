@@ -2,6 +2,7 @@ import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { StreamingModule } from './modules/streaming/streaming.module';
@@ -17,6 +18,7 @@ import { FilesModule } from './modules/files/files.module';
 import { ClientsModule } from './modules/clients/clients.module';
 import { VenuesModule } from './modules/venues/venues.module';
 import { RedisModule } from './modules/redis/redis.module';
+import { TributeBookModule } from './modules/tribute-book/tribute-book.module';
 import { validateEnv } from './config/env.validation';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -47,6 +49,7 @@ import { AppService } from './app.service';
       }),
     }),
     RedisModule,
+    ScheduleModule.forRoot(),
     PrismaModule,
     TenantModule,
     AuthModule,
@@ -61,6 +64,7 @@ import { AppService } from './app.service';
     FilesModule,
     ClientsModule,
     VenuesModule,
+    TributeBookModule,
   ],
 })
 export class AppModule implements NestModule {
