@@ -17,9 +17,19 @@ const mockPrisma = {
   },
   lead: {
     create: jest.fn(),
+    findMany: jest.fn(),
   },
   deceased: {
     create: jest.fn(),
+    findFirst: jest.fn(),
+  },
+  room: {
+    findFirst: jest.fn(),
+  },
+  client: {
+    findFirst: jest.fn(),
+  },
+  user: {
     findFirst: jest.fn(),
   },
 };
@@ -229,6 +239,29 @@ describe('StreamingRepository', () => {
     });
   });
 
+  describe('findByProviderStreamId', () => {
+    it('should call event.findUnique with providerStreamId and include the tenant plan', async () => {
+      const mockEvent = { id: 'event-1', providerStreamId: 'mux-live-1' };
+      (prisma.event.findUnique as jest.Mock).mockResolvedValue(mockEvent);
+
+      const result = await repository.findByProviderStreamId('mux-live-1');
+
+      expect(prisma.event.findUnique).toHaveBeenCalledWith({
+        where: { providerStreamId: 'mux-live-1' },
+        include: { tenant: { select: { plan: true } } },
+      });
+      expect(result).toEqual(mockEvent);
+    });
+
+    it('should return null when no event matches', async () => {
+      (prisma.event.findUnique as jest.Mock).mockResolvedValue(null);
+
+      const result = await repository.findByProviderStreamId('unknown');
+
+      expect(result).toBeNull();
+    });
+  });
+
   describe('create', () => {
     const data = {
       title: 'New Event',
@@ -271,7 +304,7 @@ describe('StreamingRepository', () => {
       const result = await repository.update(tenantId, 'event-1', data);
 
       expect(prisma.event.update).toHaveBeenCalledWith({
-        where: { id: 'event-1' },
+        where: { id: 'event-1', tenantId },
         data,
       });
       expect(result).toEqual(mockEvent);
@@ -293,7 +326,7 @@ describe('StreamingRepository', () => {
       const result = await repository.softDelete(tenantId, 'event-1');
 
       expect(prisma.event.update).toHaveBeenCalledWith({
-        where: { id: 'event-1' },
+        where: { id: 'event-1', tenantId },
         data: { deletedAt: expect.any(Date), status: 'CANCELLED' },
       });
       expect(result).toEqual(mockEvent);
@@ -333,7 +366,10 @@ describe('StreamingRepository', () => {
           deletedAt: null,
           status: { notIn: ['CANCELLED', 'FINISHED'] },
           id: undefined,
-          scheduledAt: { lt: expectedEndTime },
+          AND: [
+            { scheduledAt: { lt: expectedEndTime } },
+            { estimatedDuration: { not: null } },
+          ],
         },
       });
       expect(result).toEqual(mockOverlapEvent);
@@ -361,7 +397,10 @@ describe('StreamingRepository', () => {
           deletedAt: null,
           status: { notIn: ['CANCELLED', 'FINISHED'] },
           id: { not: 'event-1' },
-          scheduledAt: { lt: expectedEndTime },
+          AND: [
+            { scheduledAt: { lt: expectedEndTime } },
+            { estimatedDuration: { not: null } },
+          ],
         },
       });
       expect(result).toBeNull();
@@ -495,6 +534,7 @@ describe('StreamingRepository', () => {
   });
 
   describe('approveMessage', () => {
+    const tenantId = 'tenant-1';
     const eventId = 'event-1';
     const messageId = 'msg-1';
     const approvedBy = 'moderator-1';
@@ -510,13 +550,14 @@ describe('StreamingRepository', () => {
       (prisma.message.update as jest.Mock).mockResolvedValue(mockMessage);
 
       const result = await repository.approveMessage(
+        tenantId,
         eventId,
         messageId,
         approvedBy,
       );
 
       expect(prisma.message.update).toHaveBeenCalledWith({
-        where: { id: messageId, eventId },
+        where: { id: messageId, eventId, tenantId },
         data: {
           status: 'APPROVED',
           approvedBy,
@@ -528,6 +569,7 @@ describe('StreamingRepository', () => {
   });
 
   describe('rejectMessage', () => {
+    const tenantId = 'tenant-1';
     const eventId = 'event-1';
     const messageId = 'msg-1';
 
@@ -540,10 +582,14 @@ describe('StreamingRepository', () => {
       };
       (prisma.message.update as jest.Mock).mockResolvedValue(mockMessage);
 
-      const result = await repository.rejectMessage(eventId, messageId);
+      const result = await repository.rejectMessage(
+        tenantId,
+        eventId,
+        messageId,
+      );
 
       expect(prisma.message.update).toHaveBeenCalledWith({
-        where: { id: messageId, eventId },
+        where: { id: messageId, eventId, tenantId },
         data: { status: 'REJECTED', rejectedReason: null },
       });
       expect(result).toEqual(mockMessage);
@@ -559,10 +605,15 @@ describe('StreamingRepository', () => {
       };
       (prisma.message.update as jest.Mock).mockResolvedValue(mockMessage);
 
-      const result = await repository.rejectMessage(eventId, messageId, reason);
+      const result = await repository.rejectMessage(
+        tenantId,
+        eventId,
+        messageId,
+        reason,
+      );
 
       expect(prisma.message.update).toHaveBeenCalledWith({
-        where: { id: messageId, eventId },
+        where: { id: messageId, eventId, tenantId },
         data: { status: 'REJECTED', rejectedReason: reason },
       });
       expect(result).toEqual(mockMessage);
@@ -570,6 +621,7 @@ describe('StreamingRepository', () => {
   });
 
   describe('softDeleteMessage', () => {
+    const tenantId = 'tenant-1';
     const eventId = 'event-1';
     const messageId = 'msg-1';
     const mockMessage = { id: messageId, deletedAt: new Date(), eventId };
@@ -577,10 +629,14 @@ describe('StreamingRepository', () => {
     it('should update message with deletedAt', async () => {
       (prisma.message.update as jest.Mock).mockResolvedValue(mockMessage);
 
-      const result = await repository.softDeleteMessage(eventId, messageId);
+      const result = await repository.softDeleteMessage(
+        tenantId,
+        eventId,
+        messageId,
+      );
 
       expect(prisma.message.update).toHaveBeenCalledWith({
-        where: { id: messageId, eventId },
+        where: { id: messageId, eventId, tenantId },
         data: { deletedAt: expect.any(Date) },
       });
       expect(result).toEqual(mockMessage);
@@ -588,17 +644,22 @@ describe('StreamingRepository', () => {
   });
 
   describe('updateViewerCount', () => {
+    const tenantId = 'tenant-1';
     const eventId = 'event-1';
     const count = 42;
     const mockEvent = { id: eventId, viewerCount: count };
 
-    it('should update event with the given viewerCount', async () => {
+    it('should update event with the given viewerCount scoped to tenant', async () => {
       (prisma.event.update as jest.Mock).mockResolvedValue(mockEvent);
 
-      const result = await repository.updateViewerCount(eventId, count);
+      const result = await repository.updateViewerCount(
+        tenantId,
+        eventId,
+        count,
+      );
 
       expect(prisma.event.update).toHaveBeenCalledWith({
-        where: { id: eventId },
+        where: { id: eventId, tenantId },
         data: { viewerCount: count },
       });
       expect(result).toEqual(mockEvent);
@@ -626,6 +687,33 @@ describe('StreamingRepository', () => {
     });
   });
 
+  describe('findLeadsWithEmailByEvent', () => {
+    const tenantId = 'tenant-1';
+
+    it('should call lead.findMany filtering by tenantId, eventId and non-null email', async () => {
+      const leads = [
+        { email: 'jane@test.com', name: 'Jane Doe', consent: true },
+      ];
+      (prisma.lead.findMany as jest.Mock).mockResolvedValue(leads);
+
+      const result = await repository.findLeadsWithEmailByEvent(
+        tenantId,
+        'event-1',
+      );
+
+      expect(prisma.lead.findMany).toHaveBeenCalledWith({
+        where: {
+          tenantId,
+          eventId: 'event-1',
+          email: { not: null },
+          deletedAt: null,
+        },
+        select: { email: true, name: true, consent: true },
+      });
+      expect(result).toEqual(leads);
+    });
+  });
+
   describe('createDeceased', () => {
     const data = {
       firstName: 'John',
@@ -643,6 +731,97 @@ describe('StreamingRepository', () => {
 
       expect(prisma.deceased.create).toHaveBeenCalledWith({ data });
       expect(result).toEqual(mockDeceased);
+    });
+  });
+
+  describe('findRoomByTenant', () => {
+    const tenantId = 'tenant-1';
+    const mockRoom = {
+      id: 'room-1',
+      name: 'Sala A',
+      tenantId,
+      capacity: 50,
+      deletedAt: null,
+    };
+
+    it('should call room.findFirst with tenantId filter', async () => {
+      (prisma.room.findFirst as jest.Mock).mockResolvedValue(mockRoom);
+
+      const result = await repository.findRoomByTenant(tenantId, 'room-1');
+
+      expect(prisma.room.findFirst).toHaveBeenCalledWith({
+        where: { id: 'room-1', tenantId, deletedAt: null },
+      });
+      expect(result).toEqual(mockRoom);
+    });
+
+    it('should return null when room belongs to another tenant', async () => {
+      (prisma.room.findFirst as jest.Mock).mockResolvedValue(null);
+
+      const result = await repository.findRoomByTenant(tenantId, 'room-other');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('findClientByTenant', () => {
+    const tenantId = 'tenant-1';
+    const mockClient = {
+      id: 'client-1',
+      name: 'Maria Garcia',
+      tenantId,
+      deletedAt: null,
+    };
+
+    it('should call client.findFirst with tenantId filter', async () => {
+      (prisma.client.findFirst as jest.Mock).mockResolvedValue(mockClient);
+
+      const result = await repository.findClientByTenant(tenantId, 'client-1');
+
+      expect(prisma.client.findFirst).toHaveBeenCalledWith({
+        where: { id: 'client-1', tenantId, deletedAt: null },
+      });
+      expect(result).toEqual(mockClient);
+    });
+
+    it('should return null when client belongs to another tenant', async () => {
+      (prisma.client.findFirst as jest.Mock).mockResolvedValue(null);
+
+      const result = await repository.findClientByTenant(
+        tenantId,
+        'client-other',
+      );
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('findUserByTenant', () => {
+    const tenantId = 'tenant-1';
+    const mockUser = {
+      id: 'user-1',
+      email: 'operator@test.com',
+      tenantId,
+      deletedAt: null,
+    };
+
+    it('should call user.findFirst with tenantId filter', async () => {
+      (prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser);
+
+      const result = await repository.findUserByTenant(tenantId, 'user-1');
+
+      expect(prisma.user.findFirst).toHaveBeenCalledWith({
+        where: { id: 'user-1', tenantId, deletedAt: null },
+      });
+      expect(result).toEqual(mockUser);
+    });
+
+    it('should return null when user belongs to another tenant', async () => {
+      (prisma.user.findFirst as jest.Mock).mockResolvedValue(null);
+
+      const result = await repository.findUserByTenant(tenantId, 'user-other');
+
+      expect(result).toBeNull();
     });
   });
 

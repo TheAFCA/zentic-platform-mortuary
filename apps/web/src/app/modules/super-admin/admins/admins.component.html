@@ -15,7 +15,7 @@
       <h2>Crear Super Admin</h2>
     </div>
     <div class="panel-card__body">
-      <p class="admins-page__error" *ngIf="createError()">{{ createError() }}</p>
+      <p class="admins-page__error" *ngIf="createError()" role="alert">{{ createError() }}</p>
       <div class="admins-page__create-row">
         <input
           type="email"
@@ -24,7 +24,15 @@
           (ngModelChange)="newEmail.set($event)"
           [ngModelOptions]="{ standalone: true }"
         />
-        <button type="button" class="btn-primary" (click)="createSuperAdmin()">Crear</button>
+        <button
+          type="button"
+          class="btn-primary"
+          (click)="createSuperAdmin()"
+          [disabled]="creating()"
+          [attr.aria-busy]="creating()"
+        >
+          {{ creating() ? 'Creando…' : 'Crear' }}
+        </button>
       </div>
     </div>
   </section>
@@ -35,7 +43,14 @@
       <p class="panel-card__count">{{ admins().length }} usuario(s)</p>
     </div>
     <div class="panel-card__body panel-card__body--flush">
-      <app-data-table [columns]="columns" [rows]="admins()" emptyMessage="No hay Super Admins registrados">
+      <app-data-table
+        [columns]="columns"
+        [rows]="admins()"
+        [loading]="loading()"
+        [errorMessage]="loadError()"
+        (retry)="load()"
+        emptyMessage="No hay Super Admins registrados"
+      >
         <ng-template #rowActions let-admin>
           <div class="admins-table__actions">
             <app-badge [color]="admin.active ? 'green' : 'gray'">
@@ -53,10 +68,15 @@
   <app-confirm-dialog
     [open]="confirmTarget() !== null"
     title="Confirmar cambio de estado"
-    [message]="confirmTarget()?.active ? 'Este Super Admin no podrá iniciar sesión.' : 'Este Super Admin podrá volver a iniciar sesión.'"
+    [message]="
+      confirmTarget()?.active
+        ? 'Este Super Admin no podrá iniciar sesión.'
+        : 'Este Super Admin podrá volver a iniciar sesión.'
+    "
     (confirm)="confirmToggle()"
     (cancel)="cancelConfirm()"
+    [loading]="actionLoading()"
   >
-    <p class="admins-page__error" *ngIf="confirmError()">{{ confirmError() }}</p>
+    <p class="admins-page__error" *ngIf="confirmError()" role="alert">{{ confirmError() }}</p>
   </app-confirm-dialog>
 </div>

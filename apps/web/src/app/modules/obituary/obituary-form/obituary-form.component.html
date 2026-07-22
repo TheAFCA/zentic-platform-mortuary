@@ -1,5 +1,12 @@
 <form class="obituary-form" [formGroup]="form" (ngSubmit)="submit()">
-  <p class="obituary-form__error" *ngIf="errorMessage" data-testid="obituary-form-error">{{ errorMessage }}</p>
+  <p
+    class="obituary-form__error"
+    *ngIf="errorMessage"
+    role="alert"
+    data-testid="obituary-form-error"
+  >
+    {{ errorMessage }}
+  </p>
 
   <div class="obituary-form__photo">
     <app-initials-avatar
@@ -8,7 +15,12 @@
       [lastName]="form.controls.lastName.value"
       [sizePx]="96"
     />
-    <img *ngIf="photoPreviewUrl()" [src]="photoPreviewUrl()" class="obituary-form__photo-preview" alt="" />
+    <img
+      *ngIf="photoPreviewUrl()"
+      [src]="photoPreviewUrl()"
+      class="obituary-form__photo-preview"
+      alt=""
+    />
     <app-file-dropzone
       label="Foto del difunto"
       hint="PNG, JPG o WebP — se optimiza automáticamente"
@@ -30,12 +42,22 @@
 
     <mat-form-field appearance="outline">
       <mat-label>Fecha de nacimiento</mat-label>
-      <input matInput type="date" formControlName="birthDate" data-testid="obituary-birthdate-input" />
+      <input
+        matInput
+        type="date"
+        formControlName="birthDate"
+        data-testid="obituary-birthdate-input"
+      />
     </mat-form-field>
 
     <mat-form-field appearance="outline">
       <mat-label>Fecha de fallecimiento</mat-label>
-      <input matInput type="date" formControlName="deathDate" data-testid="obituary-deathdate-input" />
+      <input
+        matInput
+        type="date"
+        formControlName="deathDate"
+        data-testid="obituary-deathdate-input"
+      />
     </mat-form-field>
 
     <mat-form-field appearance="outline">
@@ -49,13 +71,23 @@
     </mat-form-field>
   </div>
 
-  <p class="obituary-form__date-error" *ngIf="dateError()" data-testid="obituary-date-error">
+  <p
+    class="obituary-form__date-error"
+    *ngIf="dateError()"
+    role="alert"
+    data-testid="obituary-date-error"
+  >
     {{ dateError() }}
   </p>
 
   <mat-form-field appearance="outline">
     <mat-label>Epitafio</mat-label>
-    <input matInput formControlName="epitaph" maxlength="150" data-testid="obituary-epitaph-input" />
+    <input
+      matInput
+      formControlName="epitaph"
+      maxlength="150"
+      data-testid="obituary-epitaph-input"
+    />
     <mat-hint align="end">{{ form.controls.epitaph.value.length }}/150</mat-hint>
   </mat-form-field>
 
@@ -92,9 +124,17 @@
   </div>
 
   <div class="obituary-form__actions">
-    <button type="button" class="btn-ghost" (click)="cancel.emit()">Cancelar</button>
-    <button type="submit" class="btn-primary" data-testid="obituary-form-submit">
-      {{ isEditing ? 'Guardar cambios' : 'Guardar como borrador' }}
+    <button type="button" class="btn-ghost" (click)="cancel.emit()" [disabled]="saving">
+      Cancelar
+    </button>
+    <button
+      type="submit"
+      class="btn-primary"
+      data-testid="obituary-form-submit"
+      [disabled]="saving"
+      [attr.aria-busy]="saving"
+    >
+      {{ saving ? 'Guardando…' : isEditing ? 'Guardar cambios' : 'Guardar como borrador' }}
     </button>
   </div>
 </form>

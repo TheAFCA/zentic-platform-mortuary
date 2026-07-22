@@ -1,4 +1,5 @@
 <form [formGroup]="form" (ngSubmit)="submit()" class="user-form" novalidate>
+  <p *ngIf="errorMessage" role="alert">{{ errorMessage }}</p>
   <div class="user-form__fields">
     <mat-form-field appearance="outline" class="user-form__field">
       <mat-label>Email</mat-label>
@@ -26,10 +27,17 @@
   </div>
 
   <div class="user-form__actions">
-    <button type="submit" class="btn-primary" [disabled]="form.invalid">
+    <button
+      type="submit"
+      class="btn-primary"
+      [disabled]="form.invalid || saving"
+      [attr.aria-busy]="saving"
+    >
       <mat-icon>check</mat-icon>
-      <span>Guardar</span>
+      <span>{{ saving ? 'Guardando…' : 'Guardar' }}</span>
     </button>
-    <button type="button" class="btn-ghost" (click)="cancel.emit()">Cancelar</button>
+    <button type="button" class="btn-ghost" (click)="cancel.emit()" [disabled]="saving">
+      Cancelar
+    </button>
   </div>
 </form>

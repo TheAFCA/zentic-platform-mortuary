@@ -1,16 +1,23 @@
 import { CommonModule } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { TenantBrandConfig } from '@zentic/shared-types';
 import { AdminSettingsApiService } from '../../../../core/services/admin-settings-api.service';
 import { FileDropzoneComponent } from '../../../../shared/molecules/file-dropzone/file-dropzone.component';
 import { ColorPickerComponent } from '../../../../shared/atoms/color-picker/color-picker.component';
+import { FeedbackBannerComponent } from '../../../../shared/molecules/feedback-banner/feedback-banner.component';
+import { getErrorMessage } from '../../../../core/utils/error-message';
 
 @Component({
   selector: 'app-brand-settings',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FileDropzoneComponent, ColorPickerComponent],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    FileDropzoneComponent,
+    ColorPickerComponent,
+    FeedbackBannerComponent,
+  ],
   templateUrl: './brand-settings.component.html',
   styleUrl: './brand-settings.component.scss',
 })
@@ -21,6 +28,8 @@ export class BrandSettingsComponent implements OnInit {
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly error = signal('');
+  readonly loadError = signal('');
+  readonly uploading = signal(false);
   readonly success = signal('');
   readonly logoUrl = signal<string | null>(null);
   readonly faviconUrl = signal<string | null>(null);
@@ -33,12 +42,21 @@ export class BrandSettingsComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.load();
+  }
+
+  load(): void {
+    this.loading.set(true);
+    this.loadError.set('');
     this.settingsApi.getBrand().subscribe({
       next: (brand) => {
         this.applyBrand(brand);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false),
+      error: (error: unknown) => {
+        this.loading.set(false);
+        this.loadError.set(getErrorMessage(error, 'No se pudo cargar la configuración de marca'));
+      },
     });
   }
 
@@ -53,28 +71,41 @@ export class BrandSettingsComponent implements OnInit {
   }
 
   onLogoSelected(file: File): void {
+    if (this.uploading()) return;
+    this.uploading.set(true);
+    this.error.set('');
     this.settingsApi.uploadLogo(file).subscribe({
       next: (brand) => {
         this.applyBrand(brand);
+        this.uploading.set(false);
         this.success.set('Logo actualizado');
       },
-      error: (error: HttpErrorResponse) =>
-        this.error.set(this.extractErrorMessage(error, 'No se pudo subir el logo')),
+      error: (error: unknown) => {
+        this.uploading.set(false);
+        this.error.set(getErrorMessage(error, 'No se pudo subir el logo'));
+      },
     });
   }
 
   onFaviconSelected(file: File): void {
+    if (this.uploading()) return;
+    this.uploading.set(true);
+    this.error.set('');
     this.settingsApi.uploadFavicon(file).subscribe({
       next: (brand) => {
         this.applyBrand(brand);
+        this.uploading.set(false);
         this.success.set('Favicon actualizado');
       },
-      error: (error: HttpErrorResponse) =>
-        this.error.set(this.extractErrorMessage(error, 'No se pudo subir el favicon')),
+      error: (error: unknown) => {
+        this.uploading.set(false);
+        this.error.set(getErrorMessage(error, 'No se pudo subir el favicon'));
+      },
     });
   }
 
   onSubmit(): void {
+    if (this.saving()) return;
     this.saving.set(true);
     this.error.set('');
     this.success.set('');
@@ -85,9 +116,9 @@ export class BrandSettingsComponent implements OnInit {
         this.saving.set(false);
         this.success.set('Colores guardados');
       },
-      error: (error: HttpErrorResponse) => {
+      error: (error: unknown) => {
         this.saving.set(false);
-        this.error.set(this.extractErrorMessage(error, 'No se pudo guardar la marca'));
+        this.error.set(getErrorMessage(error, 'No se pudo guardar la marca'));
       },
     });
   }
@@ -101,11 +132,5 @@ export class BrandSettingsComponent implements OnInit {
     });
     this.logoUrl.set(brand.logoUrl);
     this.faviconUrl.set(brand.faviconUrl);
-  }
-
-  private extractErrorMessage(error: HttpErrorResponse, fallback: string): string {
-    const message = (error.error as { message?: string | string[] } | null)?.message;
-    if (Array.isArray(message)) return message.join(', ');
-    return message ?? fallback;
   }
 }

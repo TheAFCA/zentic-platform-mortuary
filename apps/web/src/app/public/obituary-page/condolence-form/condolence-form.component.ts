@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ObituariesApiService } from '../../../core/services/obituaries-api.service';
+import { getErrorMessage } from '../../../core/utils/error-message';
 
 @Component({
   selector: 'app-condolence-form',
@@ -37,6 +37,7 @@ export class CondolenceFormComponent {
   });
 
   submit(): void {
+    if (this.submitting()) return;
     this.errorMessage.set('');
 
     if (this.form.invalid) {
@@ -62,16 +63,10 @@ export class CondolenceFormComponent {
           this.form.reset({ authorName: '', content: '', accessCode: '' });
           this.sent.emit();
         },
-        error: (error: HttpErrorResponse) => {
+        error: (error: unknown) => {
           this.submitting.set(false);
-          this.errorMessage.set(this.extractErrorMessage(error, 'No se pudo enviar tu mensaje'));
+          this.errorMessage.set(getErrorMessage(error, 'No se pudo enviar tu mensaje'));
         },
       });
-  }
-
-  private extractErrorMessage(error: HttpErrorResponse, fallback: string): string {
-    const message = (error.error as { message?: string | string[] } | null)?.message;
-    if (Array.isArray(message)) return message.join(', ');
-    return message ?? fallback;
   }
 }

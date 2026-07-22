@@ -1,5 +1,4 @@
 import { CommonModule } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -17,6 +16,9 @@ import {
   ObituaryFormSubmission,
   ObituaryFormValue,
 } from '../obituary-form/obituary-form.component';
+import { FeedbackBannerComponent } from '../../../shared/molecules/feedback-banner/feedback-banner.component';
+import { NotificationService } from '../../../core/services/notification.service';
+import { getErrorMessage } from '../../../core/utils/error-message';
 
 @Component({
   selector: 'app-obituary-detail',
@@ -29,6 +31,7 @@ import {
     BadgeComponent,
     ConfirmDialogComponent,
     ObituaryFormComponent,
+    FeedbackBannerComponent,
   ],
   templateUrl: './obituary-detail.component.html',
   styleUrl: './obituary-detail.component.scss',
@@ -37,10 +40,14 @@ export class ObituaryDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly obituariesApi = inject(ObituariesApiService);
+  private readonly notifications = inject(NotificationService);
 
   readonly obituary = signal<Obituary | null>(null);
   readonly eventOptions = signal<ObituaryEventOption[]>([]);
   readonly loading = signal(true);
+  readonly loadError = signal('');
+  readonly saving = signal(false);
+  readonly actionLoading = signal(false);
 
   readonly editing = signal(false);
   readonly formError = signal('');
@@ -65,17 +72,25 @@ export class ObituaryDetailComponent implements OnInit {
     if (!id) return;
 
     this.load(id);
-    this.obituariesApi.listEvents().subscribe((events) => this.eventOptions.set(events));
+    this.obituariesApi.listEvents().subscribe({
+      next: (events) => this.eventOptions.set(events),
+      error: (error: unknown) =>
+        this.notifications.apiError(error, 'No se pudieron cargar los eventos disponibles'),
+    });
   }
 
   load(id: string): void {
     this.loading.set(true);
+    this.loadError.set('');
     this.obituariesApi.get(id).subscribe({
       next: (obituary) => {
         this.obituary.set(obituary);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false),
+      error: (error: unknown) => {
+        this.loading.set(false);
+        this.loadError.set(getErrorMessage(error, 'No se pudo cargar el obituario'));
+      },
     });
   }
 
@@ -108,9 +123,10 @@ export class ObituaryDetailComponent implements OnInit {
 
   onSave(submission: ObituaryFormSubmission): void {
     const obituary = this.obituary();
-    if (!obituary) return;
+    if (!obituary || this.saving()) return;
 
     this.formError.set('');
+    this.saving.set(true);
     const { value, photoFile } = submission;
 
     const payload = {
@@ -131,33 +147,51 @@ export class ObituaryDetailComponent implements OnInit {
       next: () => {
         if (photoFile) {
           this.obituariesApi.uploadPhoto(obituary.id, photoFile).subscribe({
-            next: () => this.finishEdit(obituary.id),
-            error: () => this.finishEdit(obituary.id),
+            next: () => {
+              this.notifications.success('Obituario y fotografía actualizados');
+              this.finishEdit(obituary.id);
+            },
+            error: (error: unknown) => {
+              this.notifications.apiError(
+                error,
+                'El obituario se actualizó, pero no se pudo subir la fotografía',
+              );
+              this.finishEdit(obituary.id);
+            },
           });
         } else {
+          this.notifications.success('Obituario actualizado');
           this.finishEdit(obituary.id);
         }
       },
-      error: (error: HttpErrorResponse) => {
-        this.formError.set(this.extractErrorMessage(error, 'No se pudo guardar el obituario'));
+      error: (error: unknown) => {
+        this.saving.set(false);
+        this.formError.set(getErrorMessage(error, 'No se pudo guardar el obituario'));
       },
     });
   }
 
   private finishEdit(id: string): void {
+    this.saving.set(false);
     this.editing.set(false);
     this.load(id);
   }
 
   publish(): void {
     const obituary = this.obituary();
-    if (!obituary) return;
+    if (!obituary || this.actionLoading()) return;
 
     this.actionError.set('');
+    this.actionLoading.set(true);
     this.obituariesApi.publish(obituary.id).subscribe({
-      next: (updated) => this.obituary.set(updated),
-      error: (error: HttpErrorResponse) => {
-        this.actionError.set(this.extractErrorMessage(error, 'No se pudo publicar el obituario'));
+      next: (updated) => {
+        this.actionLoading.set(false);
+        this.obituary.set(updated);
+        this.notifications.success('Obituario publicado');
+      },
+      error: (error: unknown) => {
+        this.actionLoading.set(false);
+        this.actionError.set(getErrorMessage(error, 'No se pudo publicar el obituario'));
       },
     });
   }
@@ -172,16 +206,20 @@ export class ObituaryDetailComponent implements OnInit {
 
   confirmUnpublishAction(): void {
     const obituary = this.obituary();
-    this.confirmUnpublish.set(false);
-    if (!obituary) return;
+    if (!obituary || this.actionLoading()) return;
 
     this.actionError.set('');
+    this.actionLoading.set(true);
     this.obituariesApi.unpublish(obituary.id).subscribe({
-      next: (updated) => this.obituary.set(updated),
-      error: (error: HttpErrorResponse) => {
-        this.actionError.set(
-          this.extractErrorMessage(error, 'No se pudo despublicar el obituario'),
-        );
+      next: (updated) => {
+        this.actionLoading.set(false);
+        this.confirmUnpublish.set(false);
+        this.obituary.set(updated);
+        this.notifications.success('Obituario despublicado');
+      },
+      error: (error: unknown) => {
+        this.actionLoading.set(false);
+        this.actionError.set(getErrorMessage(error, 'No se pudo despublicar el obituario'));
       },
     });
   }
@@ -195,16 +233,18 @@ export class ObituaryDetailComponent implements OnInit {
   }
 
   copyPublicUrl(): void {
-    void navigator.clipboard.writeText(this.publicUrl);
+    void navigator.clipboard
+      .writeText(this.publicUrl)
+      .then(() => this.notifications.success('Enlace copiado'))
+      .catch(() => this.notifications.error('No se pudo copiar el enlace'));
   }
 
   goBack(): void {
     void this.router.navigate(['/admin/obituaries']);
   }
 
-  private extractErrorMessage(error: HttpErrorResponse, fallback: string): string {
-    const message = (error.error as { message?: string | string[] } | null)?.message;
-    if (Array.isArray(message)) return message.join(', ');
-    return message ?? fallback;
+  retryLoad(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) this.load(id);
   }
 }

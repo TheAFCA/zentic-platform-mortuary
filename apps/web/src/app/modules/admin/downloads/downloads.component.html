@@ -12,12 +12,20 @@
           <mat-icon>groups</mat-icon>
           <div>
             <p class="download-item__title">Exportar clientes (CSV)</p>
-            <p class="download-item__subtitle">Listado completo de clientes con sus datos de contacto</p>
+            <p class="download-item__subtitle">
+              Listado completo de clientes con sus datos de contacto
+            </p>
           </div>
         </div>
-        <button type="button" class="btn-primary" (click)="exportClients()">
+        <button
+          type="button"
+          class="btn-primary"
+          (click)="exportClients()"
+          [disabled]="exporting()"
+          [attr.aria-busy]="exporting()"
+        >
           <mat-icon>download</mat-icon>
-          <span>Descargar</span>
+          <span>{{ exporting() ? 'Descargando…' : 'Descargar' }}</span>
         </button>
       </div>
     </div>

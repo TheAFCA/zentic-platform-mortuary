@@ -1,6 +1,7 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -16,6 +17,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { FilesModule } from './modules/files/files.module';
 import { ClientsModule } from './modules/clients/clients.module';
 import { VenuesModule } from './modules/venues/venues.module';
+import { RedisModule } from './modules/redis/redis.module';
 import { TributeBookModule } from './modules/tribute-book/tribute-book.module';
 import { validateEnv } from './config/env.validation';
 import { AppController } from './app.controller';
@@ -23,7 +25,13 @@ import { AppService } from './app.service';
 
 @Module({
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
@@ -40,6 +48,7 @@ import { AppService } from './app.service';
         ],
       }),
     }),
+    RedisModule,
     ScheduleModule.forRoot(),
     PrismaModule,
     TenantModule,

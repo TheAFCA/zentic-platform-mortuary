@@ -1,5 +1,7 @@
 <form class="tenant-form" [formGroup]="form" (ngSubmit)="submit()">
-  <p class="tenant-form__error" *ngIf="errorMessage" data-testid="tenant-form-error">{{ errorMessage }}</p>
+  <p class="tenant-form__error" *ngIf="errorMessage" role="alert" data-testid="tenant-form-error">
+    {{ errorMessage }}
+  </p>
 
   <mat-form-field appearance="outline">
     <mat-label>Nombre de la funeraria</mat-label>
@@ -24,7 +26,12 @@
 
   <mat-form-field appearance="outline">
     <mat-label>Email del Tenant Admin</mat-label>
-    <input matInput type="email" formControlName="adminEmail" data-testid="tenant-admin-email-input" />
+    <input
+      matInput
+      type="email"
+      formControlName="adminEmail"
+      data-testid="tenant-admin-email-input"
+    />
   </mat-form-field>
 
   <mat-form-field appearance="outline">
@@ -35,9 +42,17 @@
   </mat-form-field>
 
   <div class="tenant-form__actions">
-    <button type="button" class="btn-ghost" (click)="cancel.emit()">Cancelar</button>
-    <button type="submit" class="btn-primary" data-testid="tenant-form-submit">
-      {{ isEditing ? 'Guardar cambios' : 'Crear Tenant' }}
+    <button type="button" class="btn-ghost" (click)="cancel.emit()" [disabled]="saving">
+      Cancelar
+    </button>
+    <button
+      type="submit"
+      class="btn-primary"
+      data-testid="tenant-form-submit"
+      [disabled]="saving"
+      [attr.aria-busy]="saving"
+    >
+      {{ saving ? 'Guardando…' : isEditing ? 'Guardar cambios' : 'Crear Tenant' }}
     </button>
   </div>
 </form>

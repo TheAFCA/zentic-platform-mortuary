@@ -7,6 +7,19 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { DomSanitizer } from '@angular/platform-browser';
 import { of, Subject, throwError } from 'rxjs';
 import { EventStatus } from '@zentic/shared-types';
+import { AuthStateService } from '../../../core/services/auth-state.service';
+import { InvitationsApiService } from '../../../core/services/invitations-api.service';
+
+const successNotification = expect.objectContaining({
+  duration: 4000,
+  politeness: 'polite',
+  panelClass: ['zentic-notification', 'zentic-notification--success'],
+});
+
+const errorNotification = expect.objectContaining({
+  politeness: 'assertive',
+  panelClass: ['zentic-notification', 'zentic-notification--error'],
+});
 
 const mockDeceased = {
   id: 'dec-1',
@@ -34,7 +47,7 @@ const mockEvent = {
   finishedAt: null,
   estimatedDuration: 120,
   isPublic: true,
-  accessCode: null,
+  hasAccessCode: false,
   viewerCount: 0,
   moderationMode: 'AUTO',
   createdAt: '2026-07-10T10:00:00Z',
@@ -68,6 +81,10 @@ interface SetupReturn {
   component: EventDetailComponent;
   api: {
     findOne: ReturnType<typeof vi.fn>;
+    getCredentials: ReturnType<typeof vi.fn>;
+    revealCredentials: ReturnType<typeof vi.fn>;
+    rotateStreamKey: ReturnType<typeof vi.fn>;
+    auditStreamKeyCopy: ReturnType<typeof vi.fn>;
     startStream: ReturnType<typeof vi.fn>;
     stopStream: ReturnType<typeof vi.fn>;
     getMessages: ReturnType<typeof vi.fn>;
@@ -94,6 +111,10 @@ interface SetupReturn {
 function setup(overrides?: {
   apiOverrides?: Partial<{
     findOne: ReturnType<typeof vi.fn>;
+    getCredentials: ReturnType<typeof vi.fn>;
+    revealCredentials: ReturnType<typeof vi.fn>;
+    rotateStreamKey: ReturnType<typeof vi.fn>;
+    auditStreamKeyCopy: ReturnType<typeof vi.fn>;
     startStream: ReturnType<typeof vi.fn>;
     stopStream: ReturnType<typeof vi.fn>;
     getMessages: ReturnType<typeof vi.fn>;
@@ -120,6 +141,28 @@ function setup(overrides?: {
 
   const apiDefaults: SetupReturn['api'] = {
     findOne: vi.fn().mockReturnValue(of(mockEvent)),
+    getCredentials: vi.fn().mockReturnValue(
+      of({
+        streamKey: 'zent••••c123',
+        rtmpUrl: 'rtmps://test.com/live',
+        revealed: false,
+      }),
+    ),
+    revealCredentials: vi.fn().mockReturnValue(
+      of({
+        streamKey: 'zentic_abc123',
+        rtmpUrl: 'rtmps://test.com/live',
+        revealed: true,
+      }),
+    ),
+    rotateStreamKey: vi.fn().mockReturnValue(
+      of({
+        streamKey: 'zentic_rotated',
+        rtmpUrl: 'rtmps://test.com/live',
+        revealed: true,
+      }),
+    ),
+    auditStreamKeyCopy: vi.fn().mockReturnValue(of({ recorded: true })),
     startStream: vi.fn().mockReturnValue(of(mockEvent)),
     stopStream: vi.fn().mockReturnValue(of(mockEvent)),
     getMessages: vi.fn().mockReturnValue(of(mockMessages)),
@@ -140,6 +183,14 @@ function setup(overrides?: {
       { provide: ActivatedRoute, useValue: route },
       { provide: StreamingApiService, useValue: api },
       { provide: StreamingSocketService, useValue: mockSocket },
+      {
+        provide: InvitationsApiService,
+        useValue: { create: vi.fn().mockReturnValue(of({ id: 'inv-1' })) },
+      },
+      {
+        provide: AuthStateService,
+        useValue: { hasPermission: vi.fn().mockReturnValue(true) },
+      },
       { provide: DomSanitizer, useValue: sanitizer },
     ],
   });
@@ -173,12 +224,22 @@ describe('EventDetailComponent', () => {
     expect(api.findOne).toHaveBeenCalledWith('evt-1');
     expect(component.event()?.id).toBe('evt-1');
     expect(component.loading()).toBe(false);
+    expect(api.getCredentials).toHaveBeenCalledWith('evt-1');
+  });
+
+  it('reloads the event when the player requests a refreshed playback URL', () => {
+    const { component, api } = setup();
+    api.findOne.mockClear();
+
+    component.refreshPlaybackUrl();
+
+    expect(api.findOne).toHaveBeenCalledWith('evt-1');
   });
 
   it('should show error state when event load fails', () => {
     const { component, api } = setup({
       apiOverrides: {
-        findOne: vi.fn().mockReturnValue(throwError(() => ({ message: 'Not found' }))),
+        findOne: vi.fn().mockReturnValue(throwError(() => new Error('Not found'))),
       },
     });
     expect(api.findOne).toHaveBeenCalledWith('evt-1');
@@ -202,9 +263,11 @@ describe('EventDetailComponent', () => {
       await vi.waitFor(() => {
         expect(writeText).toHaveBeenCalledWith('test-value');
       });
-      expect(snackBar.open).toHaveBeenCalledWith('Copiado al portapapeles', 'Cerrar', {
-        duration: 2000,
-      });
+      expect(snackBar.open).toHaveBeenCalledWith(
+        'Copiado al portapapeles',
+        'Cerrar',
+        successNotification,
+      );
     });
   });
 
@@ -219,20 +282,22 @@ describe('EventDetailComponent', () => {
       expect(socket.connect).toHaveBeenCalledWith('evt-1', true);
       expect(component.streamLoading()).toBe(false);
       expect(component.event()?.status).toBe('LIVE');
-      expect(snackBar.open).toHaveBeenCalledWith('Transmisión iniciada', 'Cerrar', {
-        duration: 3000,
-      });
+      expect(snackBar.open).toHaveBeenCalledWith(
+        'Transmisión iniciada',
+        'Cerrar',
+        successNotification,
+      );
     });
 
     it('should handle error from API', () => {
       const { component, api, socket, snackBar } = setup();
-      api.startStream.mockReturnValue(throwError(() => ({ message: 'Error de red' })));
+      api.startStream.mockReturnValue(throwError(() => new Error('Error de red')));
 
       component.startStream();
 
       expect(component.streamLoading()).toBe(false);
       expect(socket.connect).not.toHaveBeenCalled();
-      expect(snackBar.open).toHaveBeenCalledWith('Error de red', 'Cerrar', { duration: 3000 });
+      expect(snackBar.open).toHaveBeenCalledWith('Error de red', 'Cerrar', errorNotification);
     });
   });
 
@@ -247,20 +312,22 @@ describe('EventDetailComponent', () => {
       expect(socket.disconnect).toHaveBeenCalled();
       expect(component.streamLoading()).toBe(false);
       expect(component.event()?.status).toBe('FINISHED');
-      expect(snackBar.open).toHaveBeenCalledWith('Transmisión finalizada', 'Cerrar', {
-        duration: 3000,
-      });
+      expect(snackBar.open).toHaveBeenCalledWith(
+        'Transmisión finalizada',
+        'Cerrar',
+        successNotification,
+      );
     });
 
     it('should handle error from API', () => {
       const { component, api, socket, snackBar } = setup();
-      api.stopStream.mockReturnValue(throwError(() => ({ message: 'Error de red' })));
+      api.stopStream.mockReturnValue(throwError(() => new Error('Error de red')));
 
       component.stopStream();
 
       expect(component.streamLoading()).toBe(false);
       expect(socket.disconnect).not.toHaveBeenCalled();
-      expect(snackBar.open).toHaveBeenCalledWith('Error de red', 'Cerrar', { duration: 3000 });
+      expect(snackBar.open).toHaveBeenCalledWith('Error de red', 'Cerrar', errorNotification);
     });
   });
 
@@ -313,7 +380,7 @@ describe('EventDetailComponent', () => {
       expect(api.approveMessage).toHaveBeenCalledWith('evt-1', 'msg-2');
       expect(component.messages().find((m: any) => m.id === 'msg-2')).toBeUndefined();
       expect(component.pendingCount()).toBe(1);
-      expect(snackBar.open).toHaveBeenCalledWith('Mensaje aprobado', 'Cerrar', { duration: 2000 });
+      expect(snackBar.open).toHaveBeenCalledWith('Mensaje aprobado', 'Cerrar', successNotification);
     });
   });
 
@@ -329,7 +396,11 @@ describe('EventDetailComponent', () => {
       expect(api.rejectMessage).toHaveBeenCalledWith('evt-1', 'msg-2');
       expect(component.messages().find((m: any) => m.id === 'msg-2')).toBeUndefined();
       expect(component.pendingCount()).toBe(1);
-      expect(snackBar.open).toHaveBeenCalledWith('Mensaje rechazado', 'Cerrar', { duration: 2000 });
+      expect(snackBar.open).toHaveBeenCalledWith(
+        'Mensaje rechazado',
+        'Cerrar',
+        successNotification,
+      );
     });
   });
 
@@ -360,7 +431,7 @@ describe('EventDetailComponent', () => {
     it('should return empty string when event is null', () => {
       const { component } = setup({
         apiOverrides: {
-          findOne: vi.fn().mockReturnValue(throwError(() => ({ message: 'Error' }))),
+          findOne: vi.fn().mockReturnValue(throwError(() => new Error('Error'))),
         },
       });
       expect(component.getPublicUrl()).toBe('');
@@ -380,10 +451,57 @@ describe('EventDetailComponent', () => {
     it('should return null when event is null', () => {
       const { component } = setup({
         apiOverrides: {
-          findOne: vi.fn().mockReturnValue(throwError(() => ({ message: 'Error' }))),
+          findOne: vi.fn().mockReturnValue(throwError(() => new Error('Error'))),
         },
       });
       expect(component.previewUrl()).toBeNull();
+    });
+  });
+
+  describe('messagePending$ subscription', () => {
+    it('increments pendingCount when a new pending message arrives', () => {
+      const { component, socket } = setup();
+
+      socket.messagePending$.next({
+        id: 'msg-3',
+        authorName: 'Carlos',
+        content: 'Nuevo mensaje',
+        iconType: null,
+        createdAt: '2026-07-15T10:03:00Z',
+      });
+
+      expect(component.pendingCount()).toBe(1);
+    });
+
+    it('appends the message to the list when the pending tab is showing', () => {
+      const { component, socket } = setup();
+      component.showingPending.set(true);
+
+      socket.messagePending$.next({
+        id: 'msg-3',
+        authorName: 'Carlos',
+        content: 'Nuevo mensaje',
+        iconType: null,
+        createdAt: '2026-07-15T10:03:00Z',
+      });
+
+      expect(component.messages().find((m: any) => m.id === 'msg-3')).toBeTruthy();
+    });
+
+    it('does not append to the list when the approved tab is showing', () => {
+      const { component, socket } = setup();
+      component.showingPending.set(false);
+
+      socket.messagePending$.next({
+        id: 'msg-3',
+        authorName: 'Carlos',
+        content: 'Nuevo mensaje',
+        iconType: null,
+        createdAt: '2026-07-15T10:03:00Z',
+      });
+
+      expect(component.messages().find((m: any) => m.id === 'msg-3')).toBeUndefined();
+      expect(component.pendingCount()).toBe(1);
     });
   });
 });

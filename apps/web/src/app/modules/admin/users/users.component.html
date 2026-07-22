@@ -10,7 +10,13 @@
       <h2>{{ editingUser() ? 'Editar usuario' : 'Nuevo usuario' }}</h2>
     </div>
     <div class="panel-card__body">
-      <app-user-form [initialValue]="editingFormValue()" (save)="onSave($event)" (cancel)="closeForm()" />
+      <app-user-form
+        [initialValue]="editingFormValue()"
+        [errorMessage]="formError()"
+        [saving]="saving()"
+        (save)="onSave($event)"
+        (cancel)="closeForm()"
+      />
     </div>
   </section>
 
@@ -20,14 +26,27 @@
         <h2>Equipo del tenant</h2>
         <p class="panel-card__count">{{ users().length }} usuario(s)</p>
       </div>
-      <button *appHasPermission="'users:manage'" type="button" class="btn-primary" (click)="openCreate()">
+      <button
+        *appHasPermission="'users:manage'"
+        type="button"
+        class="btn-primary"
+        (click)="openCreate()"
+      >
         <mat-icon>person_add</mat-icon>
         <span>Nuevo usuario</span>
       </button>
     </div>
 
     <div class="panel-card__body panel-card__body--flush">
-      <table class="users-table">
+      <app-feedback-banner
+        [message]="loadError()"
+        title="No pudimos cargar los usuarios"
+        kind="error"
+        retryLabel="Reintentar"
+        (retry)="load()"
+      />
+      <p *ngIf="loading()" role="status">Cargando usuarios…</p>
+      <table class="users-table" *ngIf="!loading() && !loadError()">
         <thead>
           <tr>
             <th>Usuario</th>
@@ -44,7 +63,9 @@
               </div>
             </td>
             <td>
-              <span class="role-chip" [class]="'role-chip--' + user.role.toLowerCase()">{{ user.role }}</span>
+              <span class="role-chip" [class]="'role-chip--' + user.role.toLowerCase()">{{
+                user.role
+              }}</span>
             </td>
             <td class="users-table__actions">
               <button
@@ -60,6 +81,7 @@
           </tr>
         </tbody>
       </table>
+      <p *ngIf="!loading() && !loadError() && users().length === 0">No hay usuarios registrados.</p>
     </div>
   </section>
 </div>

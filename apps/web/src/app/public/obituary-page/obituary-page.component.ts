@@ -10,6 +10,8 @@ import { ObituarySocketService } from '../../core/services/obituary-socket.servi
 import { InitialsAvatarComponent } from '../../shared/atoms/initials-avatar/initials-avatar.component';
 import { CondolenceFormComponent } from './condolence-form/condolence-form.component';
 import { ShareButtonsComponent } from '../../shared/molecules/share-buttons/share-buttons.component';
+import { FeedbackBannerComponent } from '../../shared/molecules/feedback-banner/feedback-banner.component';
+import { getErrorMessage } from '../../core/utils/error-message';
 
 @Component({
   selector: 'app-obituary-page',
@@ -21,6 +23,7 @@ import { ShareButtonsComponent } from '../../shared/molecules/share-buttons/shar
     InitialsAvatarComponent,
     CondolenceFormComponent,
     ShareButtonsComponent,
+    FeedbackBannerComponent,
   ],
   templateUrl: './obituary-page.component.html',
   styleUrl: './obituary-page.component.scss',
@@ -38,6 +41,7 @@ export class ObituaryPageComponent implements OnInit {
   readonly loading = signal(true);
   readonly unlocking = signal(false);
   readonly accessCodeError = signal('');
+  readonly loadError = signal('');
   /** Código ya validado — se reutiliza para no pedirlo de nuevo al dejar un mensaje. */
   readonly unlockedAccessCode = signal<string | null>(null);
   /**
@@ -128,7 +132,9 @@ export class ObituaryPageComponent implements OnInit {
     // El mensaje queda en moderación (PENDING); no se agrega a la lista de aprobados aún.
   }
 
-  private fetch(): void {
+  fetch(): void {
+    this.loading.set(true);
+    this.loadError.set('');
     this.obituariesApi.getPublic(this.slug).subscribe({
       next: (obituary) => {
         this.obituary.set(obituary);
@@ -139,8 +145,13 @@ export class ObituaryPageComponent implements OnInit {
           this.connectSocket(obituary.id);
         }
       },
-      error: () => {
+      error: (error: unknown) => {
         this.loading.set(false);
+        if (error instanceof HttpErrorResponse && error.status === 404) {
+          this.obituary.set(null);
+          return;
+        }
+        this.loadError.set(getErrorMessage(error, 'No se pudo cargar el obituario'));
       },
     });
   }

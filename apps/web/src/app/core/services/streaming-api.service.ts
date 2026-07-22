@@ -18,10 +18,12 @@ export interface StreamingEvent {
   finishedAt: string | null;
   estimatedDuration: number | null;
   isPublic: boolean;
-  accessCode: string | null;
-  streamKey: string | null;
-  rtmpUrl: string | null;
+  /** Indica si el evento requiere código sin exponer su hash. */
+  hasAccessCode: boolean;
+  streamKey?: string | null;
+  rtmpUrl?: string | null;
   recordingUrl: string | null;
+  playbackUrl?: string | null;
   viewerCount: number;
   moderationMode: string;
   createdAt: string;
@@ -52,7 +54,7 @@ export interface StreamingEvent {
  * Datos públicos del evento expuestos a la página del viewer sin autenticación.
  */
 export interface PublicEvent {
-  id: string;
+  id: string | null;
   title: string;
   slug: string;
   status: EventStatus;
@@ -61,6 +63,8 @@ export interface PublicEvent {
   startedAt: string | null;
   finishedAt: string | null;
   recordingUrl: string | null;
+  playbackUrl: string | null;
+  recordingReady: boolean;
   isPublic: boolean;
   viewerCount: number;
   deceased: {
@@ -150,6 +154,12 @@ export interface AccessCodeInput {
   consent?: boolean;
 }
 
+export interface StreamCredentials {
+  streamKey: string | null;
+  rtmpUrl: string | null;
+  revealed: boolean;
+}
+
 /**
  * Servicio HTTP para el módulo de Streaming.
  *
@@ -169,6 +179,38 @@ export class StreamingApiService {
   /** Obtiene el detalle completo de un evento por ID */
   findOne(id: string) {
     return this.http.get<StreamingEvent>(`${environment.apiUrl}/events/${id}`);
+  }
+
+  /** Obtiene credenciales RTMP; requiere el permiso streaming:manage. */
+  getCredentials(id: string) {
+    return this.http.get<StreamCredentials>(`${environment.apiUrl}/events/${id}/credentials`);
+  }
+
+  /** Revela y audita las credenciales RTMP. */
+  revealCredentials(id: string) {
+    return this.http.post<StreamCredentials>(
+      `${environment.apiUrl}/events/${id}/credentials/reveal`,
+      {},
+    );
+  }
+
+  /** Rota la stream key en Mux y devuelve la nueva credencial. */
+  rotateStreamKey(id: string) {
+    return this.http.post<StreamCredentials>(
+      `${environment.apiUrl}/events/${id}/credentials/rotate`,
+      {},
+    );
+  }
+
+  auditStreamKeyCopy(id: string) {
+    return this.http.post<{ recorded: boolean }>(
+      `${environment.apiUrl}/events/${id}/credentials/audit-copy`,
+      {},
+    );
+  }
+
+  getPlayback(slug: string) {
+    return this.http.get<{ url: string }>(`${environment.apiUrl}/events/${slug}/playback`);
   }
 
   /** Obtiene datos públicos de un evento por slug (sin auth) */
@@ -204,6 +246,11 @@ export class StreamingApiService {
   /** Obtiene los mensajes aprobados de un evento */
   getMessages(id: string) {
     return this.http.get<Message[]>(`${environment.apiUrl}/events/${id}/messages`);
+  }
+
+  /** Obtiene mensajes aprobados visibles para el espectador actual. */
+  getPublicMessages(slug: string) {
+    return this.http.get<Message[]>(`${environment.apiUrl}/events/${slug}/public/messages`);
   }
 
   /** Obtiene los mensajes pendientes de moderación */

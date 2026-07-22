@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { EventStatus, MessageStatus, Prisma } from '@prisma/client';
+import { EventStatus, MessageStatus, Prisma, UserRole } from '@prisma/client';
 
 /**
  * Repositorio del módulo de Streaming.
@@ -69,6 +69,21 @@ export class StreamingRepository {
   }
 
   /**
+   * Busca un evento por el id que le asignó el proveedor de streaming
+   * (Mux/Cloudflare). Usado por los webhooks para localizar el evento sin
+   * conocer el tenant de antemano.
+   *
+   * @param providerStreamId - Identificador del live stream en el proveedor
+   * @returns Evento con el plan del tenant, o null si no existe
+   */
+  async findByProviderStreamId(providerStreamId: string) {
+    return this.prisma.event.findUnique({
+      where: { providerStreamId },
+      include: { tenant: { select: { plan: true } } },
+    });
+  }
+
+  /**
    * Busca un evento por su slug público (URL amigable).
    * Incluye datos del difunto y configuración de marca del tenant.
    * Usado por la página pública del evento (sin autenticación).
@@ -107,8 +122,11 @@ export class StreamingRepository {
    * @param data - Datos completos del evento (Prisma create input)
    * @returns El evento creado con todos sus campos
    */
-  async create(data: Prisma.EventCreateInput) {
-    return this.prisma.event.create({ data });
+  async create(
+    data: Prisma.EventCreateInput,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    return db.event.create({ data });
   }
 
   /**
@@ -119,10 +137,36 @@ export class StreamingRepository {
    * @param data - Campos a actualizar
    * @returns El evento actualizado
    */
-  async update(tenantId: string, id: string, data: Prisma.EventUpdateInput) {
-    return this.prisma.event.update({
-      where: { id },
+  async update(
+    tenantId: string,
+    id: string,
+    data: Prisma.EventUpdateInput,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    return db.event.update({
+      where: { id, tenantId },
       data,
+    });
+  }
+
+  async createCredentialAudit(input: {
+    actorId: string;
+    role: UserRole;
+    tenantId: string;
+    eventId: string;
+    action: 'STREAM_KEY_REVEALED' | 'STREAM_KEY_COPIED' | 'STREAM_KEY_ROTATED';
+    ipAddress?: string;
+  }) {
+    return this.prisma.auditLog.create({
+      data: {
+        actorId: input.actorId,
+        role: input.role,
+        tenantId: input.tenantId,
+        action: input.action,
+        entityType: 'Event',
+        entityId: input.eventId,
+        ipAddress: input.ipAddress,
+      },
     });
   }
 
@@ -135,7 +179,7 @@ export class StreamingRepository {
    */
   async softDelete(tenantId: string, id: string) {
     return this.prisma.event.update({
-      where: { id },
+      where: { id, tenantId },
       data: { deletedAt: new Date(), status: 'CANCELLED' },
     });
   }
@@ -158,7 +202,7 @@ export class StreamingRepository {
     estimatedDuration: number,
     excludeId?: string,
   ) {
-    const endTime = new Date(scheduledAt.getTime() + estimatedDuration * 60000);
+    const newEnd = new Date(scheduledAt.getTime() + estimatedDuration * 60000);
     return this.prisma.event.findFirst({
       where: {
         tenantId,
@@ -168,9 +212,49 @@ export class StreamingRepository {
           notIn: ['CANCELLED', 'FINISHED'],
         },
         id: excludeId ? { not: excludeId } : undefined,
-        scheduledAt: { lt: endTime },
+        AND: [
+          { scheduledAt: { lt: newEnd } },
+          {
+            estimatedDuration: {
+              not: null,
+            },
+          },
+        ],
       },
     });
+  }
+
+  async findOverlappingByRoomAndTimeRange(
+    tenantId: string,
+    roomId: string,
+    newStart: Date,
+    newEnd: Date,
+    excludeId?: string,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    // Prisma no puede expresar el fin calculado de cada fila. Limitamos por
+    // inicio y comprobamos en memoria la segunda mitad de la intersección.
+    const candidates = await db.event.findMany({
+      where: {
+        tenantId,
+        roomId,
+        deletedAt: null,
+        status: {
+          notIn: ['CANCELLED', 'FINISHED'],
+        },
+        id: excludeId ? { not: excludeId } : undefined,
+        scheduledAt: { lt: newEnd },
+      },
+    });
+    return (
+      candidates.find((event) => {
+        const duration = event.estimatedDuration ?? 60;
+        const existingEnd = new Date(
+          event.scheduledAt.getTime() + duration * 60_000,
+        );
+        return existingEnd > newStart;
+      }) ?? null
+    );
   }
 
   // ── Messages ────────────────────────────────────────────────────────
@@ -237,9 +321,14 @@ export class StreamingRepository {
    * @param approvedBy - Identificador del operador que aprueba
    * @returns El mensaje actualizado a estado APPROVED
    */
-  async approveMessage(eventId: string, messageId: string, approvedBy: string) {
+  async approveMessage(
+    tenantId: string,
+    eventId: string,
+    messageId: string,
+    approvedBy: string,
+  ) {
     return this.prisma.message.update({
-      where: { id: messageId, eventId },
+      where: { id: messageId, eventId, tenantId },
       data: {
         status: 'APPROVED',
         approvedBy,
@@ -251,14 +340,20 @@ export class StreamingRepository {
   /**
    * Rechaza un mensaje, opcionalmente con una razón del rechazo.
    *
+   * @param tenantId - Identificador del tenant
    * @param eventId - Identificador del evento
    * @param messageId - Identificador del mensaje a rechazar
    * @param reason - Razón opcional del rechazo (visible para el autor)
    * @returns El mensaje actualizado a estado REJECTED
    */
-  async rejectMessage(eventId: string, messageId: string, reason?: string) {
+  async rejectMessage(
+    tenantId: string,
+    eventId: string,
+    messageId: string,
+    reason?: string,
+  ) {
     return this.prisma.message.update({
-      where: { id: messageId, eventId },
+      where: { id: messageId, eventId, tenantId },
       data: {
         status: 'REJECTED',
         rejectedReason: reason ?? null,
@@ -270,13 +365,18 @@ export class StreamingRepository {
    * Soft-delete de un mensaje (lo oculta de la vista pública).
    * El administrador puede restaurarlo hasta 7 días después (RN-STREAM-006).
    *
+   * @param tenantId - Identificador del tenant
    * @param eventId - Identificador del evento
    * @param messageId - Identificador del mensaje a eliminar
    * @returns El mensaje marcado como eliminado
    */
-  async softDeleteMessage(eventId: string, messageId: string) {
+  async softDeleteMessage(
+    tenantId: string,
+    eventId: string,
+    messageId: string,
+  ) {
     return this.prisma.message.update({
-      where: { id: messageId, eventId },
+      where: { id: messageId, eventId, tenantId },
       data: { deletedAt: new Date() },
     });
   }
@@ -290,9 +390,9 @@ export class StreamingRepository {
    * @param count - Número actual de espectadores
    * @returns El evento actualizado
    */
-  async updateViewerCount(eventId: string, count: number) {
+  async updateViewerCount(tenantId: string, eventId: string, count: number) {
     return this.prisma.event.update({
-      where: { id: eventId },
+      where: { id: eventId, tenantId },
       data: { viewerCount: count },
     });
   }
@@ -308,6 +408,40 @@ export class StreamingRepository {
    */
   async createLead(data: Prisma.LeadCreateInput) {
     return this.prisma.lead.create({ data });
+  }
+
+  /**
+   * Obtiene los leads de un evento que dejaron su email, para notificarles
+   * cuando la transmisión inicia (RF-STREAM-011).
+   *
+   * @param eventId - Identificador del evento
+   * @returns Leads con email no nulo
+   */
+  async findLeadsWithEmailByEvent(tenantId: string, eventId: string) {
+    return this.prisma.lead.findMany({
+      where: { tenantId, eventId, email: { not: null }, deletedAt: null },
+      select: { email: true, name: true, consent: true },
+    });
+  }
+
+  // ── Tenant-scoped entity lookups ────────────────────────────────────
+
+  async findRoomByTenant(tenantId: string, roomId: string) {
+    return this.prisma.room.findFirst({
+      where: { id: roomId, tenantId, deletedAt: null },
+    });
+  }
+
+  async findClientByTenant(tenantId: string, clientId: string) {
+    return this.prisma.client.findFirst({
+      where: { id: clientId, tenantId, deletedAt: null },
+    });
+  }
+
+  async findUserByTenant(tenantId: string, userId: string) {
+    return this.prisma.user.findFirst({
+      where: { id: userId, tenantId, deletedAt: null },
+    });
   }
 
   // ── Deceased ────────────────────────────────────────────────────────

@@ -1,6 +1,14 @@
 <div class="brand-settings">
   <p class="brand-settings__success" *ngIf="success()" role="status">{{ success() }}</p>
   <p class="brand-settings__error" *ngIf="error()" role="alert">{{ error() }}</p>
+  <app-feedback-banner
+    [message]="loadError()"
+    title="No pudimos cargar la marca"
+    kind="error"
+    retryLabel="Reintentar"
+    (retry)="load()"
+  />
+  <p *ngIf="loading()" role="status">Cargando configuración de marca…</p>
 
   <div class="brand-settings__grid" *ngIf="!loading()">
     <section class="brand-settings__uploads">
@@ -26,7 +34,12 @@
       <app-color-picker label="Color de texto" formControlName="textColor" />
       <app-color-picker label="Color de fondo" formControlName="backgroundColor" />
 
-      <button type="submit" class="btn-primary" [disabled]="saving()">
+      <button
+        type="submit"
+        class="btn-primary"
+        [disabled]="saving() || uploading()"
+        [attr.aria-busy]="saving()"
+      >
         {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
       </button>
     </form>

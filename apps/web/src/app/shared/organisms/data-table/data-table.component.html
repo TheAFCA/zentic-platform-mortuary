@@ -1,36 +1,62 @@
-<table class="data-table">
-  <thead>
-    <tr>
-      <th *ngIf="selectable" class="data-table__select">
-        <input
-          type="checkbox"
-          data-testid="data-table-select-all"
-          [checked]="allSelected"
-          [indeterminate]="someSelected"
-          (change)="toggleAll()"
-        />
-      </th>
-      <th *ngFor="let col of columns">{{ col.label }}</th>
-      <th *ngIf="actionsTemplate"></th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr *ngFor="let row of rows" data-testid="data-row">
-      <td *ngIf="selectable" class="data-table__select">
-        <input
-          type="checkbox"
-          data-testid="data-table-select-row"
-          [checked]="isSelected(row)"
-          (change)="toggleRow(row)"
-        />
-      </td>
-      <td *ngFor="let col of columns">{{ cellValue(row, col) }}</td>
-      <td *ngIf="actionsTemplate" class="data-table__actions">
-        <ng-container *ngTemplateOutlet="actionsTemplate; context: { $implicit: row }" />
-      </td>
-    </tr>
-    <tr *ngIf="rows.length === 0" data-testid="data-table-empty">
-      <td [attr.colspan]="columnCount" class="data-table__empty">{{ emptyMessage }}</td>
-    </tr>
-  </tbody>
-</table>
+<div
+  *ngIf="loading"
+  class="data-table__state"
+  role="status"
+  aria-live="polite"
+  data-testid="data-table-loading"
+>
+  <span class="data-table__spinner" aria-hidden="true"></span>
+  <span>Cargando datos…</span>
+</div>
+
+<div
+  *ngIf="!loading && errorMessage"
+  class="data-table__state data-table__state--error"
+  role="alert"
+  data-testid="data-table-error"
+>
+  <div>
+    <strong>No pudimos cargar la información</strong>
+    <p>{{ errorMessage }}</p>
+  </div>
+  <button type="button" class="data-table__retry" (click)="retry.emit()">Reintentar</button>
+</div>
+
+<div class="data-table__scroll" *ngIf="!loading && !errorMessage">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th *ngIf="selectable" class="data-table__select">
+          <input
+            type="checkbox"
+            data-testid="data-table-select-all"
+            [checked]="allSelected"
+            [indeterminate]="someSelected"
+            (change)="toggleAll()"
+          />
+        </th>
+        <th *ngFor="let col of columns">{{ col.label }}</th>
+        <th *ngIf="actionsTemplate"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let row of rows" data-testid="data-row">
+        <td *ngIf="selectable" class="data-table__select">
+          <input
+            type="checkbox"
+            data-testid="data-table-select-row"
+            [checked]="isSelected(row)"
+            (change)="toggleRow(row)"
+          />
+        </td>
+        <td *ngFor="let col of columns">{{ cellValue(row, col) }}</td>
+        <td *ngIf="actionsTemplate" class="data-table__actions">
+          <ng-container *ngTemplateOutlet="actionsTemplate; context: { $implicit: row }" />
+        </td>
+      </tr>
+      <tr *ngIf="rows.length === 0" data-testid="data-table-empty">
+        <td [attr.colspan]="columnCount" class="data-table__empty">{{ emptyMessage }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>

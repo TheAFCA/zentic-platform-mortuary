@@ -1,5 +1,4 @@
 import { CommonModule } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Room, Venue } from '@zentic/shared-types';
@@ -8,6 +7,9 @@ import { ConfirmDialogComponent } from '../../shared/organisms/confirm-dialog/co
 import { HasPermissionDirective } from '../../shared/directives/has-permission.directive';
 import { VenueFormComponent, VenueFormValue } from './venue-form/venue-form.component';
 import { RoomFormComponent, RoomFormValue } from './room-form/room-form.component';
+import { FeedbackBannerComponent } from '../../shared/molecules/feedback-banner/feedback-banner.component';
+import { NotificationService } from '../../core/services/notification.service';
+import { getErrorMessage } from '../../core/utils/error-message';
 
 type ConfirmAction = 'delete-venue' | 'delete-room';
 
@@ -21,15 +23,21 @@ type ConfirmAction = 'delete-venue' | 'delete-room';
     HasPermissionDirective,
     VenueFormComponent,
     RoomFormComponent,
+    FeedbackBannerComponent,
   ],
   templateUrl: './venues.component.html',
   styleUrl: './venues.component.scss',
 })
 export class VenuesComponent implements OnInit {
   private readonly venuesApi = inject(VenuesApiService);
+  private readonly notifications = inject(NotificationService);
 
   readonly venues = signal<Venue[]>([]);
   readonly loading = signal(false);
+  readonly loadError = signal('');
+  readonly savingVenue = signal(false);
+  readonly savingRoom = signal(false);
+  readonly actionLoading = signal(false);
 
   readonly showForm = signal(false);
   readonly editingVenue = signal<Venue | null>(null);
@@ -51,12 +59,16 @@ export class VenuesComponent implements OnInit {
 
   load(): void {
     this.loading.set(true);
+    this.loadError.set('');
     this.venuesApi.list().subscribe({
       next: (venues) => {
         this.venues.set(venues);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false),
+      error: (error: unknown) => {
+        this.loading.set(false);
+        this.loadError.set(getErrorMessage(error, 'No se pudieron cargar las sedes'));
+      },
     });
   }
 
@@ -83,8 +95,10 @@ export class VenuesComponent implements OnInit {
   }
 
   onSave(value: VenueFormValue): void {
+    if (this.savingVenue()) return;
     const editing = this.editingVenue();
     this.formError.set('');
+    this.savingVenue.set(true);
 
     const payload = { name: value.name, address: value.address || undefined };
     const request = editing
@@ -93,11 +107,14 @@ export class VenuesComponent implements OnInit {
 
     request.subscribe({
       next: () => {
+        this.savingVenue.set(false);
         this.showForm.set(false);
+        this.notifications.success(editing ? 'Sede actualizada' : 'Sede creada');
         this.load();
       },
-      error: (error: HttpErrorResponse) => {
-        this.formError.set(this.extractErrorMessage(error, 'No se pudo guardar la sede'));
+      error: (error: unknown) => {
+        this.savingVenue.set(false);
+        this.formError.set(getErrorMessage(error, 'No se pudo guardar la sede'));
       },
     });
   }
@@ -130,10 +147,12 @@ export class VenuesComponent implements OnInit {
   }
 
   onSaveRoom(value: RoomFormValue): void {
+    if (this.savingRoom()) return;
     const venueId = this.expandedVenueId();
     if (!venueId) return;
     const editing = this.editingRoom();
     this.roomFormError.set('');
+    this.savingRoom.set(true);
 
     const payload = { name: value.name, capacity: value.capacity ?? undefined };
     const request = editing
@@ -142,11 +161,14 @@ export class VenuesComponent implements OnInit {
 
     request.subscribe({
       next: () => {
+        this.savingRoom.set(false);
         this.showRoomForm.set(false);
+        this.notifications.success(editing ? 'Sala actualizada' : 'Sala creada');
         this.load();
       },
-      error: (error: HttpErrorResponse) => {
-        this.roomFormError.set(this.extractErrorMessage(error, 'No se pudo guardar la sala'));
+      error: (error: unknown) => {
+        this.savingRoom.set(false);
+        this.roomFormError.set(getErrorMessage(error, 'No se pudo guardar la sala'));
       },
     });
   }
@@ -181,38 +203,43 @@ export class VenuesComponent implements OnInit {
   }
 
   onConfirm(): void {
+    if (this.actionLoading()) return;
     const action = this.confirmAction();
     this.confirmError.set('');
 
     if (action === 'delete-venue') {
       const venue = this.confirmVenue();
       if (!venue) return;
+      this.actionLoading.set(true);
       this.venuesApi.delete(venue.id).subscribe({
         next: () => {
+          this.actionLoading.set(false);
           this.cancelConfirm();
+          this.notifications.success('Sede eliminada');
           this.load();
         },
-        error: (error: HttpErrorResponse) =>
-          this.confirmError.set(this.extractErrorMessage(error, 'No se pudo eliminar la sede')),
+        error: (error: unknown) => {
+          this.actionLoading.set(false);
+          this.confirmError.set(getErrorMessage(error, 'No se pudo eliminar la sede'));
+        },
       });
     } else if (action === 'delete-room') {
       const venueId = this.expandedVenueId();
       const room = this.confirmRoom();
       if (!venueId || !room) return;
+      this.actionLoading.set(true);
       this.venuesApi.deleteRoom(venueId, room.id).subscribe({
         next: () => {
+          this.actionLoading.set(false);
           this.cancelConfirm();
+          this.notifications.success('Sala eliminada');
           this.load();
         },
-        error: (error: HttpErrorResponse) =>
-          this.confirmError.set(this.extractErrorMessage(error, 'No se pudo eliminar la sala')),
+        error: (error: unknown) => {
+          this.actionLoading.set(false);
+          this.confirmError.set(getErrorMessage(error, 'No se pudo eliminar la sala'));
+        },
       });
     }
-  }
-
-  private extractErrorMessage(error: HttpErrorResponse, fallback: string): string {
-    const message = (error.error as { message?: string | string[] } | null)?.message;
-    if (Array.isArray(message)) return message.join(', ');
-    return message ?? fallback;
   }
 }

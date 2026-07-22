@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import { A11yModule } from '@angular/cdk/a11y';
 
 @Component({
   selector: 'app-confirm-dialog',
   standalone: true,
-  imports: [CommonModule, MatIconModule],
+  imports: [CommonModule, MatIconModule, A11yModule],
   styles: [
     `
       .confirm-dialog__backdrop {
@@ -140,24 +141,36 @@ import { MatIconModule } from '@angular/material/icon';
     `,
   ],
   template: `
-    <div class="confirm-dialog__backdrop" *ngIf="open" (click)="onCancel()">
+    <div
+      class="confirm-dialog__backdrop"
+      *ngIf="open"
+      (click)="onCancel()"
+      (keydown.escape)="onCancel()"
+    >
       <div
         class="confirm-dialog__card"
         [class.confirm-dialog__card--danger]="danger"
         (click)="$event.stopPropagation()"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-dialog-title"
+        aria-describedby="confirm-dialog-message"
+        cdkTrapFocus
+        [cdkTrapFocusAutoCapture]="true"
         data-testid="confirm-dialog"
       >
         <span class="confirm-dialog__icon">
           <mat-icon>{{ danger ? 'warning' : 'help_outline' }}</mat-icon>
         </span>
-        <h2>{{ title }}</h2>
-        <p>{{ message }}</p>
+        <h2 id="confirm-dialog-title">{{ title }}</h2>
+        <p id="confirm-dialog-message">{{ message }}</p>
         <ng-content />
         <div class="confirm-dialog__actions">
           <button
             type="button"
             class="confirm-dialog__button confirm-dialog__button--cancel"
             (click)="onCancel()"
+            [disabled]="loading"
           >
             {{ cancelLabel }}
           </button>
@@ -168,8 +181,10 @@ import { MatIconModule } from '@angular/material/icon';
             [class.confirm-dialog__button--confirm]="!danger"
             data-testid="confirm-dialog-confirm"
             (click)="onConfirm()"
+            [disabled]="loading"
+            [attr.aria-busy]="loading"
           >
-            {{ confirmLabel }}
+            {{ loading ? 'Procesando…' : confirmLabel }}
           </button>
         </div>
       </div>
@@ -183,14 +198,17 @@ export class ConfirmDialogComponent {
   @Input() confirmLabel = 'Confirmar';
   @Input() cancelLabel = 'Cancelar';
   @Input() danger = false;
+  @Input() loading = false;
   @Output() confirm = new EventEmitter<void>();
   @Output() cancel = new EventEmitter<void>();
 
   onConfirm(): void {
+    if (this.loading) return;
     this.confirm.emit();
   }
 
   onCancel(): void {
+    if (this.loading) return;
     this.cancel.emit();
   }
 }

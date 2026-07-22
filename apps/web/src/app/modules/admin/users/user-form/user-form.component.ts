@@ -1,4 +1,5 @@
 import { Component, EventEmitter, Input, OnChanges, Output } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,6 +19,7 @@ export interface UserFormValue {
   standalone: true,
   imports: [
     ReactiveFormsModule,
+    CommonModule,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
@@ -29,6 +31,8 @@ export interface UserFormValue {
 })
 export class UserFormComponent implements OnChanges {
   @Input() initialValue: UserFormValue | null = null;
+  @Input() errorMessage = '';
+  @Input() saving = false;
   @Output() save = new EventEmitter<UserFormValue>();
   @Output() cancel = new EventEmitter<void>();
 

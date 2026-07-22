@@ -17,7 +17,7 @@ function buildEvent(overrides: Partial<StreamingEvent> = {}): StreamingEvent {
     finishedAt: null,
     estimatedDuration: null,
     isPublic: true,
-    accessCode: null,
+    hasAccessCode: false,
     streamKey: null,
     rtmpUrl: null,
     recordingUrl: null,
@@ -84,7 +84,7 @@ describe('InvitationFormComponent', () => {
   });
 
   it('shows the access code field only when the selected event has one enabled (RN-INV-004)', () => {
-    const withCode = buildEvent({ id: 'event-2', accessCode: 'hashed-value' });
+    const withCode = buildEvent({ id: 'event-2', hasAccessCode: true });
     const fixture = createFixture([buildEvent(), withCode]);
 
     fixture.componentInstance.form.patchValue({ eventId: 'event-1' });

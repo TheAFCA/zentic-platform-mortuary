@@ -1,22 +1,22 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, RouterModule } from '@angular/router';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
+import { ActivatedRoute } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { StreamingApiService, PublicEvent } from '../../core/services/streaming-api.service';
+import { NotificationService } from '../../core/services/notification.service';
 import {
   StreamingSocketService,
   SocketMessage,
 } from '../../core/services/streaming-socket.service';
 import { EventStatus } from '@zentic/shared-types';
+import { HlsPlayerComponent } from '../../shared/molecules/hls-player/hls-player.component';
+import { getErrorMessage } from '../../core/utils/error-message';
 
 /** Iconos de reacción rápida disponibles */
 const REACTION_ICONS = [
@@ -49,289 +49,1132 @@ const REACTION_ICONS = [
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    RouterModule,
-    MatButtonModule,
-    MatCardModule,
-    MatFormFieldModule,
     MatIconModule,
-    MatInputModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatTooltipModule,
+    HlsPlayerComponent,
   ],
+  styles: `
+    :host {
+      display: block;
+      height: 100%;
+    }
+
+    /* ── Twitch Dark Theme Tokens ── */
+    .stream-room {
+      --bg-body: #0e0e10;
+      --bg-surface: #18181b;
+      --bg-elevated: #1f1f23;
+      --bg-hover: #26262c;
+      --bg-active: #2b2b30;
+      --border: #2f2f35;
+      --text-primary: #efeff1;
+      --text-secondary: #adadb8;
+      --text-muted: #777781;
+      --brand: #9147ff;
+      --red: #eb0400;
+
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      background: var(--bg-body);
+      color: var(--text-primary);
+    }
+
+    /* ── Top Nav ── */
+    .stream-room__topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      height: 3.125rem;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .stream-room__nav {
+      display: flex;
+      align-items: center;
+      height: 100%;
+      padding: 0 1rem;
+      gap: 1rem;
+    }
+    .stream-room__nav-logo {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text-primary);
+    }
+    .stream-room__nav-logo img {
+      height: 1.75rem;
+    }
+    .stream-room__nav-links {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      margin-left: 1.5rem;
+    }
+    .stream-room__nav-links a {
+      padding: 0.375rem 0.75rem;
+      border-radius: 0.25rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-decoration: none;
+    }
+    .stream-room__nav-links a:hover {
+      color: var(--text-primary);
+      background: var(--bg-hover);
+    }
+    .stream-room__nav-actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .stream-room__nav-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      width: 2rem;
+      height: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 0.25rem;
+      cursor: pointer;
+    }
+    .stream-room__nav-btn:hover {
+      color: var(--text-primary);
+      background: var(--bg-hover);
+    }
+    .stream-room__nav-btn mat-icon {
+      font-size: 1.25rem;
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+
+    /* ── Layout (sidebar | main | chat) ── */
+    .stream-room__body {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+    .stream-room__sidebar {
+      width: 15rem;
+      flex-shrink: 0;
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      padding: 0.75rem 0.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+      overflow-y: auto;
+    }
+    .stream-room__sidebar-label {
+      color: var(--text-secondary);
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.5rem 0.5rem 0.25rem;
+    }
+    .stream-room__sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      width: 100%;
+      padding: 0.4375rem 0.5rem;
+      border-radius: 0.25rem;
+      color: var(--text-secondary);
+      font-size: 0.8125rem;
+      font-weight: 400;
+      background: none;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+    }
+    .stream-room__sidebar-item:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+    .stream-room__sidebar-item--active {
+      background: var(--bg-active);
+      color: var(--text-primary);
+    }
+    .stream-room__sidebar-item mat-icon {
+      font-size: 1.125rem;
+      width: 1.125rem;
+      height: 1.125rem;
+      flex-shrink: 0;
+    }
+
+    /* ── Main Content ── */
+    .stream-room__main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Video Player ── */
+    .stream-room__player {
+      position: relative;
+      background: #000;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      max-height: calc(100vh - 3.125rem - 10rem);
+    }
+    .stream-room__player app-hls-player {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    /* Override hls-player border-radius in full-width context */
+    .stream-room__player ::ng-deep .hls-player {
+      border-radius: 0 !important;
+    }
+    .stream-room__player-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      gap: 0.5rem;
+    }
+    .stream-room__player-placeholder mat-icon {
+      font-size: 2.5rem;
+      width: 2.5rem;
+      height: 2.5rem;
+      opacity: 0.6;
+    }
+    .stream-room__player-bottom {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2.5rem;
+      display: flex;
+      align-items: center;
+      padding: 0 1rem;
+      gap: 0.75rem;
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+      color: rgba(255, 255, 255, 0.8);
+    }
+    .stream-room__player-bottom mat-icon {
+      font-size: 1.125rem;
+      width: 1.125rem;
+      height: 1.125rem;
+    }
+    .stream-room__player-progress {
+      flex: 1;
+      height: 0.25rem;
+      border-radius: 0.125rem;
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* ── Metadata (channel info below player) ── */
+    .stream-room__metadata {
+      padding: 1rem 1.5rem;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+    .stream-room__metadata-avatar {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .stream-room__metadata-avatar-fallback {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      background: var(--bg-hover);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .stream-room__metadata-avatar-fallback mat-icon {
+      font-size: 1.25rem;
+      width: 1.25rem;
+      height: 1.25rem;
+      color: var(--text-muted);
+    }
+    .stream-room__metadata-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .stream-room__metadata-top {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .stream-room__metadata-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .stream-room__live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      background: var(--red);
+      color: #fff;
+      font-size: 0.625rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 0.125rem 0.4375rem;
+      border-radius: 0.125rem;
+      text-transform: uppercase;
+      line-height: 1.2;
+    }
+    .stream-room__live-dot {
+      width: 0.375rem;
+      height: 0.375rem;
+      border-radius: 50%;
+      background: #fff;
+    }
+    .stream-room__metadata-deceased {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      margin-top: 0.125rem;
+    }
+    .stream-room__metadata-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 0.25rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .stream-room__metadata-meta span {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .stream-room__metadata-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+    .stream-room__metadata-share {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      width: 2rem;
+      height: 2rem;
+      border-radius: 0.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .stream-room__metadata-share:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+    .stream-room__metadata-share mat-icon {
+      font-size: 1.25rem;
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+    .stream-room__viewer-count {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      color: var(--text-muted);
+    }
+    .stream-room__viewer-count mat-icon {
+      font-size: 0.875rem;
+      width: 0.875rem;
+      height: 0.875rem;
+    }
+
+    /* ── Info Sections ── */
+    .stream-room__info {
+      padding: 1rem 1.5rem;
+    }
+    .stream-room__about,
+    .stream-room__reactions {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .stream-room__about h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0 0 0.75rem;
+    }
+    .stream-room__about p {
+      color: var(--text-secondary);
+      font-size: 0.8125rem;
+    }
+    .stream-room__about-content {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+    .stream-room__about-avatar {
+      width: 4rem;
+      height: 4rem;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .stream-room__about-avatar-fallback {
+      width: 4rem;
+      height: 4rem;
+      border-radius: 50%;
+      background: var(--bg-hover);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .stream-room__about-avatar-fallback mat-icon {
+      font-size: 2rem;
+      width: 2rem;
+      height: 2rem;
+      color: var(--text-muted);
+    }
+    .stream-room__about-name {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .stream-room__about-dates {
+      color: var(--text-secondary);
+      font-size: 0.8125rem;
+      margin-top: 0.125rem;
+    }
+    .stream-room__about-epitaph {
+      color: var(--text-muted);
+      font-style: italic;
+      font-size: 0.875rem;
+      margin-top: 0.5rem;
+    }
+    .stream-room__reactions p {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      margin: 0 0 0.75rem;
+    }
+    .stream-room__reactions-buttons {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .stream-room__reaction-btn {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0.25rem;
+      border-radius: 0.25rem;
+      transition: transform 0.15s;
+    }
+    .stream-room__reaction-btn:hover {
+      transform: scale(1.25);
+    }
+    .stream-room__reaction-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .stream-room__reaction-cooldown {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.375rem;
+    }
+
+    /* ── Chat Column ── */
+    .stream-room__chat {
+      width: 21.25rem;
+      flex-shrink: 0;
+      background: var(--bg-surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 3.125rem);
+      position: sticky;
+      top: 3.125rem;
+    }
+    .stream-room__chat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      min-height: 3rem;
+    }
+    .stream-room__chat-header h3 {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-primary);
+      margin: 0;
+    }
+    .stream-room__chat-header-actions {
+      display: flex;
+      gap: 0.25rem;
+    }
+    .stream-room__chat-header-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      width: 1.75rem;
+      height: 1.75rem;
+      border-radius: 0.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .stream-room__chat-header-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+    .stream-room__chat-header-btn mat-icon {
+      font-size: 1.125rem;
+      width: 1.125rem;
+      height: 1.125rem;
+    }
+    .stream-room__messages {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--bg-body);
+      padding: 0.5rem 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    .stream-room__messages::-webkit-scrollbar {
+      width: 0.375rem;
+    }
+    .stream-room__messages::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 0.1875rem;
+    }
+    .stream-room__messages-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-muted);
+      font-size: 0.8125rem;
+      padding: 2rem;
+      text-align: center;
+    }
+    .stream-room__message {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      padding: 0.25rem 1rem;
+      font-size: 0.8125rem;
+      transition: background 0.1s;
+    }
+    .stream-room__message:hover {
+      background: var(--bg-hover);
+    }
+    .stream-room__message-icon {
+      font-size: 1rem;
+      line-height: 1.4;
+      flex-shrink: 0;
+    }
+    .stream-room__message-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .stream-room__message-author {
+      font-weight: 600;
+      color: #bf94ff;
+    }
+    .stream-room__message-text {
+      color: var(--text-primary);
+      word-break: break-word;
+    }
+    .stream-room__message-time {
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+      margin-top: 0.125rem;
+    }
+
+    /* ── Composer ── */
+    .stream-room__composer {
+      border-top: 1px solid var(--border);
+      padding: 0.75rem 1rem;
+      background: var(--bg-surface);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .stream-room__composer-input {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .stream-room__composer-field {
+      flex: 1;
+      position: relative;
+    }
+    .stream-room__composer-field input {
+      width: 100%;
+      background: var(--bg-body);
+      border: 1px solid var(--border);
+      border-radius: 0.25rem;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8125rem;
+      color: var(--text-primary);
+      outline: none;
+    }
+    .stream-room__composer-field input:focus {
+      border-color: var(--brand);
+    }
+    .stream-room__composer-field input::placeholder {
+      color: var(--text-muted);
+    }
+    .stream-room__composer-send {
+      background: var(--brand);
+      border: none;
+      color: #fff;
+      padding: 0.5rem 1rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .stream-room__composer-send:hover {
+      opacity: 0.9;
+    }
+    .stream-room__composer-send:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .stream-room__composer-name {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .stream-room__composer-name input {
+      flex: 1;
+      background: var(--bg-body);
+      border: 1px solid var(--border);
+      border-radius: 0.25rem;
+      padding: 0.375rem 0.75rem;
+      font-size: 0.75rem;
+      color: var(--text-primary);
+      outline: none;
+    }
+    .stream-room__composer-name input:focus {
+      border-color: var(--brand);
+    }
+    .stream-room__composer-name input::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* ── Access Code Overlay ── */
+    .stream-room__access {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .stream-room__access-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      width: 100%;
+      max-width: 24rem;
+      padding: 2rem;
+    }
+    .stream-room__access-logo {
+      height: 3rem;
+      margin: 0 auto 1rem;
+      display: block;
+    }
+    .stream-room__access-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      text-align: center;
+      color: var(--text-primary);
+      margin: 0 0 0.375rem;
+    }
+    .stream-room__access-subtitle {
+      font-size: 0.875rem;
+      text-align: center;
+      color: var(--text-secondary);
+      margin: 0 0 1.5rem;
+    }
+    .stream-room__access-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .stream-room__access-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .stream-room__access-field label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+    .stream-room__access-field input {
+      width: 100%;
+      background: var(--bg-body);
+      border: 1px solid var(--border);
+      border-radius: 0.25rem;
+      padding: 0.625rem 0.75rem;
+      font-size: 0.875rem;
+      color: var(--text-primary);
+      outline: none;
+    }
+    .stream-room__access-field input:focus {
+      border-color: var(--brand);
+    }
+    .stream-room__access-submit {
+      background: var(--brand);
+      border: none;
+      color: #fff;
+      padding: 0.625rem 1rem;
+      border-radius: 0.25rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+    }
+    .stream-room__access-submit:hover {
+      opacity: 0.9;
+    }
+    .stream-room__access-submit:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .stream-room__access-error {
+      color: #f87171;
+      font-size: 0.8125rem;
+      text-align: center;
+    }
+    .stream-room__loading {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-body);
+    }
+    .stream-room__error {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-body);
+      color: var(--text-primary);
+    }
+    .stream-room__error-content {
+      text-align: center;
+    }
+    .stream-room__error-content h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 0 0 0.5rem;
+    }
+    .stream-room__error-content p {
+      color: var(--text-secondary);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1100px) {
+      .stream-room__sidebar {
+        display: none;
+      }
+    }
+    @media (max-width: 800px) {
+      .stream-room__body {
+        flex-direction: column;
+      }
+      .stream-room__chat {
+        width: 100%;
+        height: 24rem;
+        position: static;
+        border-left: none;
+        border-top: 1px solid var(--border);
+      }
+      .stream-room__metadata {
+        flex-wrap: wrap;
+        padding: 0.75rem 1rem;
+      }
+      .stream-room__info {
+        padding: 0.75rem 1rem;
+      }
+    }
+  `,
   template: `
     @if (loading()) {
-      <div class="min-h-screen bg-gray-900 flex items-center justify-center">
-        <mat-spinner diameter="40" color="accent" />
+      <div class="stream-room__loading">
+        <mat-spinner diameter="40" />
       </div>
     } @else if (error()) {
-      <div class="min-h-screen bg-gray-900 flex items-center justify-center text-white">
-        <div class="text-center">
-          <h1 class="text-2xl font-bold mb-2">Evento no encontrado</h1>
-          <p class="text-gray-400">{{ error() }}</p>
+      <div class="stream-room__error" role="alert">
+        <div class="stream-room__error-content">
+          <h1>Evento no encontrado</h1>
+          <p>{{ error() }}</p>
         </div>
       </div>
     } @else if (evt(); as event) {
       @if (!accessGranted()) {
-        <!-- Access code form -->
-        <div
-          class="min-h-screen flex items-center justify-center p-4"
-          [style]="{
-            background: event.tenant.brandConfig?.backgroundColor ?? '#f5f5f5',
-          }"
-        >
-          <mat-card class="w-full max-w-md">
-            <mat-card-content class="p-6">
-              @if (event.tenant.brandConfig?.logoUrl) {
-                <img
-                  [src]="event.tenant.brandConfig?.logoUrl"
-                  class="h-12 mx-auto mb-4"
-                  alt="Logo"
+        <!-- Access Code Overlay -->
+        <div class="stream-room__access">
+          <div class="stream-room__access-card">
+            @if (event.tenant.brandConfig?.logoUrl) {
+              <img
+                [src]="event.tenant.brandConfig?.logoUrl"
+                class="stream-room__access-logo"
+                alt="Logo"
+              />
+            }
+            <h2 class="stream-room__access-title">{{ event.title }}</h2>
+            <p class="stream-room__access-subtitle">
+              Ingresa el código de acceso para ver el evento
+            </p>
+
+            <form
+              [formGroup]="accessForm"
+              (ngSubmit)="submitAccessCode()"
+              class="stream-room__access-form"
+            >
+              <div class="stream-room__access-field">
+                <label for="access-name">Tu nombre</label>
+                <input id="access-name" formControlName="name" placeholder="Nombre completo" />
+              </div>
+              <div class="stream-room__access-field">
+                <label for="access-email">Email (opcional)</label>
+                <input
+                  id="access-email"
+                  type="email"
+                  formControlName="email"
+                  placeholder="correo@ejemplo.com"
                 />
-              }
-              <h2 class="text-xl font-semibold text-center mb-2">
-                {{ event.title }}
-              </h2>
-              <p class="text-gray-600 text-center mb-6">
-                Ingresa el código de acceso para ver el evento
-              </p>
+              </div>
+              <div class="stream-room__access-field">
+                <label for="access-code">Código de acceso</label>
+                <input
+                  id="access-code"
+                  formControlName="code"
+                  placeholder="Ej: FAMILIA2026"
+                  required
+                />
+              </div>
 
-              <form [formGroup]="accessForm" (ngSubmit)="submitAccessCode()" class="space-y-4">
-                <mat-form-field class="w-full">
-                  <mat-label>Tu nombre</mat-label>
-                  <input matInput formControlName="name" placeholder="Nombre completo" />
-                </mat-form-field>
-
-                <mat-form-field class="w-full">
-                  <mat-label>Email (opcional)</mat-label>
-                  <input
-                    matInput
-                    type="email"
-                    formControlName="email"
-                    placeholder="correo@ejemplo.com"
-                  />
-                </mat-form-field>
-
-                <mat-form-field class="w-full">
-                  <mat-label>Código de acceso</mat-label>
-                  <input matInput formControlName="code" placeholder="Ej: FAMILIA2026" required />
-                  @if (accessForm.get('code')?.invalid && accessForm.get('code')?.touched) {
-                    <mat-error>El código es requerido</mat-error>
-                  }
-                </mat-form-field>
-
-                <button
-                  mat-raised-button
-                  color="primary"
-                  class="w-full"
-                  type="submit"
-                  [disabled]="accessLoading() || accessForm.invalid"
-                >
-                  @if (accessLoading()) {
-                    <mat-spinner diameter="20" />
-                  } @else {
-                    Acceder al evento
-                  }
-                </button>
-
-                @if (accessError()) {
-                  <p class="text-red-500 text-sm text-center">
-                    {{ accessError() }}
-                  </p>
+              <button
+                class="stream-room__access-submit"
+                type="submit"
+                [disabled]="accessLoading() || accessForm.invalid"
+              >
+                @if (accessLoading()) {
+                  <mat-spinner diameter="20" />
+                } @else {
+                  Acceder al evento
                 }
-              </form>
-            </mat-card-content>
-          </mat-card>
+              </button>
+
+              @if (accessError()) {
+                <p class="stream-room__access-error" role="alert">{{ accessError() }}</p>
+              }
+            </form>
+          </div>
         </div>
       } @else {
-        <!-- Event page -->
-        <div
-          class="min-h-screen"
-          [style]="{
-            background: event.tenant.brandConfig?.backgroundColor ?? '#f5f5f5',
-          }"
-        >
-          <!-- Header -->
-          <header class="bg-white shadow-sm">
-            <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-              <div class="flex items-center gap-3">
+        <!-- Full Twitch‑style event page -->
+        <div class="stream-room">
+          <!-- ── Top Nav ── -->
+          <header class="stream-room__topbar">
+            <div class="stream-room__nav">
+              <div class="stream-room__nav-logo">
                 @if (event.tenant.brandConfig?.logoUrl) {
-                  <img [src]="event.tenant.brandConfig?.logoUrl" class="h-8" alt="Logo" />
-                } @else {
-                  <span class="font-semibold text-gray-800">{{ event.tenant.name }}</span>
+                  <img [src]="event.tenant.brandConfig?.logoUrl" alt="Logo" />
                 }
+                <span>{{ event.tenant.name }}</span>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="stream-room__nav-actions">
                 <button
-                  mat-icon-button
+                  class="stream-room__nav-btn"
                   (click)="shareWhatsApp()"
                   matTooltip="Compartir por WhatsApp"
                 >
                   <mat-icon>chat</mat-icon>
                 </button>
-                <button mat-icon-button (click)="shareEmail()" matTooltip="Compartir por email">
+                <button
+                  class="stream-room__nav-btn"
+                  (click)="shareEmail()"
+                  matTooltip="Compartir por email"
+                >
                   <mat-icon>email</mat-icon>
                 </button>
-                <button mat-icon-button (click)="copyLink()" matTooltip="Copiar enlace">
+                <button
+                  class="stream-room__nav-btn"
+                  (click)="copyLink()"
+                  matTooltip="Copiar enlace"
+                >
                   <mat-icon>link</mat-icon>
                 </button>
               </div>
             </div>
           </header>
 
-          <main class="max-w-4xl mx-auto px-4 py-6">
-            <!-- Video player -->
-            <div class="aspect-video bg-black rounded-lg overflow-hidden mb-6 relative">
-              @if (event.status === 'LIVE') {
-                <div
-                  class="absolute top-3 left-3 z-10 flex items-center gap-2 bg-red-600 text-white px-2 py-1 rounded text-sm"
-                >
-                  <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-                  EN VIVO
-                </div>
-              }
-              @if (event.status === 'LIVE' || event.status === 'FINISHED') {
-                <video
-                  controls
-                  class="w-full h-full"
-                  [src]="event.status === 'FINISHED' ? event.recordingUrl : event.slug"
-                  poster="{{ event.deceased?.photoUrl ?? '' }}"
-                >
-                  Tu navegador no soporta video.
-                </video>
-              } @else {
-                <div class="w-full h-full flex items-center justify-center text-white">
-                  <div class="text-center">
-                    <p class="text-2xl font-bold mb-2">🕊️</p>
-                    <p>El evento comenzará pronto</p>
-                    @if (event.scheduledAt) {
-                      <p class="text-gray-400 text-sm mt-1">
-                        {{ event.scheduledAt | date: 'dd/MM/yyyy HH:mm' }}
-                      </p>
-                    }
-                  </div>
-                </div>
-              }
+          <!-- ── Body: sidebar / main / chat ── -->
+          <div class="stream-room__body">
+            <!-- Sidebar -->
+            <aside class="stream-room__sidebar" aria-label="Navegación del evento">
+              <span class="stream-room__sidebar-label">Este homenaje</span>
+              <button
+                class="stream-room__sidebar-item stream-room__sidebar-item--active"
+                type="button"
+              >
+                <mat-icon>play_circle</mat-icon>
+                Ver transmisión
+              </button>
+              <button class="stream-room__sidebar-item" type="button">
+                <mat-icon>favorite_border</mat-icon>
+                Mensajes
+              </button>
+              <button class="stream-room__sidebar-item" type="button">
+                <mat-icon>info_outline</mat-icon>
+                Información
+              </button>
+            </aside>
 
-              @if (event.status === 'LIVE') {
-                <div
-                  class="absolute bottom-3 right-3 z-10 bg-black/60 text-white px-2 py-1 rounded text-sm"
-                >
-                  {{ viewerCount() }} espectadores
-                </div>
-              }
-            </div>
-
-            <!-- Deceased info -->
-            @if (event.deceased; as deceased) {
-              <div class="bg-white rounded-lg p-6 mb-6 flex items-start gap-4">
-                @if (deceased.photoUrl) {
-                  <img
-                    [src]="deceased.photoUrl"
-                    class="w-20 h-20 rounded-full object-cover flex-shrink-0"
+            <!-- Main Content -->
+            <div class="stream-room__main">
+              <!-- Player -->
+              <section class="stream-room__player" aria-label="Reproductor de transmisión">
+                @if (event.status === 'LIVE' || event.status === 'FINISHED') {
+                  <app-hls-player
+                    [src]="event.playbackUrl"
+                    [posterUrl]="event.deceased?.photoUrl ?? ''"
+                    [mode]="event.status === 'FINISHED' ? 'recording' : 'live'"
+                    (playbackRefreshRequested)="refreshPlaybackUrl()"
                   />
                 } @else {
-                  <div
-                    class="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0"
-                  >
-                    <mat-icon class="text-gray-400 text-3xl">person</mat-icon>
+                  <div class="stream-room__player-placeholder">
+                    <mat-icon>play_circle</mat-icon>
+                    <p>Transmisión en espera</p>
+                    <p>El reproductor iniciará automáticamente cuando comience la transmisión.</p>
+                    @if (event.scheduledAt) {
+                      <p>Programado para {{ event.scheduledAt | date: 'dd/MM/yyyy, HH:mm' }}</p>
+                    }
                   </div>
                 }
-                <div>
-                  <h2 class="text-xl font-bold text-gray-900">
-                    {{ deceased.firstName }} {{ deceased.lastName }}
-                  </h2>
-                  @if (deceased.birthDate || deceased.deathDate) {
-                    <p class="text-gray-600 mt-1">
-                      @if (deceased.birthDate) {
-                        {{ deceased.birthDate | date: 'dd/MM/yyyy' }}
-                      }
-                      @if (deceased.birthDate && deceased.deathDate) {
-                        -
-                      }
-                      @if (deceased.deathDate) {
-                        {{ deceased.deathDate | date: 'dd/MM/yyyy' }}
-                      }
+                <!-- Bottom overlay bar -->
+                <div class="stream-room__player-bottom">
+                  <mat-icon>play_arrow</mat-icon>
+                  <div class="stream-room__player-progress"></div>
+                  <mat-icon>volume_up</mat-icon>
+                  <mat-icon>fullscreen</mat-icon>
+                </div>
+              </section>
+
+              <!-- Metadata -->
+              <section class="stream-room__metadata">
+                @if (event.deceased?.photoUrl) {
+                  <img
+                    [src]="event.deceased?.photoUrl"
+                    class="stream-room__metadata-avatar"
+                    alt=""
+                  />
+                } @else {
+                  <div class="stream-room__metadata-avatar-fallback">
+                    <mat-icon>person</mat-icon>
+                  </div>
+                }
+                <div class="stream-room__metadata-body">
+                  <div class="stream-room__metadata-top">
+                    <h1 class="stream-room__metadata-title">{{ event.title }}</h1>
+                    @if (event.status === 'LIVE') {
+                      <span class="stream-room__live-badge">
+                        <span class="stream-room__live-dot"></span>
+                        EN DIRECTO
+                      </span>
+                    }
+                  </div>
+                  @if (event.deceased; as deceased) {
+                    <p class="stream-room__metadata-deceased">
+                      Homenaje a {{ deceased.firstName }} {{ deceased.lastName }}
                     </p>
                   }
-                  @if (deceased.epitaph) {
-                    <p class="text-gray-500 italic mt-2">"{{ deceased.epitaph }}"</p>
-                  }
+                  <div class="stream-room__metadata-meta">
+                    @if (event.status === 'LIVE') {
+                      <span class="stream-room__viewer-count">
+                        <mat-icon>people</mat-icon>
+                        {{ viewerCount() }} espectadores
+                      </span>
+                    } @else if (event.scheduledAt) {
+                      <span>Programado: {{ event.scheduledAt | date: 'dd/MM/yyyy, HH:mm' }}</span>
+                    }
+                    <span>{{ event.ceremonyType | titlecase }}</span>
+                  </div>
                 </div>
-              </div>
-            }
+                <div class="stream-room__metadata-actions">
+                  <button
+                    class="stream-room__metadata-share"
+                    (click)="copyLink()"
+                    matTooltip="Compartir enlace"
+                    aria-label="Compartir enlace"
+                  >
+                    <mat-icon>share</mat-icon>
+                  </button>
+                </div>
+              </section>
 
-            <!-- Reactions -->
-            @if (event.status === 'LIVE') {
-              <div class="bg-white rounded-lg p-4 mb-6">
-                <p class="text-sm font-medium text-gray-600 mb-3">Envía tu reacción</p>
-                <div class="flex gap-2">
-                  @for (reaction of reactions; track reaction.type) {
-                    <button
-                      mat-icon-button
-                      (click)="sendReaction(reaction.type)"
-                      [disabled]="reactionCooldown()"
-                      class="text-2xl hover:scale-125 transition-transform"
-                    >
-                      {{ reaction.icon }}
-                    </button>
-                  }
-                </div>
-                @if (reactionCooldown()) {
-                  <p class="text-xs text-gray-400 mt-1">Espera un momento...</p>
+              <!-- Info sections -->
+              <div class="stream-room__info">
+                <!-- Deceased about -->
+                @if (event.deceased; as deceased) {
+                  <section class="stream-room__about">
+                    <h2>Acerca del homenaje</h2>
+                    <div class="stream-room__about-content">
+                      @if (deceased.photoUrl) {
+                        <img [src]="deceased.photoUrl" class="stream-room__about-avatar" alt="" />
+                      } @else {
+                        <div class="stream-room__about-avatar-fallback">
+                          <mat-icon>person</mat-icon>
+                        </div>
+                      }
+                      <div>
+                        <p class="stream-room__about-name">
+                          {{ deceased.firstName }} {{ deceased.lastName }}
+                        </p>
+                        @if (deceased.birthDate || deceased.deathDate) {
+                          <p class="stream-room__about-dates">
+                            @if (deceased.birthDate) {
+                              {{ deceased.birthDate | date: 'dd/MM/yyyy' }}
+                            }
+                            @if (deceased.birthDate && deceased.deathDate) {
+                              –
+                            }
+                            @if (deceased.deathDate) {
+                              {{ deceased.deathDate | date: 'dd/MM/yyyy' }}
+                            }
+                          </p>
+                        }
+                        @if (deceased.epitaph) {
+                          <p class="stream-room__about-epitaph">"{{ deceased.epitaph }}"</p>
+                        }
+                      </div>
+                    </div>
+                  </section>
+                }
+
+                <!-- Reactions -->
+                @if (event.status === 'LIVE') {
+                  <section class="stream-room__reactions">
+                    <p>Envía tu reacción</p>
+                    <div class="stream-room__reactions-buttons">
+                      @for (reaction of reactions; track reaction.type) {
+                        <button
+                          class="stream-room__reaction-btn"
+                          (click)="sendReaction(reaction.type)"
+                          [disabled]="reactionCooldown()"
+                        >
+                          {{ reaction.icon }}
+                        </button>
+                      }
+                    </div>
+                    @if (reactionCooldown()) {
+                      <p class="stream-room__reaction-cooldown">Espera un momento...</p>
+                    }
+                  </section>
                 }
               </div>
-            }
+            </div>
 
-            <!-- Messages -->
-            <div class="bg-white rounded-lg p-6">
-              <h3 class="font-semibold text-gray-900 mb-4">Mensajes y Homenajes</h3>
+            <!-- Chat -->
+            <aside class="stream-room__chat">
+              <div class="stream-room__chat-header">
+                <h3>Chat del evento</h3>
+                <div class="stream-room__chat-header-actions">
+                  <button
+                    class="stream-room__chat-header-btn"
+                    matTooltip="Configuración del chat"
+                    aria-label="Configuración del chat"
+                  >
+                    <mat-icon>settings</mat-icon>
+                  </button>
+                </div>
+              </div>
 
-              <form [formGroup]="messageForm" (ngSubmit)="submitMessage()" class="flex gap-2 mb-6">
-                <mat-form-field class="flex-1" appearance="outline">
-                  <mat-label>Tu nombre</mat-label>
-                  <input matInput formControlName="authorName" required />
-                </mat-form-field>
-                <mat-form-field class="flex-[2]" appearance="outline">
-                  <mat-label>Escribe tu mensaje...</mat-label>
-                  <input matInput formControlName="content" required maxlength="500" />
-                </mat-form-field>
-                <button
-                  mat-raised-button
-                  color="primary"
-                  type="submit"
-                  [disabled]="messageSending() || messageForm.invalid"
-                >
-                  Enviar
-                </button>
-              </form>
-
-              <div class="space-y-3 max-h-96 overflow-y-auto">
+              <div class="stream-room__messages">
                 @for (msg of messages(); track msg.id) {
-                  <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                    <span class="text-xl">{{ iconMap[msg.iconType ?? ''] ?? '💬' }}</span>
-                    <div>
-                      <p class="font-medium text-sm text-gray-900">
-                        {{ msg.authorName }}
-                      </p>
-                      <p class="text-gray-700 text-sm">{{ msg.content }}</p>
-                      <p class="text-xs text-gray-400 mt-0.5">
+                  <div class="stream-room__message">
+                    <span class="stream-room__message-icon">{{
+                      iconMap[msg.iconType ?? ''] ?? '💬'
+                    }}</span>
+                    <div class="stream-room__message-body">
+                      <span class="stream-room__message-author">{{ msg.authorName }}</span>
+                      <span class="stream-room__message-text">{{ msg.content }}</span>
+                      <div class="stream-room__message-time">
                         {{ msg.createdAt | date: 'dd/MM HH:mm' }}
-                      </p>
+                      </div>
                     </div>
                   </div>
                 } @empty {
-                  <p class="text-gray-500 text-center py-4">
+                  <div class="stream-room__messages-empty">
                     @if (event.status === 'SCHEDULED') {
                       Los mensajes se habilitarán cuando el evento comience
                     } @else {
                       No hay mensajes aún. ¡Sé el primero en escribir!
                     }
-                  </p>
+                  </div>
                 }
               </div>
-            </div>
-          </main>
+
+              <form
+                [formGroup]="messageForm"
+                (ngSubmit)="submitMessage()"
+                class="stream-room__composer"
+              >
+                <div class="stream-room__composer-name">
+                  <input formControlName="authorName" placeholder="Tu nombre" required />
+                </div>
+                <div class="stream-room__composer-input">
+                  <div class="stream-room__composer-field">
+                    <input
+                      formControlName="content"
+                      placeholder="Escribe tu mensaje..."
+                      required
+                      maxlength="500"
+                    />
+                  </div>
+                  <button
+                    class="stream-room__composer-send"
+                    type="submit"
+                    [disabled]="messageSending() || messageForm.invalid"
+                  >
+                    @if (messageSending()) {
+                      <mat-spinner diameter="16" />
+                    } @else {
+                      Enviar
+                    }
+                  </button>
+                </div>
+              </form>
+            </aside>
+          </div>
         </div>
       }
     }
@@ -343,7 +1186,8 @@ export class EventPageComponent {
   private readonly fb = inject(FormBuilder);
   private readonly api = inject(StreamingApiService);
   private readonly socket = inject(StreamingSocketService);
-  private readonly snackBar = inject(MatSnackBar);
+  private readonly notifications = inject(NotificationService);
+  private readonly destroyRef = inject(DestroyRef);
 
   /** Indica si los datos del evento están cargando */
   readonly loading = signal(true);
@@ -370,7 +1214,7 @@ export class EventPageComponent {
   readonly reactions = REACTION_ICONS;
 
   /** Mapa de iconos por tipo */
-  readonly iconMap: Record<string, string> = {
+  readonly iconMap: Partial<Record<string, string>> = {
     HEART: '❤️',
     CANDLE: '🕯️',
     FLOWER: '🌸',
@@ -396,13 +1240,19 @@ export class EventPageComponent {
 
   private slug = '';
   private eventId = '';
+  private playbackRefreshTimer: ReturnType<typeof setInterval> | null = null;
+  private playbackRefreshInFlight = false;
+  private lastMessageTimestamp = '';
 
   constructor() {
     this.slug = this.route.snapshot.paramMap.get('slug') ?? '';
     if (this.slug) this.loadPublicEvent();
 
     this.socket.newMessage$.subscribe((msg) => {
-      this.messages.update((prev) => [...prev, msg]);
+      this.messages.update((prev) =>
+        prev.some((current) => current.id === msg.id) ? prev : [...prev, msg],
+      );
+      this.lastMessageTimestamp = msg.createdAt;
     });
 
     this.socket.viewerCount$.subscribe((count) => {
@@ -410,34 +1260,127 @@ export class EventPageComponent {
     });
 
     this.socket.streamStatus$.subscribe((status) => {
+      const prevStatus = this.evt()?.status as string | undefined;
       this.evt.update((e) => (e ? { ...e, status: status as EventStatus } : e));
+      if (prevStatus === 'LIVE' && status === 'FINISHED') {
+        this.pollRecordingUrl();
+      }
+    });
+
+    this.destroyRef.onDestroy(() => {
+      this.clearPlaybackRefreshTimer();
+      this.cancelPoll();
     });
   }
 
   /** Carga los datos públicos del evento desde la API */
   loadPublicEvent(): void {
+    const previouslyGranted = this.accessGranted();
     this.loading.set(true);
     this.api.findPublic(this.slug).subscribe({
       next: (ev) => {
         this.evt.set(ev);
+        this.schedulePlaybackRefresh(ev);
         this.loading.set(false);
-        this.eventId = ev.id;
+        this.eventId = ev.id ?? '';
 
-        if (ev.isPublic || ev.status === EventStatus.FINISHED) {
+        if ((ev.isPublic || previouslyGranted) && ev.id) {
           this.accessGranted.set(true);
+          this.accessLoading.set(false);
+          this.loadMessages();
           this.connectSocket();
         }
+
+        if ((ev.status as string) === 'FINISHED' && !ev.recordingReady) {
+          this.pollRecordingUrl();
+        }
       },
-      error: (err: { message?: string }) => {
-        this.error.set(err.message ?? 'Evento no encontrado');
+      error: (error: unknown) => {
+        this.error.set(getErrorMessage(error, 'Evento no encontrado'));
         this.loading.set(false);
+        this.accessLoading.set(false);
       },
     });
   }
 
+  refreshPlaybackUrl(): void {
+    if (this.playbackRefreshInFlight || !this.accessGranted()) return;
+
+    this.playbackRefreshInFlight = true;
+    this.api.getPlayback(this.slug).subscribe({
+      next: ({ url }) => {
+        this.evt.update((event) => (event ? { ...event, playbackUrl: url } : event));
+        this.playbackRefreshInFlight = false;
+      },
+      error: () => {
+        this.playbackRefreshInFlight = false;
+      },
+    });
+  }
+
+  private schedulePlaybackRefresh(event: PublicEvent): void {
+    this.clearPlaybackRefreshTimer();
+    const hasPrivatePlayback =
+      !event.isPublic &&
+      Boolean(event.playbackUrl) &&
+      (event.status === EventStatus.LIVE || event.status === EventStatus.FINISHED);
+    if (!hasPrivatePlayback) return;
+
+    this.playbackRefreshTimer = setInterval(() => this.refreshPlaybackUrl(), 45 * 60 * 1000);
+  }
+
+  private pollAttempts = 0;
+  private pollTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private pollRecordingUrl(): void {
+    this.cancelPoll();
+    this.pollAttempts = 0;
+    this.schedulePoll();
+  }
+
+  private schedulePoll(): void {
+    const delay = [2_000, 5_000, 10_000, 30_000][this.pollAttempts] ?? 60_000;
+    this.pollTimer = setTimeout(() => {
+      this.pollTimer = null;
+      this.api.findPublic(this.slug).subscribe({
+        next: (ev) => {
+          if (ev.recordingReady) {
+            this.evt.set(ev);
+            this.pollAttempts = 0;
+            return;
+          }
+          if (this.pollAttempts < 8) {
+            this.pollAttempts++;
+            this.schedulePoll();
+          }
+        },
+        error: () => {
+          if (this.pollAttempts < 8) {
+            this.pollAttempts++;
+            this.schedulePoll();
+          }
+        },
+      });
+    }, delay);
+  }
+
+  private cancelPoll(): void {
+    if (this.pollTimer) {
+      clearTimeout(this.pollTimer);
+      this.pollTimer = null;
+    }
+    this.pollAttempts = 0;
+  }
+
+  private clearPlaybackRefreshTimer(): void {
+    if (!this.playbackRefreshTimer) return;
+    clearInterval(this.playbackRefreshTimer);
+    this.playbackRefreshTimer = null;
+  }
+
   /** Valida el código de acceso y concede acceso si es correcto */
   submitAccessCode(): void {
-    if (this.accessForm.invalid) return;
+    if (this.accessForm.invalid || this.accessLoading()) return;
     this.accessLoading.set(true);
     this.accessError.set('');
 
@@ -451,12 +1394,11 @@ export class EventPageComponent {
       .subscribe({
         next: (res) => {
           this.accessGranted.set(true);
-          this.accessLoading.set(false);
           this.eventId = res.eventId;
-          this.connectSocket();
+          this.loadPublicEvent();
         },
-        error: (err: { message?: string }) => {
-          this.accessError.set(err.message ?? 'Código incorrecto');
+        error: (error: unknown) => {
+          this.accessError.set(getErrorMessage(error, 'Código incorrecto'));
           this.accessLoading.set(false);
         },
       });
@@ -464,7 +1406,7 @@ export class EventPageComponent {
 
   /** Envía un mensaje de homenaje al evento */
   submitMessage(): void {
-    if (this.messageForm.invalid) return;
+    if (this.messageForm.invalid || this.messageSending()) return;
     this.messageSending.set(true);
 
     this.api
@@ -479,13 +1421,11 @@ export class EventPageComponent {
             content: '',
           });
           this.messageSending.set(false);
-          this.snackBar.open('Mensaje enviado', 'Cerrar', { duration: 2000 });
+          this.notifications.success('Mensaje enviado para moderación');
         },
-        error: () => {
+        error: (error: unknown) => {
           this.messageSending.set(false);
-          this.snackBar.open('Error al enviar mensaje', 'Cerrar', {
-            duration: 2000,
-          });
+          this.notifications.apiError(error, 'No se pudo enviar el mensaje');
         },
       });
   }
@@ -501,6 +1441,7 @@ export class EventPageComponent {
       },
       error: () => {
         this.reactionCooldown.set(false);
+        this.notifications.error('No se pudo enviar la reacción');
       },
     });
   }
@@ -528,13 +1469,38 @@ export class EventPageComponent {
 
   /** Copia el enlace del evento al portapapeles */
   copyLink(): void {
-    void navigator.clipboard.writeText(window.location.href).then(() => {
-      this.snackBar.open('Enlace copiado', 'Cerrar', { duration: 2000 });
-    });
+    void navigator.clipboard
+      .writeText(window.location.href)
+      .then(() => this.notifications.success('Enlace copiado'))
+      .catch(() => this.notifications.error('No se pudo copiar el enlace'));
   }
 
   /** Conecta al Socket.IO para recibir actualizaciones en tiempo real */
   private connectSocket(): void {
     this.socket.connect(this.eventId);
+
+    this.socket.reconnect$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.loadMessages();
+    });
+  }
+
+  private loadMessages(): void {
+    this.api.getPublicMessages(this.slug).subscribe({
+      next: (messages) => {
+        this.messages.set(
+          messages.map(({ id, authorName, content, iconType, createdAt }) => ({
+            id,
+            authorName,
+            content,
+            iconType,
+            createdAt,
+          })),
+        );
+      },
+      error: () => {
+        this.messages.set([]);
+        this.notifications.error('No se pudieron cargar los mensajes');
+      },
+    });
   }
 }

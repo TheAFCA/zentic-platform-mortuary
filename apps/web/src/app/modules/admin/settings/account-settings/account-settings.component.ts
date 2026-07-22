@@ -1,8 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { AdminSettingsApiService } from '../../../../core/services/admin-settings-api.service';
+import { FeedbackBannerComponent } from '../../../../shared/molecules/feedback-banner/feedback-banner.component';
+import { getErrorMessage } from '../../../../core/utils/error-message';
 
 const TIMEZONE_OPTIONS = [
   'America/Bogota',
@@ -16,7 +17,7 @@ const TIMEZONE_OPTIONS = [
 @Component({
   selector: 'app-account-settings',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FeedbackBannerComponent],
   templateUrl: './account-settings.component.html',
   styleUrl: './account-settings.component.scss',
 })
@@ -28,6 +29,7 @@ export class AccountSettingsComponent implements OnInit {
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly error = signal('');
+  readonly loadError = signal('');
   readonly success = signal('');
 
   form = this.fb.nonNullable.group({
@@ -40,16 +42,26 @@ export class AccountSettingsComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.load();
+  }
+
+  load(): void {
+    this.loading.set(true);
+    this.loadError.set('');
     this.settingsApi.getSettings().subscribe({
       next: (settings) => {
         this.form.patchValue(settings);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false),
+      error: (error: unknown) => {
+        this.loading.set(false);
+        this.loadError.set(getErrorMessage(error, 'No se pudo cargar la configuración'));
+      },
     });
   }
 
   onSubmit(): void {
+    if (this.saving()) return;
     this.saving.set(true);
     this.error.set('');
     this.success.set('');
@@ -59,16 +71,10 @@ export class AccountSettingsComponent implements OnInit {
         this.saving.set(false);
         this.success.set('Configuración guardada');
       },
-      error: (error: HttpErrorResponse) => {
+      error: (error: unknown) => {
         this.saving.set(false);
-        this.error.set(this.extractErrorMessage(error, 'No se pudo guardar la configuración'));
+        this.error.set(getErrorMessage(error, 'No se pudo guardar la configuración'));
       },
     });
-  }
-
-  private extractErrorMessage(error: HttpErrorResponse, fallback: string): string {
-    const message = (error.error as { message?: string | string[] } | null)?.message;
-    if (Array.isArray(message)) return message.join(', ');
-    return message ?? fallback;
   }
 }

@@ -122,6 +122,7 @@ export class ObituaryService {
       ? await this.obituaryRepo.findEventById(tenantId, existing.eventId)
       : null;
     const approvedMessages = await this.obituaryRepo.findApprovedMessages(
+      tenantId,
       existing.id,
     );
 

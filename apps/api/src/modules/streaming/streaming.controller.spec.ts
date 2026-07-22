@@ -6,6 +6,7 @@ import { UpdateEventDto } from './dto/update-event.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { SendReactionDto } from './dto/send-reaction.dto';
 import { AccessCodeDto } from './dto/access-code.dto';
+import { StreamAccessService } from './stream-access.service';
 
 describe('StreamingController', () => {
   let controller: StreamingController;
@@ -14,12 +15,18 @@ describe('StreamingController', () => {
   const mockService = {
     findAll: jest.fn(),
     findOne: jest.fn(),
+    getCredentials: jest.fn(),
+    revealCredentials: jest.fn(),
+    rotateStreamKey: jest.fn(),
+    auditCredentialCopy: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
     startStream: jest.fn(),
     stopStream: jest.fn(),
     findPublic: jest.fn(),
+    getPublicMessages: jest.fn(),
+    getPlayback: jest.fn(),
     sendMessage: jest.fn(),
     sendReaction: jest.fn(),
     validateAccessCode: jest.fn(),
@@ -29,11 +36,20 @@ describe('StreamingController', () => {
     rejectMessage: jest.fn(),
     deleteMessage: jest.fn(),
   };
+  const mockStreamAccess = {
+    cookieOptions: jest.fn().mockReturnValue({ httpOnly: true, path: '/' }),
+  };
+  const request = {
+    cookies: { stream_event_access: 'viewer-token' },
+  } as any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [StreamingController],
-      providers: [{ provide: StreamingService, useValue: mockService }],
+      providers: [
+        { provide: StreamingService, useValue: mockService },
+        { provide: StreamAccessService, useValue: mockStreamAccess },
+      ],
     }).compile();
 
     controller = module.get<StreamingController>(StreamingController);
@@ -73,6 +89,25 @@ describe('StreamingController', () => {
 
       expect(service.findOne).toHaveBeenCalledTimes(1);
       expect(service.findOne).toHaveBeenCalledWith(tenantId, id);
+      expect(result).toBe(expected);
+    });
+  });
+
+  describe('getCredentials', () => {
+    it('should request credentials for the tenant event', async () => {
+      const expected = {
+        streamKey: 'secr••••••••cret',
+        rtmpUrl: 'rtmps://example',
+        revealed: false,
+      };
+      service.getCredentials.mockResolvedValue(expected);
+
+      const result = await controller.getCredentials('tenant-1', 'event-1');
+
+      expect(service.getCredentials).toHaveBeenCalledWith(
+        'tenant-1',
+        'event-1',
+      );
       expect(result).toBe(expected);
     });
   });
@@ -163,10 +198,10 @@ describe('StreamingController', () => {
       const expected = { slug, title: 'Public Event' };
       service.findPublic.mockResolvedValue(expected as any);
 
-      const result = await controller.findPublic(slug);
+      const result = await controller.findPublic(slug, request);
 
       expect(service.findPublic).toHaveBeenCalledTimes(1);
-      expect(service.findPublic).toHaveBeenCalledWith(slug);
+      expect(service.findPublic).toHaveBeenCalledWith(slug, 'viewer-token');
       expect(result).toBe(expected);
     });
   });
@@ -181,10 +216,32 @@ describe('StreamingController', () => {
       const expected = { id: 'msg-1', ...dto };
       service.sendMessage.mockResolvedValue(expected as any);
 
-      const result = await controller.sendMessage(slug, dto);
+      const result = await controller.sendMessage(slug, dto, request);
 
       expect(service.sendMessage).toHaveBeenCalledTimes(1);
-      expect(service.sendMessage).toHaveBeenCalledWith(slug, dto);
+      expect(service.sendMessage).toHaveBeenCalledWith(
+        slug,
+        dto,
+        'viewer-token',
+      );
+      expect(result).toBe(expected);
+    });
+  });
+
+  describe('getPublicMessages', () => {
+    it('should call service.getPublicMessages with the viewer token', async () => {
+      const expected = [{ id: 'msg-1', content: 'Rest in peace' }];
+      service.getPublicMessages.mockResolvedValue(expected as any);
+
+      const result = await controller.getPublicMessages(
+        'test-event-slug',
+        request,
+      );
+
+      expect(service.getPublicMessages).toHaveBeenCalledWith(
+        'test-event-slug',
+        'viewer-token',
+      );
       expect(result).toBe(expected);
     });
   });
@@ -197,10 +254,15 @@ describe('StreamingController', () => {
       const expected = { id: 'rxn-1', type: 'heart' };
       service.sendReaction.mockResolvedValue(expected as any);
 
-      const result = await controller.sendReaction(slug, dto, ip);
+      const result = await controller.sendReaction(slug, dto, ip, request);
 
       expect(service.sendReaction).toHaveBeenCalledTimes(1);
-      expect(service.sendReaction).toHaveBeenCalledWith(slug, dto, ip);
+      expect(service.sendReaction).toHaveBeenCalledWith(
+        slug,
+        dto,
+        ip,
+        'viewer-token',
+      );
       expect(result).toBe(expected);
     });
   });
@@ -209,14 +271,23 @@ describe('StreamingController', () => {
     it('should call service.validateAccessCode with slug and dto and return the result', async () => {
       const slug = 'test-event-slug';
       const dto: AccessCodeDto = { code: 'ABC123' };
-      const expected = { valid: true, event: { slug } };
-      service.validateAccessCode.mockResolvedValue(expected as any);
+      const expected = { valid: true, eventId: 'event-1' };
+      service.validateAccessCode.mockResolvedValue({
+        ...expected,
+        accessToken: 'new-viewer-token',
+      });
+      const response = { cookie: jest.fn() } as any;
 
-      const result = await controller.validateAccessCode(slug, dto);
+      const result = await controller.validateAccessCode(slug, dto, response);
 
       expect(service.validateAccessCode).toHaveBeenCalledTimes(1);
       expect(service.validateAccessCode).toHaveBeenCalledWith(slug, dto);
-      expect(result).toBe(expected);
+      expect(response.cookie).toHaveBeenCalledWith(
+        'stream_event_access',
+        'new-viewer-token',
+        { httpOnly: true, path: '/' },
+      );
+      expect(result).toEqual(expected);
     });
   });
 
@@ -251,20 +322,27 @@ describe('StreamingController', () => {
   });
 
   describe('approveMessage', () => {
-    it('should call service.approveMessage with tenantId, id and messageId and return the result', async () => {
+    it('should call service.approveMessage with tenantId, id, messageId and the current user id, returning the result', async () => {
       const tenantId = 'tenant-1';
       const id = 'event-1';
       const messageId = 'msg-1';
+      const user = { sub: 'user-1' } as any;
       const expected = { id: messageId, status: 'approved' };
       service.approveMessage.mockResolvedValue(expected as any);
 
-      const result = await controller.approveMessage(tenantId, id, messageId);
+      const result = await controller.approveMessage(
+        tenantId,
+        id,
+        messageId,
+        user,
+      );
 
       expect(service.approveMessage).toHaveBeenCalledTimes(1);
       expect(service.approveMessage).toHaveBeenCalledWith(
         tenantId,
         id,
         messageId,
+        'user-1',
       );
       expect(result).toBe(expected);
     });

@@ -13,6 +13,7 @@
       <app-venue-form
         [initialValue]="editingFormValue()"
         [errorMessage]="formError()"
+        [saving]="savingVenue()"
         (save)="onSave($event)"
         (cancel)="closeForm()"
       />
@@ -25,14 +26,27 @@
         <h2>Sedes</h2>
         <p class="panel-card__count">{{ venues().length }} sede(s)</p>
       </div>
-      <button *appHasPermission="'venues:manage'" type="button" class="btn-primary" (click)="openCreate()">
+      <button
+        *appHasPermission="'venues:manage'"
+        type="button"
+        class="btn-primary"
+        (click)="openCreate()"
+      >
         <mat-icon>add_business</mat-icon>
         <span>Nueva sede</span>
       </button>
     </div>
 
     <div class="panel-card__body panel-card__body--flush">
-      <div class="venue-card" *ngFor="let venue of venues()">
+      <app-feedback-banner
+        [message]="loadError()"
+        title="No pudimos cargar las sedes"
+        kind="error"
+        retryLabel="Reintentar"
+        (retry)="load()"
+      />
+      <p class="venues-page__empty" *ngIf="loading()" role="status">Cargando sedes…</p>
+      <div class="venue-card" *ngFor="let venue of venues()" [hidden]="loading() || loadError()">
         <div class="venue-card__row">
           <div>
             <p class="venue-card__name">{{ venue.name }}</p>
@@ -96,12 +110,15 @@
               </tr>
             </tbody>
           </table>
-          <p class="venue-card__empty" *ngIf="!venue.rooms.length">Esta sede no tiene salas todavía.</p>
+          <p class="venue-card__empty" *ngIf="!venue.rooms.length">
+            Esta sede no tiene salas todavía.
+          </p>
 
           <app-room-form
             *ngIf="showRoomForm(); else addRoomButton"
             [initialValue]="editingRoomFormValue()"
             [errorMessage]="roomFormError()"
+            [saving]="savingRoom()"
             (save)="onSaveRoom($event)"
             (cancel)="closeRoomForm()"
           />
@@ -119,7 +136,9 @@
         </div>
       </div>
 
-      <p class="venues-page__empty" *ngIf="!venues().length">No hay sedes registradas</p>
+      <p class="venues-page__empty" *ngIf="!loading() && !loadError() && !venues().length">
+        No hay sedes registradas
+      </p>
     </div>
   </section>
 
@@ -128,10 +147,13 @@
     [title]="confirmDialogTitle()"
     [message]="confirmDialogMessage()"
     [danger]="true"
+    [loading]="actionLoading()"
     confirmLabel="Eliminar"
     (confirm)="onConfirm()"
     (cancel)="cancelConfirm()"
   >
-    <p class="venues-page__confirm-error" *ngIf="confirmError()">{{ confirmError() }}</p>
+    <p class="venues-page__confirm-error" *ngIf="confirmError()" role="alert">
+      {{ confirmError() }}
+    </p>
   </app-confirm-dialog>
 </div>

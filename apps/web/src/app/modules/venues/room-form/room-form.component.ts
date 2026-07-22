@@ -19,6 +19,7 @@ export interface RoomFormValue {
 export class RoomFormComponent implements OnChanges {
   @Input() initialValue: RoomFormValue | null = null;
   @Input() errorMessage = '';
+  @Input() saving = false;
   @Output() save = new EventEmitter<RoomFormValue>();
   @Output() cancel = new EventEmitter<void>();
 

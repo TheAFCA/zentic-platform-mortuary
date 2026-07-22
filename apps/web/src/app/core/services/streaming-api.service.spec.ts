@@ -31,10 +31,11 @@ describe('StreamingApiService', () => {
     finishedAt: null,
     estimatedDuration: 60,
     isPublic: true,
-    accessCode: null,
+    hasAccessCode: false,
     streamKey: null,
     rtmpUrl: null,
     recordingUrl: null,
+    playbackUrl: null,
     viewerCount: 0,
     moderationMode: 'auto',
     createdAt: '2026-07-01T12:00:00Z',
@@ -63,6 +64,8 @@ describe('StreamingApiService', () => {
     startedAt: null,
     finishedAt: null,
     recordingUrl: null,
+    playbackUrl: null,
+    recordingReady: false,
     isPublic: true,
     viewerCount: 0,
     deceased: {
@@ -146,6 +149,50 @@ describe('StreamingApiService', () => {
     });
   });
 
+  describe('getCredentials', () => {
+    it('should request credentials from the protected endpoint', () => {
+      const credentials = {
+        streamKey: 'stream-secret',
+        rtmpUrl: 'rtmps://example.com/live',
+        revealed: false,
+      };
+
+      service.getCredentials('event-1').subscribe((result) => {
+        expect(result).toEqual(credentials);
+      });
+
+      const req = httpMock.expectOne(`${baseUrl}/events/event-1/credentials`);
+      expect(req.request.method).toBe('GET');
+      req.flush(credentials);
+    });
+  });
+
+  describe('credential actions', () => {
+    it('reveals credentials through an explicit POST', () => {
+      service.revealCredentials('event-1').subscribe();
+
+      const req = httpMock.expectOne(`${baseUrl}/events/event-1/credentials/reveal`);
+      expect(req.request.method).toBe('POST');
+      req.flush({ streamKey: 'secret', rtmpUrl: 'rtmps://example', revealed: true });
+    });
+
+    it('rotates credentials through an explicit POST', () => {
+      service.rotateStreamKey('event-1').subscribe();
+
+      const req = httpMock.expectOne(`${baseUrl}/events/event-1/credentials/rotate`);
+      expect(req.request.method).toBe('POST');
+      req.flush({ streamKey: 'new-secret', rtmpUrl: 'rtmps://example', revealed: true });
+    });
+
+    it('audits stream key copies', () => {
+      service.auditStreamKeyCopy('event-1').subscribe();
+
+      const req = httpMock.expectOne(`${baseUrl}/events/event-1/credentials/audit-copy`);
+      expect(req.request.method).toBe('POST');
+      req.flush({ recorded: true });
+    });
+  });
+
   describe('findPublic', () => {
     it('should perform a GET against /events/{slug}/public and return public event', () => {
       service.findPublic('test-event').subscribe((event) => {
@@ -155,6 +202,18 @@ describe('StreamingApiService', () => {
       const req = httpMock.expectOne(`${baseUrl}/events/test-event/public`);
       expect(req.request.method).toBe('GET');
       req.flush(mockPublicEvent);
+    });
+  });
+
+  describe('getPlayback', () => {
+    it('requests a fresh playback URL for the current viewer', () => {
+      service.getPlayback('test-event').subscribe((result) => {
+        expect(result.url).toContain('stream.mux.com');
+      });
+
+      const req = httpMock.expectOne(`${baseUrl}/events/test-event/playback`);
+      expect(req.request.method).toBe('GET');
+      req.flush({ url: 'https://stream.mux.com/id.m3u8?token=jwt' });
     });
   });
 
@@ -315,6 +374,18 @@ describe('StreamingApiService', () => {
       const req = httpMock.expectOne(`${baseUrl}/events/test-event/messages`);
       expect(req.request.body).toEqual(dto);
       req.flush(mockMessage);
+    });
+  });
+
+  describe('getPublicMessages', () => {
+    it('should perform a GET against the public messages endpoint', () => {
+      service.getPublicMessages('test-event').subscribe((messages) => {
+        expect(messages).toEqual([mockMessage]);
+      });
+
+      const req = httpMock.expectOne(`${baseUrl}/events/test-event/public/messages`);
+      expect(req.request.method).toBe('GET');
+      req.flush([mockMessage]);
     });
   });
 

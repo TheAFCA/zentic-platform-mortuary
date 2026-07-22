@@ -1,5 +1,4 @@
 import { CommonModule } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -13,6 +12,8 @@ import {
 import { ConfirmDialogComponent } from '../../../shared/organisms/confirm-dialog/confirm-dialog.component';
 import { BadgeColor, BadgeComponent } from '../../../shared/atoms/badge/badge.component';
 import { TenantFormComponent, TenantFormValue } from './tenant-form/tenant-form.component';
+import { NotificationService } from '../../../core/services/notification.service';
+import { getErrorMessage } from '../../../core/utils/error-message';
 
 type ConfirmAction = 'suspend' | 'reactivate' | 'delete' | 'impersonate';
 
@@ -36,10 +37,13 @@ const RESERVED_HOST_LABELS = new Set(['localhost', 'super-admin', 'admin', 'www'
 export class TenantsComponent implements OnInit {
   private readonly tenantsApi = inject(TenantsApiService);
   private readonly impersonationApi = inject(ImpersonationApiService);
+  private readonly notifications = inject(NotificationService);
 
   readonly tenants = signal<Tenant[]>([]);
   readonly total = signal(0);
   readonly loading = signal(false);
+  readonly loadError = signal('');
+  readonly saving = signal(false);
   readonly showForm = signal(false);
   readonly editingTenant = signal<Tenant | null>(null);
   readonly formError = signal('');
@@ -48,6 +52,7 @@ export class TenantsComponent implements OnInit {
   readonly confirmTarget = signal<Tenant | null>(null);
   readonly confirmReason = signal('');
   readonly confirmError = signal('');
+  readonly actionLoading = signal(false);
 
   readonly columns: DataTableColumn<Tenant>[] = [
     { key: 'name', label: 'Nombre' },
@@ -67,13 +72,17 @@ export class TenantsComponent implements OnInit {
 
   load(): void {
     this.loading.set(true);
+    this.loadError.set('');
     this.tenantsApi.list({ page: 1, limit: 100 }).subscribe({
       next: (result) => {
         this.tenants.set(result.data);
         this.total.set(result.total);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false),
+      error: (error: unknown) => {
+        this.loading.set(false);
+        this.loadError.set(getErrorMessage(error, 'No se pudieron cargar los tenants'));
+      },
     });
   }
 
@@ -107,8 +116,10 @@ export class TenantsComponent implements OnInit {
   }
 
   onSave(value: TenantFormValue): void {
+    if (this.saving()) return;
     const editing = this.editingTenant();
     this.formError.set('');
+    this.saving.set(true);
 
     const request = editing
       ? this.tenantsApi.update(editing.id, {
@@ -120,11 +131,14 @@ export class TenantsComponent implements OnInit {
 
     request.subscribe({
       next: () => {
+        this.saving.set(false);
         this.showForm.set(false);
+        this.notifications.success(editing ? 'Tenant actualizado' : 'Tenant creado');
         this.load();
       },
-      error: (error: HttpErrorResponse) => {
-        this.formError.set(this.extractErrorMessage(error, 'No se pudo guardar el tenant'));
+      error: (error: unknown) => {
+        this.saving.set(false);
+        this.formError.set(getErrorMessage(error, 'No se pudo guardar el tenant'));
       },
     });
   }
@@ -202,45 +216,55 @@ export class TenantsComponent implements OnInit {
   }
 
   onConfirm(): void {
+    if (this.actionLoading()) return;
     const tenant = this.confirmTarget();
     const action = this.confirmAction();
     if (!tenant || !action) return;
 
     this.confirmError.set('');
+    this.actionLoading.set(true);
 
     switch (action) {
       case 'suspend':
         this.tenantsApi.suspend(tenant.id, this.confirmReason() || undefined).subscribe({
           next: () => {
+            this.actionLoading.set(false);
             this.cancelConfirm();
+            this.notifications.success('Tenant suspendido');
             this.load();
           },
-          error: (error: HttpErrorResponse) =>
-            this.confirmError.set(
-              this.extractErrorMessage(error, 'No se pudo suspender el tenant'),
-            ),
+          error: (error: unknown) => {
+            this.actionLoading.set(false);
+            this.confirmError.set(getErrorMessage(error, 'No se pudo suspender el tenant'));
+          },
         });
         break;
       case 'reactivate':
         this.tenantsApi.reactivate(tenant.id).subscribe({
           next: () => {
+            this.actionLoading.set(false);
             this.cancelConfirm();
+            this.notifications.success('Tenant reactivado');
             this.load();
           },
-          error: (error: HttpErrorResponse) =>
-            this.confirmError.set(
-              this.extractErrorMessage(error, 'No se pudo reactivar el tenant'),
-            ),
+          error: (error: unknown) => {
+            this.actionLoading.set(false);
+            this.confirmError.set(getErrorMessage(error, 'No se pudo reactivar el tenant'));
+          },
         });
         break;
       case 'delete':
         this.tenantsApi.delete(tenant.id).subscribe({
           next: () => {
+            this.actionLoading.set(false);
             this.cancelConfirm();
+            this.notifications.success('Tenant eliminado');
             this.load();
           },
-          error: (error: HttpErrorResponse) =>
-            this.confirmError.set(this.extractErrorMessage(error, 'No se pudo eliminar el tenant')),
+          error: (error: unknown) => {
+            this.actionLoading.set(false);
+            this.confirmError.set(getErrorMessage(error, 'No se pudo eliminar el tenant'));
+          },
         });
         break;
       case 'impersonate':
@@ -248,13 +272,14 @@ export class TenantsComponent implements OnInit {
           .start(tenant.id, this.confirmReason() || 'Soporte técnico')
           .subscribe({
             next: (session) => {
+              this.actionLoading.set(false);
               this.cancelConfirm();
               window.open(this.buildImpersonateUrl(session), '_blank');
             },
-            error: (error: HttpErrorResponse) =>
-              this.confirmError.set(
-                this.extractErrorMessage(error, 'No se pudo iniciar la impersonación'),
-              ),
+            error: (error: unknown) => {
+              this.actionLoading.set(false);
+              this.confirmError.set(getErrorMessage(error, 'No se pudo iniciar la impersonación'));
+            },
           });
         break;
     }
@@ -287,11 +312,5 @@ export class TenantsComponent implements OnInit {
       return rest.join('.');
     }
     return host;
-  }
-
-  private extractErrorMessage(error: HttpErrorResponse, fallback: string): string {
-    const message = (error.error as { message?: string | string[] } | null)?.message;
-    if (Array.isArray(message)) return message.join(', ');
-    return message ?? fallback;
   }
 }

@@ -26,6 +26,7 @@ const SLUG_PATTERN = /^[a-z0-9-]+$/;
 export class TenantFormComponent implements OnChanges {
   @Input() initialValue: TenantFormValue | null = null;
   @Input() errorMessage = '';
+  @Input() saving = false;
   @Output() save = new EventEmitter<TenantFormValue>();
   @Output() cancel = new EventEmitter<void>();
 

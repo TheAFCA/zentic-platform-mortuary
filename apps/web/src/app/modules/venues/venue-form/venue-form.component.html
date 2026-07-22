@@ -1,5 +1,7 @@
 <form class="venue-form" [formGroup]="form" (ngSubmit)="submit()">
-  <p class="venue-form__error" *ngIf="errorMessage" data-testid="venue-form-error">{{ errorMessage }}</p>
+  <p class="venue-form__error" *ngIf="errorMessage" role="alert" data-testid="venue-form-error">
+    {{ errorMessage }}
+  </p>
 
   <mat-form-field appearance="outline">
     <mat-label>Nombre de la sede</mat-label>
@@ -12,9 +14,17 @@
   </mat-form-field>
 
   <div class="venue-form__actions">
-    <button type="button" class="btn-ghost" (click)="cancel.emit()">Cancelar</button>
-    <button type="submit" class="btn-primary" data-testid="venue-form-submit">
-      {{ isEditing ? 'Guardar cambios' : 'Crear sede' }}
+    <button type="button" class="btn-ghost" (click)="cancel.emit()" [disabled]="saving">
+      Cancelar
+    </button>
+    <button
+      type="submit"
+      class="btn-primary"
+      data-testid="venue-form-submit"
+      [disabled]="saving"
+      [attr.aria-busy]="saving"
+    >
+      {{ saving ? 'Guardando…' : isEditing ? 'Guardar cambios' : 'Crear sede' }}
     </button>
   </div>
 </form>

@@ -1,5 +1,4 @@
 import { CommonModule } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,6 +11,8 @@ import {
 import { BadgeColor, BadgeComponent } from '../../shared/atoms/badge/badge.component';
 import { HasPermissionDirective } from '../../shared/directives/has-permission.directive';
 import { ClientFormComponent, ClientFormValue } from './client-form/client-form.component';
+import { NotificationService } from '../../core/services/notification.service';
+import { getErrorMessage } from '../../core/utils/error-message';
 
 @Component({
   selector: 'app-clients',
@@ -30,10 +31,14 @@ import { ClientFormComponent, ClientFormValue } from './client-form/client-form.
 })
 export class ClientsComponent implements OnInit {
   private readonly clientsApi = inject(ClientsApiService);
+  private readonly notifications = inject(NotificationService);
 
   readonly clients = signal<Client[]>([]);
   readonly total = signal(0);
   readonly loading = signal(false);
+  readonly loadError = signal('');
+  readonly saving = signal(false);
+  readonly exporting = signal(false);
   readonly search = signal('');
 
   readonly showForm = signal(false);
@@ -58,13 +63,17 @@ export class ClientsComponent implements OnInit {
 
   load(): void {
     this.loading.set(true);
+    this.loadError.set('');
     this.clientsApi.list({ page: 1, limit: 100, search: this.search() || undefined }).subscribe({
       next: (result) => {
         this.clients.set(result.data);
         this.total.set(result.total);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false),
+      error: (error: unknown) => {
+        this.loading.set(false);
+        this.loadError.set(getErrorMessage(error, 'No se pudieron cargar los clientes'));
+      },
     });
   }
 
@@ -108,8 +117,10 @@ export class ClientsComponent implements OnInit {
   }
 
   onSave(value: ClientFormValue): void {
+    if (this.saving()) return;
     const editing = this.editingClient();
     this.formError.set('');
+    this.saving.set(true);
 
     const payload = {
       name: value.name,
@@ -127,29 +138,36 @@ export class ClientsComponent implements OnInit {
 
     request.subscribe({
       next: () => {
+        this.saving.set(false);
         this.showForm.set(false);
+        this.notifications.success(editing ? 'Cliente actualizado' : 'Cliente creado');
         this.load();
       },
-      error: (error: HttpErrorResponse) => {
-        this.formError.set(this.extractErrorMessage(error, 'No se pudo guardar el cliente'));
+      error: (error: unknown) => {
+        this.saving.set(false);
+        this.formError.set(getErrorMessage(error, 'No se pudo guardar el cliente'));
       },
     });
   }
 
   exportCsv(): void {
-    this.clientsApi.exportCsv({ search: this.search() || undefined }).subscribe((blob) => {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'clientes.csv';
-      link.click();
-      URL.revokeObjectURL(url);
+    if (this.exporting()) return;
+    this.exporting.set(true);
+    this.clientsApi.exportCsv({ search: this.search() || undefined }).subscribe({
+      next: (blob) => {
+        this.exporting.set(false);
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'clientes.csv';
+        link.click();
+        URL.revokeObjectURL(url);
+        this.notifications.success('Archivo de clientes descargado');
+      },
+      error: (error: unknown) => {
+        this.exporting.set(false);
+        this.notifications.apiError(error, 'No se pudo exportar el archivo de clientes');
+      },
     });
-  }
-
-  private extractErrorMessage(error: HttpErrorResponse, fallback: string): string {
-    const message = (error.error as { message?: string | string[] } | null)?.message;
-    if (Array.isArray(message)) return message.join(', ');
-    return message ?? fallback;
   }
 }

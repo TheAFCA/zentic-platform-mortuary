@@ -11,6 +11,8 @@ import {
   DataTableColumn,
   DataTableComponent,
 } from '../../../shared/organisms/data-table/data-table.component';
+import { NotificationService } from '../../../core/services/notification.service';
+import { getErrorMessage } from '../../../core/utils/error-message';
 
 @Component({
   selector: 'app-audit-logs',
@@ -21,10 +23,12 @@ import {
 })
 export class AuditLogsComponent implements OnInit {
   private readonly auditLogsApi = inject(AuditLogsApiService);
+  private readonly notifications = inject(NotificationService);
 
   readonly logs = signal<AuditLogEntry[]>([]);
   readonly total = signal(0);
   readonly loading = signal(false);
+  readonly loadError = signal('');
   readonly exporting = signal(false);
 
   readonly tenantId = signal('');
@@ -63,13 +67,17 @@ export class AuditLogsComponent implements OnInit {
 
   load(): void {
     this.loading.set(true);
+    this.loadError.set('');
     this.auditLogsApi.list(this.buildFilters()).subscribe({
       next: (result) => {
         this.logs.set(result.data);
         this.total.set(result.total);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false),
+      error: (error: unknown) => {
+        this.loading.set(false);
+        this.loadError.set(getErrorMessage(error, 'No se pudieron cargar los registros'));
+      },
     });
   }
 
@@ -86,6 +94,7 @@ export class AuditLogsComponent implements OnInit {
   }
 
   exportCsv(): void {
+    if (this.exporting()) return;
     this.exporting.set(true);
     this.auditLogsApi.exportCsv(this.buildFilters()).subscribe({
       next: (blob) => {
@@ -96,8 +105,12 @@ export class AuditLogsComponent implements OnInit {
         link.download = 'audit-logs.csv';
         link.click();
         window.URL.revokeObjectURL(url);
+        this.notifications.success('Archivo de auditoría descargado');
       },
-      error: () => this.exporting.set(false),
+      error: (error: unknown) => {
+        this.exporting.set(false);
+        this.notifications.apiError(error, 'No se pudo exportar la auditoría');
+      },
     });
   }
 }

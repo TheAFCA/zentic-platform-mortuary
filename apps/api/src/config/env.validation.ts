@@ -38,10 +38,31 @@ const envSchema = z.object({
   THROTTLE_LIMIT: z.coerce.number().default(100),
 
   // Streaming
-  STREAM_PROVIDER: z.enum(['mux', 'ivs']).default('mux'),
+  STREAM_PROVIDER: z.enum(['mux', 'cloudflare']).default('mux'),
   MUX_TOKEN_ID: z.string().optional(),
   MUX_TOKEN_SECRET: z.string().optional(),
   MUX_WEBHOOK_SECRET: z.string().optional(),
+  MUX_SIGNING_KEY_ID: z.string().optional(),
+  MUX_PRIVATE_KEY: z.string().optional(),
+  MUX_PLAYBACK_TOKEN_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(14400),
+  CLOUDFLARE_ACCOUNT_ID: z.string().optional(),
+  CLOUDFLARE_STREAM_API_TOKEN: z.string().optional(),
+  CLOUDFLARE_STREAM_WEBHOOK_SECRET: z.string().optional(),
+  CLOUDFLARE_STREAM_CUSTOMER_CODE: z.string().optional(),
+  STREAM_ACCESS_SECRET: z.string().min(32),
+  STREAM_ACCESS_TOKEN_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(7200),
+  ACCESS_CODE_HMAC_SECRET: z
+    .string()
+    .min(16)
+    .default('zentic-access-code-secret'),
 
   // Storage
   STORAGE_PROVIDER: z.enum(['r2', 's3']).default('r2'),

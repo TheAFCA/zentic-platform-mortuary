@@ -13,6 +13,7 @@
       <app-obituary-form
         [eventOptions]="eventOptions()"
         [errorMessage]="formError()"
+        [saving]="saving()"
         (save)="onSave($event)"
         (cancel)="closeForm()"
       />
@@ -56,7 +57,14 @@
     </div>
 
     <div class="panel-card__body panel-card__body--flush">
-      <app-data-table [columns]="columns" [rows]="obituaries()" emptyMessage="No hay obituarios registrados">
+      <app-data-table
+        [columns]="columns"
+        [rows]="obituaries()"
+        [loading]="loading()"
+        [errorMessage]="loadError()"
+        (retry)="load()"
+        emptyMessage="No hay obituarios registrados"
+      >
         <ng-template #rowActions let-obituary>
           <div class="obituaries-table__actions">
             <app-badge [color]="statusBadgeColor(obituary.status)">{{ obituary.status }}</app-badge>

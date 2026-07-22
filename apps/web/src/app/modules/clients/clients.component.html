@@ -13,6 +13,7 @@
       <app-client-form
         [initialValue]="editingFormValue()"
         [errorMessage]="formError()"
+        [saving]="saving()"
         (save)="onSave($event)"
         (cancel)="closeForm()"
       />
@@ -34,11 +35,23 @@
           (ngModelChange)="onSearchChange($event)"
           [ngModelOptions]="{ standalone: true }"
         />
-        <button *appHasPermission="'downloads:access'" type="button" class="btn-ghost" (click)="exportCsv()">
+        <button
+          *appHasPermission="'downloads:access'"
+          type="button"
+          class="btn-ghost"
+          (click)="exportCsv()"
+          [disabled]="exporting()"
+          [attr.aria-busy]="exporting()"
+        >
           <mat-icon>download</mat-icon>
-          <span>Exportar CSV</span>
+          <span>{{ exporting() ? 'Exportando…' : 'Exportar CSV' }}</span>
         </button>
-        <button *appHasPermission="'clients:manage'" type="button" class="btn-primary" (click)="openCreate()">
+        <button
+          *appHasPermission="'clients:manage'"
+          type="button"
+          class="btn-primary"
+          (click)="openCreate()"
+        >
           <mat-icon>person_add</mat-icon>
           <span>Nuevo cliente</span>
         </button>
@@ -46,7 +59,14 @@
     </div>
 
     <div class="panel-card__body panel-card__body--flush">
-      <app-data-table [columns]="columns" [rows]="clients()" emptyMessage="No hay clientes registrados">
+      <app-data-table
+        [columns]="columns"
+        [rows]="clients()"
+        [loading]="loading()"
+        [errorMessage]="loadError()"
+        (retry)="load()"
+        emptyMessage="No hay clientes registrados"
+      >
         <ng-template #rowActions let-client>
           <div class="clients-table__actions">
             <app-badge [color]="statusBadgeColor(client.status)">{{ client.status }}</app-badge>

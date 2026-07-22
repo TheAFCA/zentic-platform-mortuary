@@ -189,9 +189,28 @@ export class ObituaryRepository {
     });
   }
 
-  findApprovedMessages(obituaryId: string): Promise<ObituaryMessage[]> {
+  async findTenantBrand(
+    tenantId: string,
+  ): Promise<{ name: string; logoUrl: string | null } | null> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { name: true, brandConfig: { select: { logoUrl: true } } },
+    });
+    if (!tenant) return null;
+    return { name: tenant.name, logoUrl: tenant.brandConfig?.logoUrl ?? null };
+  }
+
+  findApprovedMessages(
+    tenantId: string,
+    obituaryId: string,
+  ): Promise<ObituaryMessage[]> {
     return this.prisma.obituaryMessage.findMany({
-      where: { obituaryId, status: MessageStatus.APPROVED, deletedAt: null },
+      where: {
+        obituaryId,
+        tenantId,
+        status: MessageStatus.APPROVED,
+        deletedAt: null,
+      },
       orderBy: { createdAt: 'asc' },
     });
   }

@@ -4,8 +4,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { StreamingApiService } from '../../../../core/services/streaming-api.service';
+import { NotificationService } from '../../../../core/services/notification.service';
 import { RouterModule } from '@angular/router';
 
 @Component({
@@ -518,14 +519,14 @@ import { RouterModule } from '@angular/router';
 })
 export class StreamingSettingsComponent {
   private readonly api = inject(StreamingApiService);
-  private readonly snackBar = inject(MatSnackBar);
+  private readonly notifications = inject(NotificationService);
 
   readonly events = signal<any[]>([]);
 
   constructor() {
     this.api.findAll().subscribe({
       next: (list) => this.events.set(list),
-      error: () => this.snackBar.open('Error al cargar eventos', 'Cerrar', { duration: 3000 }),
+      error: () => this.notifications.error('No se pudieron cargar los eventos'),
     });
   }
 

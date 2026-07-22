@@ -63,6 +63,7 @@ export class ObituaryFormComponent implements OnChanges {
   @Input() initialPhotoUrl: string | null = null;
   @Input() eventOptions: ObituaryEventOption[] = [];
   @Input() errorMessage = '';
+  @Input() saving = false;
   @Output() save = new EventEmitter<ObituaryFormSubmission>();
   @Output() cancel = new EventEmitter<void>();
 

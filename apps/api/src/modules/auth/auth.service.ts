@@ -464,9 +464,8 @@ export class AuthService {
   }
 
   private clearAuthCookies(res: Response) {
-    const cookieOptions = { path: '/api' };
-    res.clearCookie(ACCESS_TOKEN_COOKIE, cookieOptions);
-    res.clearCookie(REFRESH_TOKEN_COOKIE, cookieOptions);
+    res.clearCookie(ACCESS_TOKEN_COOKIE, { path: '/' });
+    res.clearCookie(REFRESH_TOKEN_COOKIE, { path: '/api' });
   }
 
   private getAccessCookieOptions() {
@@ -474,7 +473,7 @@ export class AuthService {
       httpOnly: true,
       secure: this.isProduction(),
       sameSite: 'lax' as const,
-      path: '/api',
+      path: '/',
       maxAge: this.parseDurationToMs(
         this.config.get('JWT_ACCESS_EXPIRES_IN', '15m'),
       ),
