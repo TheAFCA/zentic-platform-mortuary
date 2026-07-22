@@ -75,6 +75,17 @@ async function bootstrap() {
   const port = config.get<number>('PORT', 3000);
   await app.listen(port);
   logger.log({ event: 'startup', url: `http://localhost:${port}/api` });
+  logger.log({
+    event: 'streaming-config',
+    provider: config.get<string>('STREAM_PROVIDER'),
+    hasMuxTokenId: Boolean(config.get<string>('MUX_TOKEN_ID')),
+    hasMuxTokenSecret: Boolean(config.get<string>('MUX_TOKEN_SECRET')),
+    hasMuxWebhookSecret: Boolean(config.get<string>('MUX_WEBHOOK_SECRET')),
+    hasMuxPlaybackSigning: Boolean(
+      config.get<string>('MUX_SIGNING_KEY_ID') &&
+        config.get<string>('MUX_PRIVATE_KEY'),
+    ),
+  });
   if (nodeEnv !== 'production') {
     logger.log({
       event: 'swagger',

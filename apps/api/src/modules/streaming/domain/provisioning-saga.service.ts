@@ -5,6 +5,7 @@ import {
   StreamProvider,
   STREAM_PROVIDER_TOKEN,
 } from '../providers/stream-provider.interface';
+import { withProviderTimeout } from '../providers/stream-provider.factory';
 
 @Injectable()
 export class ProvisioningSagaService {
@@ -63,9 +64,11 @@ export class ProvisioningSagaService {
     let rtmpUrl: string | undefined;
 
     try {
-      const result = await this.provider.createLiveStream({
-        signedPlayback: !isPublic,
-      });
+      const result = await withProviderTimeout(
+        this.provider,
+        'createLiveStream',
+        () => this.provider.createLiveStream({ signedPlayback: !isPublic }),
+      );
 
       providerStreamId = result.providerStreamId;
       streamKey = result.streamKey;
