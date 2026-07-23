@@ -10,8 +10,8 @@
   margin: 0;
   padding: 0.75rem 1rem;
   border-radius: 0.75rem;
-  background: #fef2f2;
-  color: #b91c1c;
+  background: var(--error-bg, #fef2f2);
+  color: var(--error-text, #b91c1c);
   font-size: 0.9rem;
 }
 
@@ -42,7 +42,7 @@
 
 .obituary-form__date-error {
   margin: -0.5rem 0 0;
-  color: #b91c1c;
+  color: var(--error-text, #b91c1c);
   font-size: 0.85rem;
 }
 

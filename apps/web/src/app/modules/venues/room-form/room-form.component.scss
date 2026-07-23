@@ -12,8 +12,8 @@
   margin: 0 0 0.25rem;
   padding: 0.5rem 0.75rem;
   border-radius: 0.6rem;
-  background: #fef2f2;
-  color: #b91c1c;
+  background: var(--error-bg, #fef2f2);
+  color: var(--error-text, #b91c1c);
   font-size: 0.8rem;
 }
 
