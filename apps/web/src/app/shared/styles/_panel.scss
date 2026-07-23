@@ -1,35 +1,22 @@
-@use 'sass:color';
-
-$brand-primary: #0f5e59;
-$brand-primary-hover: #0b4c48;
-$brand-primary-light: rgba(15, 94, 89, 0.08);
-$ink: #1f2937;
-$ink-secondary: #4b5563;
-$muted: #6b7280;
-$muted-light: #9ca3af;
-$border: #e7e9ee;
-$border-light: #f1f3f6;
-$surface: #f7f8fa;
-$error: #dc2626;
-$success: #16a34a;
-$warning: #d97706;
-
-$radius-sm: 0.65rem;
-$radius-md: 0.85rem;
-$radius-lg: 1rem;
-$radius-xl: 1.25rem;
-$radius-2xl: 1.5rem;
-
-$shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
-$shadow-md: 0 4px 6px rgba(15, 23, 42, 0.06), 0 2px 4px rgba(15, 23, 42, 0.04);
-$shadow-lg: 0 12px 32px rgba(17, 24, 39, 0.06);
-$shadow-xl: 0 20px 48px rgba(17, 24, 39, 0.08);
+// Tokens live only in apps/web/src/styles.scss (:root CSS custom properties).
+// These mixins — and the Sass aliases below, kept for the ~25 component
+// stylesheets that reference panel.$ink/$muted/$border/etc. directly —
+// consume that single source of truth so a rebrand only ever touches
+// styles.scss, never a hardcoded hex here.
+$brand-primary: var(--brand-primary);
+$brand-primary-hover: var(--brand-primary-hover);
+$ink: var(--ink);
+$ink-secondary: var(--ink-secondary);
+$muted: var(--muted);
+$border: var(--border);
+$border-light: var(--border-light);
+$surface: var(--surface);
 
 @mixin panel-card {
-  border-radius: $radius-xl;
-  border: 1px solid $border;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
   background: #fff;
-  box-shadow: $shadow-lg;
+  box-shadow: var(--shadow-lg);
 }
 
 @mixin eyebrow {
@@ -38,7 +25,7 @@ $shadow-xl: 0 20px 48px rgba(17, 24, 39, 0.08);
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: $muted;
+  color: var(--muted);
 }
 
 @mixin primary-button {
@@ -47,29 +34,29 @@ $shadow-xl: 0 20px 48px rgba(17, 24, 39, 0.08);
   justify-content: center;
   gap: 0.5rem;
   border: 0;
-  border-radius: $radius-md;
+  border-radius: var(--radius-md);
   padding: 0 1.25rem;
   min-height: 2.75rem;
   font-weight: 600;
   font-size: 0.92rem;
-  background: linear-gradient(135deg, $brand-primary, $brand-primary-hover);
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-hover));
   color: #fff;
   cursor: pointer;
-  box-shadow: 0 12px 24px rgba(15, 94, 89, 0.2);
+  box-shadow: var(--shadow-button);
   transition:
     transform 200ms ease,
     box-shadow 200ms ease;
 
   &:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 16px 30px rgba(15, 94, 89, 0.26);
+    box-shadow: var(--shadow-button-hover);
   }
 
   &:focus-visible {
     outline: none;
     box-shadow:
-      0 0 0 4px rgba(15, 94, 89, 0.16),
-      0 12px 24px rgba(15, 94, 89, 0.2);
+      0 0 0 4px var(--brand-primary-light),
+      var(--shadow-button);
   }
 
   &:disabled {
@@ -84,27 +71,27 @@ $shadow-xl: 0 20px 48px rgba(17, 24, 39, 0.08);
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border: 1px solid $border;
-  border-radius: $radius-md;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   padding: 0 1.25rem;
   min-height: 2.75rem;
   font-weight: 600;
   font-size: 0.92rem;
   background: #fff;
-  color: $ink;
+  color: var(--ink);
   cursor: pointer;
   transition:
     border-color 200ms ease,
     background-color 200ms ease;
 
   &:hover:not(:disabled) {
-    border-color: color.adjust($border, $lightness: -12%);
+    border-color: color-mix(in srgb, var(--border) 88%, black);
     background: #f9fafb;
   }
 
   &:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 4px rgba(15, 94, 89, 0.12);
+    box-shadow: 0 0 0 4px var(--brand-primary-light);
   }
 }
 
@@ -133,12 +120,12 @@ $shadow-xl: 0 20px 48px rgba(17, 24, 39, 0.08);
     font-size: 1.75rem;
     font-weight: 700;
     letter-spacing: -0.02em;
-    color: $ink;
+    color: var(--ink);
   }
 
   .page-header__subtitle {
     margin: 0;
-    color: $muted;
+    color: var(--muted);
   }
 }
 
@@ -151,17 +138,17 @@ $shadow-xl: 0 20px 48px rgba(17, 24, 39, 0.08);
 @mixin status-message {
   margin: 0 0 1rem;
   padding: 0.65rem 0.9rem;
-  border-radius: $radius-md;
+  border-radius: var(--radius-md);
   font-size: 0.85rem;
 
   &--success {
-    background: #f0fdf4;
-    color: #166534;
+    background: var(--success-bg);
+    color: var(--success-text);
   }
 
   &--error {
-    background: #fef2f2;
-    color: #991b1b;
+    background: var(--error-bg);
+    color: var(--error-text);
   }
 }
 
@@ -172,7 +159,7 @@ $shadow-xl: 0 20px 48px rgba(17, 24, 39, 0.08);
   label {
     font-size: 0.8rem;
     font-weight: 600;
-    color: $muted;
+    color: var(--muted);
   }
 
   select {
@@ -180,23 +167,19 @@ $shadow-xl: 0 20px 48px rgba(17, 24, 39, 0.08);
   }
 }
 
-$sa-dark: #0f172a;
-$sa-dark-mid: #1f2937;
-$sa-dark-deep: #111827;
-
 @mixin sa-hero {
   position: relative;
   overflow: hidden;
-  border-radius: $radius-2xl;
+  border-radius: var(--radius-2xl);
   padding: 1.9rem 2rem;
   background:
     radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.08), transparent 45%),
-    linear-gradient(135deg, $sa-dark 0%, $sa-dark-mid 60%, $sa-dark-deep 100%);
+    linear-gradient(135deg, var(--sa-dark) 0%, var(--sa-dark-mid) 60%, var(--sa-dark-deep) 100%);
   color: rgba(255, 255, 255, 0.92);
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
 }
 
-@mixin sa-icon-chip($from: $brand-primary, $to: $brand-primary-hover) {
+@mixin sa-icon-chip($from: var(--brand-primary), $to: var(--brand-primary-hover)) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -210,10 +193,10 @@ $sa-dark-deep: #111827;
 }
 
 @mixin sa-card {
-  border-radius: $radius-2xl;
-  border: 1px solid $border;
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--border);
   background: #fff;
-  box-shadow: $shadow-xl;
+  box-shadow: var(--shadow-xl);
   transition:
     box-shadow 200ms ease,
     transform 200ms ease;
@@ -221,13 +204,13 @@ $sa-dark-deep: #111827;
 
 @mixin sa-card-hover {
   &:hover {
-    box-shadow: 0 20px 48px rgba(17, 24, 39, 0.1);
+    box-shadow: var(--shadow-card-hover);
   }
 }
 
 @mixin sa-pill-input {
-  border: 1px solid $border;
-  border-radius: $radius-md;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   padding: 0.6rem 0.9rem;
   font: inherit;
   font-size: 0.92rem;
@@ -238,11 +221,11 @@ $sa-dark-deep: #111827;
 
   &:focus {
     outline: none;
-    border-color: rgba(15, 94, 89, 0.4);
-    box-shadow: 0 0 0 4px rgba(15, 94, 89, 0.1);
+    border-color: var(--brand-primary-light);
+    box-shadow: 0 0 0 4px var(--brand-primary-light);
   }
 
   &::placeholder {
-    color: $muted-light;
+    color: var(--muted-light);
   }
 }

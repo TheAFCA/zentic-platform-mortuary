@@ -30,18 +30,19 @@ const REFRESH_INTERVAL_MS = 60_000;
       .dashboard__eyebrow {
         margin: 0;
         font-size: 0.75rem;
-        font-weight: 600;
-        letter-spacing: 0.18em;
+        font-weight: 700;
+        letter-spacing: 0.16em;
         text-transform: uppercase;
-        color: #6b7280;
+        color: var(--candle-ink, #6b7280);
       }
 
       .dashboard__title {
         margin: 0;
-        font-size: 1.75rem;
-        font-weight: 700;
-        letter-spacing: -0.02em;
-        color: #1f2937;
+        font-family: var(--font-display, inherit);
+        font-weight: 500;
+        font-size: 1.9rem;
+        letter-spacing: 0;
+        color: var(--ink, #1f2937);
       }
 
       .dashboard__grid {
@@ -75,6 +76,7 @@ const REFRESH_INTERVAL_MS = 60_000;
           subtitle="este mes"
           [value]="loading() ? '—' : (metrics()?.obituariesPublishedThisMonth ?? 0)"
           icon="article"
+          accent="candle"
         />
         <app-stat-card
           label="Leads este mes"
@@ -86,6 +88,7 @@ const REFRESH_INTERVAL_MS = 60_000;
           label="Clientes totales"
           [value]="loading() ? '—' : (metrics()?.totalClients ?? 0)"
           icon="people"
+          accent="candle"
         />
         <app-stat-card
           label="Mensajes pendientes"
@@ -98,6 +101,7 @@ const REFRESH_INTERVAL_MS = 60_000;
           label="Viewers en vivo"
           [value]="loading() ? '—' : (metrics()?.liveViewers ?? 0)"
           icon="visibility"
+          accent="candle"
         />
       </div>
     </div>

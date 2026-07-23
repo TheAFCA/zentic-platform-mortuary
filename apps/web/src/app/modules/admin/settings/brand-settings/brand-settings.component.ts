@@ -3,6 +3,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { TenantBrandConfig } from '@zentic/shared-types';
 import { AdminSettingsApiService } from '../../../../core/services/admin-settings-api.service';
+import { BrandThemeService } from '../../../../core/services/brand-theme.service';
 import { FileDropzoneComponent } from '../../../../shared/molecules/file-dropzone/file-dropzone.component';
 import { ColorPickerComponent } from '../../../../shared/atoms/color-picker/color-picker.component';
 import { FeedbackBannerComponent } from '../../../../shared/molecules/feedback-banner/feedback-banner.component';
@@ -24,6 +25,7 @@ import { getErrorMessage } from '../../../../core/utils/error-message';
 export class BrandSettingsComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly settingsApi = inject(AdminSettingsApiService);
+  private readonly brandTheme = inject(BrandThemeService);
 
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -61,13 +63,7 @@ export class BrandSettingsComponent implements OnInit {
   }
 
   get previewStyle(): Record<string, string> {
-    const value = this.form.getRawValue();
-    return {
-      '--preview-primary': value.primaryColor,
-      '--preview-secondary': value.secondaryColor,
-      '--preview-text': value.textColor,
-      '--preview-background': value.backgroundColor,
-    };
+    return this.brandTheme.previewVariables(this.form.getRawValue());
   }
 
   onLogoSelected(file: File): void {
@@ -132,5 +128,7 @@ export class BrandSettingsComponent implements OnInit {
     });
     this.logoUrl.set(brand.logoUrl);
     this.faviconUrl.set(brand.faviconUrl);
+    // Refleja la marca guardada en toda la app (sidenav, botones, etc.) sin recargar.
+    this.brandTheme.apply(brand);
   }
 }

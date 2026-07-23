@@ -24,7 +24,7 @@ export type ButtonSize = 'sm' | 'md' | 'lg';
         justify-content: center;
         gap: 0.5rem;
         border: 0;
-        border-radius: 0.85rem;
+        border-radius: var(--radius-md, 0.85rem);
         padding: 0.75rem 1rem;
         font-weight: 600;
         font-size: 0.92rem;
@@ -94,15 +94,15 @@ export type ButtonSize = 'sm' | 'md' | 'lg';
       }
 
       button[data-variant='ghost'] {
-        color: #374151;
+        color: var(--ink, #374151);
         background: #fff;
-        border: 1px solid #e7e9ee;
-        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        border: 1px solid var(--border, #e7e9ee);
+        box-shadow: var(--shadow-xs, 0 1px 2px rgba(15, 23, 42, 0.04));
       }
 
       button[data-variant='ghost']:hover:not(:disabled) {
-        background: #f9fafb;
-        border-color: #d1d5db;
+        background: var(--surface, #f9fafb);
+        border-color: var(--border-dark, #d1d5db);
       }
 
       mat-spinner {

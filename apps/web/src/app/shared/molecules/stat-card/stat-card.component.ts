@@ -2,7 +2,7 @@ import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 
-export type StatCardAccent = 'primary' | 'success' | 'warning' | 'danger' | 'neutral';
+export type StatCardAccent = 'primary' | 'success' | 'warning' | 'danger' | 'neutral' | 'candle';
 
 @Component({
   selector: 'app-stat-card',

@@ -1,3 +1,5 @@
+@use 'styles/material-theme';
+
 :root {
   color-scheme: light;
 
@@ -17,21 +19,29 @@
   --success-bg: #f0fdf4;
   --success-text: #166534;
 
-  --warning: #d97706;
-  --warning-bg: #fffbeb;
-  --warning-text: #92400e;
+  --warning: oklch(45% 0.13 65);
+  --warning-bg: oklch(65% 0.14 75 / 0.16);
+  --warning-text: oklch(38% 0.13 60);
 
-  --ink: #1f2937;
-  --ink-secondary: #4b5563;
-  --muted: #6b7280;
-  --muted-light: #9ca3af;
+  /* Acento decorativo "vela conmemorativa" — no es la marca del tenant, ver [[project_zentic]] */
+  --candle: oklch(65% 0.14 75);
+  --candle-ink: oklch(45% 0.13 65);
+  --candle-soft: oklch(65% 0.14 75 / 0.16);
 
-  --border: #e7e9ee;
-  --border-light: #f1f3f6;
-  --border-dark: #d1d5db;
+  --ink: oklch(24% 0.02 60);
+  --ink-secondary: oklch(42% 0.02 60);
+  --muted: oklch(52% 0.02 65);
+  --muted-light: oklch(68% 0.015 65);
 
-  --surface: #f7f8fa;
-  --surface-alt: #ffffff;
+  --border: oklch(88% 0.02 70);
+  --border-light: oklch(93% 0.014 72);
+  --border-dark: oklch(78% 0.025 68);
+
+  --surface: oklch(97% 0.012 75);
+  --surface-alt: oklch(99% 0.004 75);
+
+  --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Frank Ruhl Libre', ui-serif, Georgia, serif;
 
   --radius-xs: 0.5rem;
   --radius-sm: 0.65rem;
@@ -40,16 +50,29 @@
   --radius-xl: 1.25rem;
   --radius-2xl: 1.5rem;
 
-  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.06), 0 2px 4px rgba(15, 23, 42, 0.04);
-  --shadow-lg: 0 10px 15px rgba(15, 23, 42, 0.06), 0 4px 6px rgba(15, 23, 42, 0.04);
-  --shadow-xl: 0 20px 48px rgba(17, 24, 39, 0.08);
-  --shadow-2xl: 0 28px 64px rgba(15, 23, 42, 0.14);
+  --shadow-xs: 0 1px 2px rgba(60, 40, 10, 0.04);
+  --shadow-sm: 0 1px 3px rgba(60, 40, 10, 0.06), 0 1px 2px rgba(60, 40, 10, 0.04);
+  --shadow-md: 0 4px 6px rgba(60, 40, 10, 0.06), 0 2px 4px rgba(60, 40, 10, 0.04);
+  --shadow-lg: 0 10px 15px rgba(60, 40, 10, 0.06), 0 4px 6px rgba(60, 40, 10, 0.04);
+  --shadow-xl: 0 20px 48px rgba(50, 34, 10, 0.08);
+  --shadow-2xl: 0 28px 64px rgba(45, 30, 10, 0.14);
+
+  /* Semantic shadow aliases — consumed by both tailwind.config.js and _panel.scss */
+  --shadow-card: 0 12px 32px rgba(60, 40, 10, 0.06);
+  --shadow-card-hover: 0 20px 48px rgba(60, 40, 10, 0.1);
+  --shadow-button: 0 12px 24px rgba(15, 94, 89, 0.2);
+  --shadow-button-hover: 0 16px 30px rgba(15, 94, 89, 0.26);
+  --shadow-dialog: 0 28px 64px rgba(45, 30, 10, 0.28);
+  --shadow-login: 0 20px 55px rgba(60, 40, 10, 0.09);
 
   --transition-fast: 150ms ease;
   --transition-base: 200ms ease;
   --transition-slow: 300ms ease;
+
+  /* Super-admin dark hero palette — used by _panel.scss sa-* mixins */
+  --sa-dark: #0f172a;
+  --sa-dark-mid: #1f2937;
+  --sa-dark-deep: #111827;
 }
 
 html,
@@ -59,14 +82,7 @@ body {
 
 body {
   margin: 0;
-  font-family:
-    'Inter',
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
+  font-family: var(--font-sans);
   background: var(--surface);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
@@ -464,10 +480,8 @@ select {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.18), transparent 32%),
-    linear-gradient(135deg, var(--brand-primary) 0%, #0d4f4b 58%, #083937 100%);
-  color: rgba(255, 255, 255, 0.92);
+  background: oklch(93% 0.03 75);
+  color: var(--ink);
 }
 
 .login-shell__backdrop,
@@ -478,34 +492,28 @@ select {
 
 .login-shell__backdrop {
   inset: 0;
-  opacity: 0.4;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
-  background-size: 72px 72px;
-  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), transparent 90%);
+  opacity: 0;
 }
 
 .login-shell__orb {
   border-radius: 999px;
-  filter: blur(28px);
-  opacity: 0.55;
+  filter: blur(36px);
 }
 
 .login-shell__orb--one {
-  top: 8%;
-  right: 10%;
-  width: 18rem;
-  height: 18rem;
-  background: rgba(255, 255, 255, 0.16);
+  top: -10%;
+  right: -8%;
+  width: 22rem;
+  height: 22rem;
+  background: radial-gradient(circle, oklch(78% 0.13 70 / 0.55), transparent 70%);
 }
 
 .login-shell__orb--two {
-  bottom: 14%;
-  left: -6%;
-  width: 22rem;
-  height: 22rem;
-  background: rgba(107, 144, 128, 0.3);
+  bottom: -14%;
+  left: -8%;
+  width: 20rem;
+  height: 20rem;
+  background: radial-gradient(circle, oklch(70% 0.05 175 / 0.16), transparent 72%);
 }
 
 .login-shell__content {
@@ -522,11 +530,11 @@ select {
   gap: 0.875rem;
   width: fit-content;
   padding: 0.875rem 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid oklch(75% 0.04 70 / 0.5);
   border-radius: 1.25rem;
-  background: rgba(255, 255, 255, 0.08);
+  background: oklch(99% 0.004 75 / 0.8);
   backdrop-filter: blur(18px);
-  box-shadow: 0 20px 60px rgba(4, 15, 18, 0.16);
+  box-shadow: 0 6px 20px rgba(60, 40, 10, 0.05);
 }
 
 .tenant-chip__mark,
@@ -537,15 +545,11 @@ select {
   width: 3rem;
   height: 3rem;
   border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.16);
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-hover));
   color: #fff;
   font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: 0.12em;
-}
-
-.login-card__tenant-mark {
-  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-hover));
   box-shadow: 0 12px 24px rgba(15, 94, 89, 0.18);
 }
 
@@ -554,10 +558,10 @@ select {
 .login-shell__eyebrow {
   margin: 0;
   font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.22em;
+  font-weight: 700;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.68);
+  color: var(--candle-ink);
 }
 
 .tenant-chip__name {
@@ -573,11 +577,13 @@ select {
 
 .login-shell__copy h1 {
   margin: 0;
-  max-width: 12ch;
-  font-size: clamp(2.15rem, 4vw, 2.85rem);
-  line-height: 1.03;
-  letter-spacing: -0.04em;
-  font-weight: 700;
+  max-width: 11ch;
+  font-family: var(--font-display);
+  font-size: clamp(2.1rem, 4vw, 2.75rem);
+  line-height: 1.1;
+  letter-spacing: 0;
+  font-weight: 500;
+  color: var(--ink);
 }
 
 .login-shell__copy p {
@@ -585,7 +591,7 @@ select {
   max-width: 34rem;
   font-size: 1.05rem;
   line-height: 1.7;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--ink-secondary);
 }
 
 .benefits {
@@ -598,9 +604,9 @@ select {
   gap: 0.875rem;
   align-items: flex-start;
   padding: 1rem 1.05rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid oklch(75% 0.04 70 / 0.45);
   border-radius: 1.25rem;
-  background: rgba(255, 255, 255, 0.08);
+  background: oklch(99% 0.004 75 / 0.65);
   backdrop-filter: blur(16px);
   transition:
     transform 200ms ease,
@@ -610,8 +616,8 @@ select {
 
 .benefit-card:hover {
   transform: translateY(-1px);
-  border-color: rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.11);
+  border-color: oklch(75% 0.04 70 / 0.7);
+  background: oklch(99% 0.004 75 / 0.85);
 }
 
 .benefit-card__icon {
@@ -621,20 +627,21 @@ select {
   justify-content: center;
   width: 2.625rem;
   height: 2.625rem;
-  border-radius: 0.9rem;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  border-radius: 999px;
+  background: var(--candle-soft);
+  color: var(--candle-ink);
 }
 
 .benefit-card h2 {
   margin: 0;
   font-size: 0.98rem;
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--ink);
 }
 
 .benefit-card p {
   margin: 0.3rem 0 0;
-  color: rgba(255, 255, 255, 0.74);
+  color: var(--ink-secondary);
   font-size: 0.95rem;
   line-height: 1.55;
 }
@@ -643,7 +650,7 @@ select {
   position: relative;
   z-index: 1;
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.68);
+  color: var(--muted);
 }
 
 .login-shell__panel {
@@ -666,24 +673,26 @@ select {
 
 .panel-heading h2 {
   margin: 0;
-  font-size: clamp(2rem, 3vw, 2.45rem);
-  line-height: 1.08;
-  letter-spacing: -0.04em;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(1.9rem, 3vw, 2.3rem);
+  line-height: 1.12;
+  letter-spacing: 0;
   color: var(--ink);
 }
 
 .panel-heading p {
   margin: 0;
-  color: var(--muted);
+  color: var(--ink-secondary);
   font-size: 1rem;
 }
 
 .login-card {
-  padding: 1.4rem;
-  border-radius: 1.5rem;
+  padding: 1.5rem;
+  border-radius: 1.25rem;
   border: 1px solid var(--border);
-  box-shadow: 0 20px 55px rgba(17, 24, 39, 0.08);
-  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-login);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(24px);
 }
 

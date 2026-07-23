@@ -11,6 +11,8 @@ import { ImpersonationSessionService } from '../../core/services/impersonation-s
 import { ImpersonationApiService } from '../../core/services/impersonation-api.service';
 import { AuthStateService } from '../../core/services/auth-state.service';
 import { PendingMessagesBadgeService } from '../../core/services/pending-messages-badge.service';
+import { AdminSettingsApiService } from '../../core/services/admin-settings-api.service';
+import { BrandThemeService } from '../../core/services/brand-theme.service';
 import { ImpersonationBannerComponent } from '../../shared/organisms/impersonation-banner/impersonation-banner.component';
 import { HasPermissionDirective } from '../../shared/directives/has-permission.directive';
 
@@ -53,9 +55,21 @@ export class DashboardLayoutComponent {
   protected readonly pendingMessagesBadge = inject(PendingMessagesBadgeService);
   private readonly impersonationApi = inject(ImpersonationApiService);
   private readonly authState = inject(AuthStateService);
+  private readonly settingsApi = inject(AdminSettingsApiService);
+  private readonly brandTheme = inject(BrandThemeService);
 
   constructor() {
     this.pendingMessagesBadge.start();
+
+    // Solo hay marca de tenant que aplicar cuando la sesión tiene un tenant real
+    // (SUPER_ADMIN en su propio panel global no tiene brandConfig que cargar).
+    if (this.authState.currentUser()?.tenantId) {
+      this.settingsApi.getBrand().subscribe({
+        next: (brand) => this.brandTheme.apply(brand),
+        // Si falla, la app se queda con los --brand-* por defecto de styles.scss.
+        error: () => undefined,
+      });
+    }
   }
 
   protected readonly superAdminNavItems: NavItem[] = [

@@ -1,0 +1,38 @@
+// Angular Material M3 theme.
+//
+// mat.theme() needs a compile-time seed palette (M3 tonal palettes can't be
+// generated from a runtime CSS custom property), so this uses a structural
+// seed (closest built-in hue family to the brand teal) for typography/shape/
+// elevation/density/neutrals, then overrides just the primary/secondary/error
+// color roles to point at the same --brand-*/--error-* variables the rest of
+// the app already uses. That keeps Material's system tokens (--mat-sys-*)
+// reactive to BrandThemeService at runtime instead of baked in at build time.
+@use '@angular/material' as mat;
+
+html {
+  @include mat.theme(
+    (
+      color: (
+        theme-type: light,
+        primary: mat.$green-palette,
+      ),
+      typography: Manrope,
+      density: 0,
+    ),
+    $overrides: (
+      primary: var(--brand-primary),
+      on-primary: #fff,
+      primary-container: var(--brand-primary-light),
+      on-primary-container: var(--brand-primary),
+      inverse-primary: var(--brand-primary-light),
+      secondary: var(--brand-secondary),
+      on-secondary: #fff,
+      secondary-container: var(--brand-secondary-light),
+      on-secondary-container: var(--brand-secondary),
+      error: var(--error),
+      on-error: #fff,
+      error-container: var(--error-bg),
+      on-error-container: var(--error-text),
+    )
+  );
+}

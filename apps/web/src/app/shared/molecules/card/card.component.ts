@@ -12,17 +12,17 @@ import { CommonModule } from '@angular/common';
       }
 
       .card {
-        border-radius: 1.25rem;
-        background: #fff;
-        box-shadow: 0 12px 32px rgba(17, 24, 39, 0.06);
-        border: 1px solid #e7e9ee;
+        border-radius: var(--radius-xl, 1.25rem);
+        background: var(--surface-alt, #fff);
+        box-shadow: var(--shadow-card, 0 12px 32px rgba(17, 24, 39, 0.06));
+        border: 1px solid var(--border, #e7e9ee);
         transition:
           box-shadow 200ms ease,
           transform 200ms ease;
       }
 
       .card:hover {
-        box-shadow: 0 20px 48px rgba(17, 24, 39, 0.1);
+        box-shadow: var(--shadow-card-hover, 0 20px 48px rgba(17, 24, 39, 0.1));
       }
 
       .card__header {
@@ -31,10 +31,11 @@ import { CommonModule } from '@angular/common';
 
       .card__title {
         margin: 0;
-        font-size: 1rem;
-        font-weight: 700;
-        color: #1f2937;
-        letter-spacing: -0.01em;
+        font-family: var(--font-display, inherit);
+        font-weight: 500;
+        font-size: 1.05rem;
+        color: var(--ink, #1f2937);
+        letter-spacing: 0;
       }
 
       .card__body {
@@ -43,9 +44,9 @@ import { CommonModule } from '@angular/common';
 
       .card__footer {
         padding: 1rem 1.5rem;
-        border-top: 1px solid #f1f3f6;
-        background: #fafbfc;
-        border-radius: 0 0 1.25rem 1.25rem;
+        border-top: 1px solid var(--border-light, #f1f3f6);
+        background: var(--surface, #fafbfc);
+        border-radius: 0 0 var(--radius-xl, 1.25rem) var(--radius-xl, 1.25rem);
       }
     `,
   ],
