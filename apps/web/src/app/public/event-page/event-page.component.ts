@@ -72,7 +72,7 @@ const REACTION_ICONS = [
       --text-primary: #efeff1;
       --text-secondary: #adadb8;
       --text-muted: #777781;
-      --brand: #9147ff;
+      --brand: var(--brand-primary, #9147ff);
       --red: #eb0400;
 
       display: flex;
@@ -602,7 +602,7 @@ const REACTION_ICONS = [
     }
     .stream-room__message-author {
       font-weight: 600;
-      color: #bf94ff;
+      color: color-mix(in srgb, var(--brand-primary, #9147ff) 55%, white);
     }
     .stream-room__message-text {
       color: var(--text-primary);
