@@ -18,6 +18,7 @@ import {
 } from '../invitation-form/invitation-form.component';
 import { NotificationService } from '../../../core/services/notification.service';
 import { getErrorMessage } from '../../../core/utils/error-message';
+import { FormPanelComponent } from '../../../shared/organisms/form-panel/form-panel.component';
 
 export interface InvitationRow extends Invitation {
   eventTitle: string;
@@ -42,6 +43,7 @@ function toRow(invitation: Invitation, eventOptions: StreamingEvent[]): Invitati
     BadgeComponent,
     HasPermissionDirective,
     InvitationFormComponent,
+    FormPanelComponent,
   ],
   templateUrl: './invitations-list.component.html',
   styleUrl: './invitations-list.component.scss',

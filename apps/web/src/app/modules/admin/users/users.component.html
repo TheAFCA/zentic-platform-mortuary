@@ -5,20 +5,19 @@
     <p class="users-page__subtitle">Gestiona el equipo de tu funeraria y sus permisos</p>
   </header>
 
-  <section class="panel-card" *ngIf="showForm()">
-    <div class="panel-card__header">
-      <h2>{{ editingUser() ? 'Editar usuario' : 'Nuevo usuario' }}</h2>
-    </div>
-    <div class="panel-card__body">
-      <app-user-form
-        [initialValue]="editingFormValue()"
-        [errorMessage]="formError()"
-        [saving]="saving()"
-        (save)="onSave($event)"
-        (cancel)="closeForm()"
-      />
-    </div>
-  </section>
+  <app-form-panel
+    *ngIf="showForm()"
+    [title]="editingUser() ? 'Editar usuario' : 'Nuevo usuario'"
+    (closed)="closeForm()"
+  >
+    <app-user-form
+      [initialValue]="editingFormValue()"
+      [errorMessage]="formError()"
+      [saving]="saving()"
+      (save)="onSave($event)"
+      (cancel)="closeForm()"
+    />
+  </app-form-panel>
 
   <section class="panel-card">
     <div class="panel-card__header panel-card__header--split">

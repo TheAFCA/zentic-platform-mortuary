@@ -5,20 +5,15 @@
     <p class="obituaries-page__subtitle">Espacios de remembranza digital para cada difunto</p>
   </header>
 
-  <section class="panel-card" *ngIf="showForm()">
-    <div class="panel-card__header">
-      <h2>Nuevo obituario</h2>
-    </div>
-    <div class="panel-card__body">
-      <app-obituary-form
-        [eventOptions]="eventOptions()"
-        [errorMessage]="formError()"
-        [saving]="saving()"
-        (save)="onSave($event)"
-        (cancel)="closeForm()"
-      />
-    </div>
-  </section>
+  <app-form-panel *ngIf="showForm()" title="Nuevo obituario" (closed)="closeForm()">
+    <app-obituary-form
+      [eventOptions]="eventOptions()"
+      [errorMessage]="formError()"
+      [saving]="saving()"
+      (save)="onSave($event)"
+      (cancel)="closeForm()"
+    />
+  </app-form-panel>
 
   <section class="panel-card">
     <div class="panel-card__header panel-card__header--split">

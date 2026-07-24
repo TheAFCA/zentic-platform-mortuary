@@ -6,7 +6,10 @@
   gap: 1.5rem;
   align-items: start;
 
-  @media (max-width: 860px) {
+  // Container query, no media query: este layout vive tanto en el panel lateral
+  // (angosto, ancho fijo) como en la página de detalle (ancho variable pero
+  // acotado) — ninguno de los dos se correlaciona con el ancho del viewport.
+  @container (max-width: 860px) {
     grid-template-columns: 1fr;
   }
 }

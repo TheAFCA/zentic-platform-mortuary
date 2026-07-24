@@ -20,6 +20,7 @@ import {
 } from '../obituary-form/obituary-form.component';
 import { NotificationService } from '../../../core/services/notification.service';
 import { getErrorMessage } from '../../../core/utils/error-message';
+import { FormPanelComponent } from '../../../shared/organisms/form-panel/form-panel.component';
 
 @Component({
   selector: 'app-obituaries-list',
@@ -32,6 +33,7 @@ import { getErrorMessage } from '../../../core/utils/error-message';
     BadgeComponent,
     HasPermissionDirective,
     ObituaryFormComponent,
+    FormPanelComponent,
   ],
   templateUrl: './obituaries-list.component.html',
   styleUrl: './obituaries-list.component.scss',

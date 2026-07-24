@@ -5,20 +5,15 @@
     <p class="invitations-page__subtitle">Genera y comparte invitaciones para cada ceremonia</p>
   </header>
 
-  <section class="panel-card" *ngIf="showForm()">
-    <div class="panel-card__header">
-      <h2>Nueva invitación</h2>
-    </div>
-    <div class="panel-card__body">
-      <app-invitation-form
-        [eventOptions]="eventOptions()"
-        [errorMessage]="formError()"
-        [saving]="saving()"
-        (save)="onSave($event)"
-        (cancel)="closeForm()"
-      />
-    </div>
-  </section>
+  <app-form-panel *ngIf="showForm()" title="Nueva invitación" (closed)="closeForm()">
+    <app-invitation-form
+      [eventOptions]="eventOptions()"
+      [errorMessage]="formError()"
+      [saving]="saving()"
+      (save)="onSave($event)"
+      (cancel)="closeForm()"
+    />
+  </app-form-panel>
 
   <section class="panel-card">
     <div class="panel-card__header panel-card__header--split">
