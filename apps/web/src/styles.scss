@@ -856,34 +856,84 @@ select {
   grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
 }
 
+/* Variante oscura para Super-Admin (acceso interno) — mismo charcoal cálido
+   del sidenav del dashboard, no el navy frío original. Sobrescribe también
+   el color de texto: el panel visual base ahora es claro por defecto
+   (ver .login-shell__visual), así que esta variante necesita su propio
+   set de textos claros, no solo el fondo. */
 .login-shell--admin .login-shell__visual {
   background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.11), transparent 30%),
-    linear-gradient(135deg, #0f172a 0%, #1f2937 58%, #111827 100%);
+    radial-gradient(circle at top left, var(--candle-soft), transparent 32%),
+    linear-gradient(175deg, oklch(21% 0.015 55) 0%, oklch(17% 0.013 55) 100%);
+  color: rgba(255, 255, 255, 0.92);
 }
 
-.login-shell--admin .login-shell__orb--two {
-  background: rgba(107, 114, 128, 0.26);
-}
-
-.login-shell--admin .benefit-card__icon {
-  background: rgba(255, 255, 255, 0.08);
+.login-shell--admin .login-shell__eyebrow {
+  color: var(--candle);
 }
 
 .login-shell--admin .login-shell__copy h1 {
   max-width: 14ch;
+  color: #fff;
+}
+
+.login-shell--admin .login-shell__copy p {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.login-shell--admin .tenant-chip {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.login-shell--admin .tenant-chip__eyebrow {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.login-shell--admin .tenant-chip__name {
+  color: #fff;
+}
+
+.login-shell--admin .login-shell__orb--one {
+  background: radial-gradient(circle, var(--candle-soft), transparent 70%);
+}
+
+.login-shell--admin .login-shell__orb--two {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.08), transparent 72%);
+}
+
+.login-shell--admin .benefit-card {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.login-shell--admin .benefit-card__icon {
+  background: var(--candle-soft);
+  color: var(--candle);
+}
+
+.login-shell--admin .benefit-card h2 {
+  color: #fff;
+}
+
+.login-shell--admin .benefit-card p {
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.login-shell--admin .login-shell__footer {
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .login-shell--admin .login-card {
-  box-shadow: 0 22px 60px rgba(15, 23, 42, 0.09);
+  box-shadow: var(--shadow-login, 0 22px 60px rgba(15, 23, 42, 0.09));
 }
 
 .login-card--admin {
-  border-color: #dfe5ec;
+  border-color: var(--border, #dfe5ec);
 }
 
 .login-submit--admin {
-  background: linear-gradient(135deg, var(--brand-primary), #334155);
+  background: linear-gradient(135deg, var(--brand-primary), oklch(21% 0.015 55));
   box-shadow: 0 16px 30px rgba(31, 41, 55, 0.18);
 }
 
@@ -892,7 +942,7 @@ select {
 }
 
 .panel-heading--admin h2 {
-  color: #111827;
+  color: var(--ink, #111827);
 }
 
 @media (max-width: 1024px) {
