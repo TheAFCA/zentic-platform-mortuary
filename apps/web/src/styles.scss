@@ -69,10 +69,13 @@
   --transition-base: 200ms ease;
   --transition-slow: 300ms ease;
 
-  /* Super-admin dark hero palette — used by _panel.scss sa-* mixins */
-  --sa-dark: #0f172a;
-  --sa-dark-mid: #1f2937;
-  --sa-dark-deep: #111827;
+  /* Super-admin dark hero palette — used by _panel.scss sa-* mixins.
+     Mismo charcoal cálido del sidenav/login de super-admin (ver
+     dashboard-layout.component.scss y el bloque .login-shell--admin),
+     no el navy frío original. */
+  --sa-dark: oklch(21% 0.015 55);
+  --sa-dark-mid: oklch(19% 0.014 55);
+  --sa-dark-deep: oklch(17% 0.013 55);
 }
 
 html,
