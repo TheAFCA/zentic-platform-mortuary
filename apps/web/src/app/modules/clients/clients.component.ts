@@ -13,6 +13,7 @@ import { HasPermissionDirective } from '../../shared/directives/has-permission.d
 import { ClientFormComponent, ClientFormValue } from './client-form/client-form.component';
 import { NotificationService } from '../../core/services/notification.service';
 import { getErrorMessage } from '../../core/utils/error-message';
+import { FormPanelComponent } from '../../shared/organisms/form-panel/form-panel.component';
 
 @Component({
   selector: 'app-clients',
@@ -25,6 +26,7 @@ import { getErrorMessage } from '../../core/utils/error-message';
     BadgeComponent,
     HasPermissionDirective,
     ClientFormComponent,
+    FormPanelComponent,
   ],
   templateUrl: './clients.component.html',
   styleUrl: './clients.component.scss',
@@ -43,6 +45,7 @@ export class ClientsComponent implements OnInit {
 
   readonly showForm = signal(false);
   readonly editingClient = signal<Client | null>(null);
+  readonly editingFormValue = signal<ClientFormValue | null>(null);
   readonly formError = signal('');
 
   readonly columns: DataTableColumn<Client>[] = [
@@ -89,23 +92,14 @@ export class ClientsComponent implements OnInit {
   openCreate(): void {
     this.formError.set('');
     this.editingClient.set(null);
+    this.editingFormValue.set(null);
     this.showForm.set(true);
   }
 
   openEdit(client: Client): void {
     this.formError.set('');
     this.editingClient.set(client);
-    this.showForm.set(true);
-  }
-
-  closeForm(): void {
-    this.showForm.set(false);
-  }
-
-  editingFormValue(): ClientFormValue | null {
-    const client = this.editingClient();
-    if (!client) return null;
-    return {
+    this.editingFormValue.set({
       name: client.name,
       email: client.email ?? '',
       phone: client.phone ?? '',
@@ -113,7 +107,12 @@ export class ClientsComponent implements OnInit {
       notes: client.notes ?? '',
       status: client.status,
       serviceDate: client.serviceDate ? client.serviceDate.slice(0, 10) : '',
-    };
+    });
+    this.showForm.set(true);
+  }
+
+  closeForm(): void {
+    this.showForm.set(false);
   }
 
   onSave(value: ClientFormValue): void {

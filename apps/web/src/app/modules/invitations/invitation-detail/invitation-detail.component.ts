@@ -50,6 +50,7 @@ export class InvitationDetailComponent implements OnInit {
   readonly actionLoading = signal(false);
 
   readonly editing = signal(false);
+  readonly editingFormValue = signal<InvitationFormValue | null>(null);
   readonly formError = signal('');
 
   readonly confirmPublish = signal(false);
@@ -129,19 +130,16 @@ export class InvitationDetailComponent implements OnInit {
     });
   }
 
-  editingFormValue(): InvitationFormValue | null {
+  openEdit(): void {
     const invitation = this.invitation();
-    if (!invitation) return null;
-    return {
+    if (!invitation) return;
+    this.formError.set('');
+    this.editingFormValue.set({
       eventId: invitation.eventId,
       template: invitation.template,
       message: invitation.message ?? '',
       accessCodeDisplay: invitation.accessCodeDisplay ?? '',
-    };
-  }
-
-  openEdit(): void {
-    this.formError.set('');
+    });
     this.editing.set(true);
   }
 
