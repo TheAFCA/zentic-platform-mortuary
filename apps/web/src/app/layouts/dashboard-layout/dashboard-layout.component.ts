@@ -59,11 +59,12 @@ export class DashboardLayoutComponent {
   private readonly brandTheme = inject(BrandThemeService);
 
   constructor() {
-    this.pendingMessagesBadge.start();
-
-    // Solo hay marca de tenant que aplicar cuando la sesión tiene un tenant real
-    // (SUPER_ADMIN en su propio panel global no tiene brandConfig que cargar).
+    // El badge de mensajes pendientes es del Libro de Homenajes, tenant-scoped: para
+    // SUPER_ADMIN (sin tenantId) el backend responde 403 y el errorInterceptor global
+    // redirige a /no-autorizado como efecto secundario, aunque la página cargue bien.
     if (this.authState.currentUser()?.tenantId) {
+      this.pendingMessagesBadge.start();
+
       this.settingsApi.getBrand().subscribe({
         next: (brand) => this.brandTheme.apply(brand),
         // Si falla, la app se queda con los --brand-* por defecto de styles.scss.
