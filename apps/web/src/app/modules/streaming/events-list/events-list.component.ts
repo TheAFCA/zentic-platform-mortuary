@@ -55,14 +55,15 @@ const STATUS_ICONS: Record<string, string> = {
         font-weight: 600;
         letter-spacing: 0.18em;
         text-transform: uppercase;
-        color: #6b7280;
+        color: var(--ink-secondary, #6b7280);
       }
       .events-header__title {
         margin: 0;
+        font-family: var(--font-display);
         font-size: 1.75rem;
-        font-weight: 700;
-        letter-spacing: -0.02em;
-        color: #1f2937;
+        font-weight: 500;
+        letter-spacing: 0;
+        color: var(--ink, #1f2937);
       }
 
       .events-tabs {
@@ -70,7 +71,7 @@ const STATUS_ICONS: Record<string, string> = {
         gap: 0.25rem;
         margin-bottom: 1.5rem;
         padding: 0.25rem;
-        background: #f3f4f6;
+        background: var(--surface, #f3f4f6);
         border-radius: 0.85rem;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
@@ -82,7 +83,7 @@ const STATUS_ICONS: Record<string, string> = {
         border: none;
         border-radius: 0.65rem;
         background: transparent;
-        color: #6b7280;
+        color: var(--ink-secondary, #6b7280);
         font-size: 0.85rem;
         font-weight: 500;
         cursor: pointer;
@@ -91,12 +92,12 @@ const STATUS_ICONS: Record<string, string> = {
       }
 
       .events-tab:hover {
-        color: #1f2937;
+        color: var(--ink, #1f2937);
         background: rgba(255, 255, 255, 0.6);
       }
       .events-tab--active {
-        background: #fff;
-        color: #0f5e59;
+        background: var(--surface-alt, #fff);
+        color: var(--brand-primary, #0f5e59);
         font-weight: 600;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
       }
@@ -110,9 +111,9 @@ const STATUS_ICONS: Record<string, string> = {
       .event-card {
         display: block;
         border-radius: 1rem;
-        background: #fff;
-        border: 1px solid #e7e9ee;
-        border-left: 3px solid #e7e9ee;
+        background: var(--surface-alt, #fff);
+        border: 1px solid var(--border, #e7e9ee);
+        border-left: 3px solid var(--border, #e7e9ee);
         padding: 1.25rem;
         transition: all 200ms ease;
         text-decoration: none;
@@ -121,7 +122,7 @@ const STATUS_ICONS: Record<string, string> = {
 
       .event-card:hover {
         box-shadow: 0 8px 24px rgba(17, 24, 39, 0.08);
-        border-color: #d1d5db;
+        border-color: var(--border-dark, #d1d5db);
         transform: translateY(-1px);
       }
 
@@ -156,7 +157,7 @@ const STATUS_ICONS: Record<string, string> = {
         margin: 0;
         font-size: 1rem;
         font-weight: 600;
-        color: #1f2937;
+        color: var(--ink, #1f2937);
         line-height: 1.4;
       }
 
@@ -170,8 +171,8 @@ const STATUS_ICONS: Record<string, string> = {
         font-weight: 600;
         white-space: nowrap;
         flex-shrink: 0;
-        background: #f3f4f6;
-        color: #4b5563;
+        background: var(--surface, #f3f4f6);
+        color: var(--ink-secondary, #4b5563);
       }
 
       .event-card__badge mat-icon {
@@ -215,7 +216,7 @@ const STATUS_ICONS: Record<string, string> = {
         flex-wrap: wrap;
         gap: 0.75rem;
         font-size: 0.8rem;
-        color: #6b7280;
+        color: var(--ink-secondary, #6b7280);
       }
       .event-card__meta-item {
         display: inline-flex;
@@ -226,7 +227,7 @@ const STATUS_ICONS: Record<string, string> = {
         font-size: 0.95rem;
         width: 0.95rem;
         height: 0.95rem;
-        color: #9ca3af;
+        color: var(--muted-light, #9ca3af);
       }
 
       .event-card__stats {
@@ -234,7 +235,7 @@ const STATUS_ICONS: Record<string, string> = {
         gap: 1rem;
         margin-top: 0.75rem;
         padding-top: 0.75rem;
-        border-top: 1px solid #f3f4f6;
+        border-top: 1px solid var(--border-light, #f3f4f6);
       }
 
       .event-card__stat {
@@ -242,14 +243,14 @@ const STATUS_ICONS: Record<string, string> = {
         align-items: center;
         gap: 0.3rem;
         font-size: 0.8rem;
-        color: #6b7280;
+        color: var(--ink-secondary, #6b7280);
       }
 
       .event-card__stat mat-icon {
         font-size: 0.95rem;
         width: 0.95rem;
         height: 0.95rem;
-        color: #9ca3af;
+        color: var(--muted-light, #9ca3af);
       }
 
       .events-empty {
@@ -260,7 +261,7 @@ const STATUS_ICONS: Record<string, string> = {
         justify-content: center;
         padding: 3rem 1rem;
         text-align: center;
-        color: #6b7280;
+        color: var(--ink-secondary, #6b7280);
       }
 
       .events-empty mat-icon {
@@ -268,13 +269,13 @@ const STATUS_ICONS: Record<string, string> = {
         width: 3rem;
         height: 3rem;
         margin-bottom: 1rem;
-        color: #d1d5db;
+        color: var(--border-dark, #d1d5db);
       }
       .events-empty h3 {
         margin: 0 0 0.5rem;
         font-size: 1.1rem;
         font-weight: 600;
-        color: #1f2937;
+        color: var(--ink, #1f2937);
       }
       .events-empty p {
         margin: 0 0 1.25rem;
@@ -288,13 +289,13 @@ const STATUS_ICONS: Record<string, string> = {
       }
       .skeleton-card {
         border-radius: 1rem;
-        background: #fff;
-        border: 1px solid #e7e9ee;
+        background: var(--surface-alt, #fff);
+        border: 1px solid var(--border, #e7e9ee);
         padding: 1.25rem;
       }
       .skeleton-line {
         height: 0.85rem;
-        background: #f3f4f6;
+        background: var(--surface, #f3f4f6);
         border-radius: 0.25rem;
         margin-bottom: 0.75rem;
         animation: pulse 1.5s ease-in-out infinite;

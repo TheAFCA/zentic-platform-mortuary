@@ -3,10 +3,18 @@
 // mat.theme() needs a compile-time seed palette (M3 tonal palettes can't be
 // generated from a runtime CSS custom property), so this uses a structural
 // seed (closest built-in hue family to the brand teal) for typography/shape/
-// elevation/density/neutrals, then overrides just the primary/secondary/error
-// color roles to point at the same --brand-*/--error-* variables the rest of
-// the app already uses. That keeps Material's system tokens (--mat-sys-*)
-// reactive to BrandThemeService at runtime instead of baked in at build time.
+// elevation/density, then overrides the color roles to point at the same
+// --brand-*/--error-*/--ink/--surface/--border variables the rest of the app
+// already uses. That keeps Material's system tokens (--mat-sys-*) reactive to
+// BrandThemeService at runtime instead of baked in at build time.
+//
+// The neutral roles (surface-*, outline, on-surface, background) MUST be
+// overridden too, not just primary/secondary/error: mat.$green-palette's
+// auto-generated neutral tones carry a visible green/olive cast (M3 ties
+// neutral chroma to the seed hue), which only becomes obvious on a filled
+// mat-form-field or any other component reading --mat-sys-surface-container-*
+// directly. Routing every neutral role to our own warm-neutral tokens avoids
+// depending on the seed palette's neutrals at all.
 @use '@angular/material' as mat;
 
 html {
@@ -33,6 +41,25 @@ html {
       on-error: #fff,
       error-container: var(--error-bg),
       on-error-container: var(--error-text),
+
+      background: var(--surface),
+      on-background: var(--ink),
+      surface: var(--surface-alt),
+      surface-dim: var(--surface),
+      surface-bright: var(--surface-alt),
+      surface-variant: var(--surface),
+      surface-container-lowest: var(--surface-alt),
+      surface-container-low: var(--surface),
+      surface-container: var(--surface),
+      surface-container-high: var(--border-light),
+      surface-container-highest: var(--border),
+      on-surface: var(--ink),
+      on-surface-variant: var(--ink-secondary),
+      outline: var(--border-dark),
+      outline-variant: var(--border),
+      surface-tint: var(--brand-primary),
+      inverse-surface: oklch(21% 0.015 55),
+      inverse-on-surface: #fff,
     )
   );
 }

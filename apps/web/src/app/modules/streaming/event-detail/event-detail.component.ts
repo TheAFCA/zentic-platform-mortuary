@@ -78,15 +78,16 @@ import { getErrorMessage } from '../../../core/utils/error-message';
       }
       .detail-header__title {
         margin: 0;
-        font-size: 1.5rem;
-        font-weight: 700;
-        letter-spacing: -0.02em;
-        color: #1f2937;
+        font-family: var(--font-display);
+        font-size: 1.6rem;
+        font-weight: 500;
+        letter-spacing: 0;
+        color: var(--ink, #1f2937);
       }
       .detail-header__subtitle {
         margin: 0;
         font-size: 0.92rem;
-        color: #4b5563;
+        color: var(--ink-secondary, #4b5563);
       }
       .detail-header__meta {
         display: flex;
@@ -94,10 +95,10 @@ import { getErrorMessage } from '../../../core/utils/error-message';
         gap: 0.5rem 1rem;
         margin-top: 0.5rem;
         font-size: 0.85rem;
-        color: #6b7280;
+        color: var(--ink-secondary, #6b7280);
       }
       .detail-header__meta a {
-        color: #0f5e59;
+        color: var(--brand-primary, #0f5e59);
         font-weight: 500;
       }
       .detail-header__meta a:hover {
@@ -112,7 +113,7 @@ import { getErrorMessage } from '../../../core/utils/error-message';
         font-size: 1rem;
         width: 1rem;
         height: 1rem;
-        color: #9ca3af;
+        color: var(--muted-light, #9ca3af);
       }
 
       .status-badge {
@@ -158,8 +159,8 @@ import { getErrorMessage } from '../../../core/utils/error-message';
         gap: 1rem;
         padding: 1rem 1.25rem;
         border-radius: 1rem;
-        background: #fff;
-        border: 1px solid #e7e9ee;
+        background: var(--surface-alt, #fff);
+        border: 1px solid var(--border, #e7e9ee);
         margin-bottom: 1.5rem;
         flex-wrap: wrap;
       }
@@ -174,7 +175,7 @@ import { getErrorMessage } from '../../../core/utils/error-message';
         align-items: center;
         gap: 0.5rem;
         font-size: 0.9rem;
-        color: #4b5563;
+        color: var(--ink-secondary, #4b5563);
         margin-left: auto;
       }
 
@@ -212,18 +213,18 @@ import { getErrorMessage } from '../../../core/utils/error-message';
 
       .creds-card {
         border-radius: 1rem;
-        background: #fff;
-        border: 1px solid #e7e9ee;
+        background: var(--surface-alt, #fff);
+        border: 1px solid var(--border, #e7e9ee);
         margin-bottom: 1.5rem;
         overflow: hidden;
       }
 
       .creds-card__header {
         padding: 1rem 1.25rem;
-        border-bottom: 1px solid #f3f4f6;
+        border-bottom: 1px solid var(--border-light, #f3f4f6);
         font-weight: 600;
         font-size: 0.92rem;
-        color: #1f2937;
+        color: var(--ink, #1f2937);
         display: flex;
         align-items: center;
         gap: 0.5rem;
@@ -233,7 +234,7 @@ import { getErrorMessage } from '../../../core/utils/error-message';
         font-size: 1.1rem;
         width: 1.1rem;
         height: 1.1rem;
-        color: #0f5e59;
+        color: var(--brand-primary, #0f5e59);
       }
 
       .creds-card__body {
@@ -247,7 +248,7 @@ import { getErrorMessage } from '../../../core/utils/error-message';
       .creds-field__label {
         font-size: 0.78rem;
         font-weight: 600;
-        color: #6b7280;
+        color: var(--ink-secondary, #6b7280);
         margin-bottom: 0.35rem;
         display: block;
         text-transform: uppercase;
@@ -261,12 +262,12 @@ import { getErrorMessage } from '../../../core/utils/error-message';
       .creds-field__value {
         flex: 1;
         padding: 0.6rem 0.85rem;
-        background: #f9fafb;
-        border: 1px solid #f3f4f6;
+        background: var(--surface, #f9fafb);
+        border: 1px solid var(--border-light, #f3f4f6);
         border-radius: 0.65rem;
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         font-size: 0.82rem;
-        color: #1f2937;
+        color: var(--ink, #1f2937);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -277,7 +278,7 @@ import { getErrorMessage } from '../../../core/utils/error-message';
         gap: 0.25rem;
         margin-bottom: 1rem;
         padding: 0.25rem;
-        background: #f3f4f6;
+        background: var(--surface, #f3f4f6);
         border-radius: 0.75rem;
       }
 
@@ -287,7 +288,7 @@ import { getErrorMessage } from '../../../core/utils/error-message';
         border: none;
         border-radius: 0.55rem;
         background: transparent;
-        color: #6b7280;
+        color: var(--ink-secondary, #6b7280);
         font-size: 0.85rem;
         font-weight: 500;
         cursor: pointer;
@@ -296,19 +297,19 @@ import { getErrorMessage } from '../../../core/utils/error-message';
       }
 
       .detail-tab:hover {
-        color: #1f2937;
+        color: var(--ink, #1f2937);
       }
       .detail-tab--active {
-        background: #fff;
-        color: #0f5e59;
+        background: var(--surface-alt, #fff);
+        color: var(--brand-primary, #0f5e59);
         font-weight: 600;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
       }
 
       .chat-card {
         border-radius: 1rem;
-        background: #fff;
-        border: 1px solid #e7e9ee;
+        background: var(--surface-alt, #fff);
+        border: 1px solid var(--border, #e7e9ee);
         overflow: hidden;
       }
 
@@ -317,14 +318,14 @@ import { getErrorMessage } from '../../../core/utils/error-message';
         align-items: center;
         justify-content: space-between;
         padding: 0.75rem 1.25rem;
-        border-bottom: 1px solid #f3f4f6;
-        background: #fafbfc;
+        border-bottom: 1px solid var(--border-light, #f3f4f6);
+        background: var(--surface, #fafbfc);
       }
 
       .chat-header__title {
         font-size: 0.88rem;
         font-weight: 600;
-        color: #1f2937;
+        color: var(--ink, #1f2937);
         display: flex;
         align-items: center;
         gap: 0.4rem;
@@ -333,7 +334,7 @@ import { getErrorMessage } from '../../../core/utils/error-message';
         font-size: 1.1rem;
         width: 1.1rem;
         height: 1.1rem;
-        color: #0f5e59;
+        color: var(--brand-primary, #0f5e59);
       }
       .chat-header__actions {
         display: flex;
@@ -343,24 +344,24 @@ import { getErrorMessage } from '../../../core/utils/error-message';
 
       .chat-filter-btn {
         padding: 0.3rem 0.65rem;
-        border: 1px solid #e7e9ee;
+        border: 1px solid var(--border, #e7e9ee);
         border-radius: 0.5rem;
-        background: #fff;
+        background: var(--surface-alt, #fff);
         font-size: 0.78rem;
         font-weight: 500;
-        color: #6b7280;
+        color: var(--ink-secondary, #6b7280);
         cursor: pointer;
         transition: all 150ms ease;
       }
 
       .chat-filter-btn:hover {
-        border-color: #d1d5db;
-        color: #1f2937;
+        border-color: var(--border-dark, #d1d5db);
+        color: var(--ink, #1f2937);
       }
       .chat-filter-btn--active {
-        background: #0f5e59;
+        background: var(--brand-primary, #0f5e59);
         color: #fff;
-        border-color: #0f5e59;
+        border-color: var(--brand-primary, #0f5e59);
       }
 
       .chat-messages {
@@ -369,7 +370,7 @@ import { getErrorMessage } from '../../../core/utils/error-message';
         padding: 0.75rem 1.25rem;
         display: grid;
         gap: 0.15rem;
-        background: #fafbfc;
+        background: var(--surface, #fafbfc);
       }
 
       .chat-message {
@@ -397,16 +398,16 @@ import { getErrorMessage } from '../../../core/utils/error-message';
       .chat-message__author {
         font-weight: 600;
         font-size: 0.82rem;
-        color: #1f2937;
+        color: var(--ink, #1f2937);
       }
       .chat-message__text {
         font-size: 0.85rem;
-        color: #374151;
+        color: var(--ink-secondary, #374151);
         word-break: break-word;
       }
       .chat-message__time {
         font-size: 0.72rem;
-        color: #9ca3af;
+        color: var(--muted-light, #9ca3af);
         margin-left: 0.35rem;
         flex-shrink: 0;
       }
@@ -436,7 +437,7 @@ import { getErrorMessage } from '../../../core/utils/error-message';
         justify-content: center;
         padding: 3rem 1rem;
         text-align: center;
-        color: #6b7280;
+        color: var(--ink-secondary, #6b7280);
       }
 
       .chat-empty mat-icon {
@@ -444,7 +445,7 @@ import { getErrorMessage } from '../../../core/utils/error-message';
         width: 2.5rem;
         height: 2.5rem;
         margin-bottom: 0.75rem;
-        color: #d1d5db;
+        color: var(--border-dark, #d1d5db);
       }
       .chat-empty p {
         margin: 0;
@@ -452,14 +453,14 @@ import { getErrorMessage } from '../../../core/utils/error-message';
       }
       .chat-empty p:first-of-type {
         font-weight: 500;
-        color: #1f2937;
+        color: var(--ink, #1f2937);
       }
 
       .preview-card {
         border-radius: 1rem;
         overflow: hidden;
-        border: 1px solid #e7e9ee;
-        background: #fff;
+        border: 1px solid var(--border, #e7e9ee);
+        background: var(--surface-alt, #fff);
       }
 
       .preview-card__toolbar {
@@ -468,8 +469,8 @@ import { getErrorMessage } from '../../../core/utils/error-message';
         justify-content: space-between;
         gap: 1rem;
         padding: 0.85rem 1rem;
-        border-bottom: 1px solid #e7e9ee;
-        background: #fafbfc;
+        border-bottom: 1px solid var(--border, #e7e9ee);
+        background: var(--surface, #fafbfc);
       }
 
       .preview-card__context {
@@ -480,7 +481,7 @@ import { getErrorMessage } from '../../../core/utils/error-message';
       }
 
       .preview-card__context mat-icon {
-        color: #0f5e59;
+        color: var(--brand-primary, #0f5e59);
       }
 
       .preview-card__copy {
@@ -490,11 +491,11 @@ import { getErrorMessage } from '../../../core/utils/error-message';
       }
 
       .preview-card__copy strong {
-        color: #1f2937;
+        color: var(--ink, #1f2937);
         font-size: 0.88rem;
       }
       .preview-card__copy span {
-        color: #6b7280;
+        color: var(--ink-secondary, #6b7280);
         font-size: 0.76rem;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -507,7 +508,7 @@ import { getErrorMessage } from '../../../core/utils/error-message';
         min-height: 34rem;
         display: block;
         border: 0;
-        background: #f7f8fa;
+        background: var(--surface, #f7f8fa);
       }
 
       @media (max-width: 640px) {
@@ -523,7 +524,7 @@ import { getErrorMessage } from '../../../core/utils/error-message';
       .recording-card {
         border-radius: 1rem;
         overflow: hidden;
-        border: 1px solid #e7e9ee;
+        border: 1px solid var(--border, #e7e9ee);
       }
 
       .recording-card video {
@@ -533,7 +534,7 @@ import { getErrorMessage } from '../../../core/utils/error-message';
       .recording-card__footer {
         padding: 1rem 1.25rem;
         font-size: 0.85rem;
-        color: #6b7280;
+        color: var(--ink-secondary, #6b7280);
       }
 
       .recording-empty {
@@ -550,12 +551,12 @@ import { getErrorMessage } from '../../../core/utils/error-message';
         width: 2.5rem;
         height: 2.5rem;
         margin-bottom: 0.75rem;
-        color: #d1d5db;
+        color: var(--border-dark, #d1d5db);
       }
       .recording-empty p {
         margin: 0;
         font-size: 0.9rem;
-        color: #6b7280;
+        color: var(--ink-secondary, #6b7280);
       }
     `,
   ],
@@ -654,7 +655,7 @@ import { getErrorMessage } from '../../../core/utils/error-message';
                   <span class="live-dot"></span>
                   EN VIVO
                 </span>
-                <span style="color:#6b7280;font-size:0.85rem;"
+                <span style="color:var(--ink-secondary,#6b7280);font-size:0.85rem;"
                   >{{ viewerCount() }} espectadores</span
                 >
               </div>

@@ -182,21 +182,13 @@ select {
   }
 }
 
-// Streaming — editorial ceremonial system
-// A restrained visual language for operators and families during a sensitive moment.
-.streaming-list-shell,
-.streaming-form-shell,
-.streaming-detail-shell {
-  --stream-ink: #182523;
-  --stream-muted: #67706a;
-  --stream-paper: #f8f6f0;
-  --stream-line: #dedbd1;
-  --stream-pine: #16463f;
-  --stream-copper: #b8753d;
-  --stream-live: #b73635;
-  color: var(--stream-ink);
-}
-
+// Streaming — unificado con el sistema de diseño general (ver [[project_zentic]]:
+// se retiró el sub-tema "editorial ceremonial" propio (Georgia + paleta pino/cobre)
+// porque el sistema general ya cubre ese registro cálido/ceremonial (serif
+// Frank Ruhl Libre, papel cálido, acento "candle"). Estas reglas mantienen la
+// estructura/layout propia de estas pantallas (grid de tarjetas, tabs, etc.)
+// pero ya no definen una paleta ni tipografía distintas — todo usa los
+// tokens y var(--brand-primary) del resto de la app.
 .streaming-list-shell .events-header,
 .streaming-form-shell .form-card,
 .streaming-detail-shell .detail-header {
@@ -207,43 +199,32 @@ select {
   align-items: end;
   padding: 1.75rem 0 1.5rem;
   margin-bottom: 1.25rem;
-  border-bottom: 1px solid var(--stream-line);
+  border-bottom: 1px solid var(--border);
 }
 
 .streaming-list-shell .events-header__eyebrow,
 .streaming-form-shell .form-section__title {
-  color: var(--stream-copper);
+  color: var(--candle-ink);
   letter-spacing: 0.16em;
 }
 
 .streaming-list-shell .events-header__title,
 .streaming-detail-shell .detail-header__title,
 .streaming-form-shell .form-title {
-  font-family: Georgia, 'Times New Roman', serif;
-  color: var(--stream-ink);
+  font-family: var(--font-display);
+  color: var(--ink);
   font-weight: 500;
-  letter-spacing: -0.035em;
+  letter-spacing: 0;
 }
 
 .streaming-list-shell .events-header__title {
-  font-size: clamp(2rem, 3.5vw, 3rem);
+  font-size: clamp(1.9rem, 3.5vw, 2.75rem);
 }
 .streaming-form-shell .form-title {
-  font-size: clamp(2rem, 3vw, 2.7rem);
+  font-size: clamp(1.9rem, 3vw, 2.5rem);
 }
 .streaming-detail-shell .detail-header__title {
-  font-size: clamp(2rem, 3.3vw, 3.2rem);
-}
-
-.streaming-list-shell .mat-mdc-raised-button,
-.streaming-form-shell .mat-mdc-raised-button,
-.streaming-detail-shell .mat-mdc-raised-button {
-  min-height: 3rem;
-  border-radius: 0.35rem;
-  background: var(--stream-pine) !important;
-  box-shadow: 0 10px 22px rgba(22, 70, 63, 0.18) !important;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  font-size: clamp(1.9rem, 3.3vw, 2.9rem);
 }
 
 .streaming-list-shell .events-tabs {
@@ -251,21 +232,21 @@ select {
   padding: 0;
   border-radius: 0;
   background: transparent;
-  border-bottom: 1px solid var(--stream-line);
+  border-bottom: 1px solid var(--border);
 }
 
 .streaming-list-shell .events-tab {
   border-radius: 0;
   padding: 0.8rem 1rem;
-  color: var(--stream-muted);
+  color: var(--muted);
   border-bottom: 2px solid transparent;
 }
 
 .streaming-list-shell .events-tab--active {
-  color: var(--stream-pine);
+  color: var(--brand-primary);
   background: transparent;
   box-shadow: none;
-  border-bottom-color: var(--stream-copper);
+  border-bottom-color: var(--candle);
 }
 
 .streaming-list-shell .events-grid {
@@ -276,34 +257,33 @@ select {
 .streaming-list-shell .event-card {
   min-height: 13.5rem;
   padding: 1.35rem;
-  border: 1px solid var(--stream-line);
-  border-left: 1px solid var(--stream-line);
-  border-radius: 0.25rem;
-  background: linear-gradient(145deg, #fff 0%, #fbfaf6 100%);
-  box-shadow: 0 5px 16px rgba(24, 37, 35, 0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-alt);
+  box-shadow: var(--shadow-card);
 }
 
 .streaming-list-shell .event-card:hover {
   transform: translateY(-4px);
-  border-color: #c9bcae;
-  box-shadow: 0 18px 32px rgba(24, 37, 35, 0.12);
+  border-color: var(--border-dark);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .streaming-list-shell .event-card__title {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: var(--font-display);
   font-size: 1.28rem;
   font-weight: 500;
 }
 .streaming-list-shell .event-card__deceased {
-  color: var(--stream-pine);
+  color: var(--brand-primary);
   font-weight: 600;
 }
 .streaming-list-shell .event-card__stats {
   margin-top: 1.2rem;
-  border-top-color: var(--stream-line);
+  border-top-color: var(--border);
 }
 .streaming-list-shell .event-card__badge {
-  border-radius: 0.2rem;
+  border-radius: 999px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -316,35 +296,29 @@ select {
   padding: 2rem 0 3rem;
 }
 .streaming-form-shell .form-back {
-  color: var(--stream-pine);
+  color: var(--brand-primary);
 }
 .streaming-form-shell .form-subtitle {
   max-width: 36rem;
-  color: var(--stream-muted);
+  color: var(--ink-secondary);
 }
 .streaming-form-shell .form-card {
   overflow: visible;
-  border: 1px solid var(--stream-line);
-  border-radius: 0.4rem;
-  background: #fffdf9;
-  box-shadow: 0 22px 52px rgba(24, 37, 35, 0.08);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-alt);
+  box-shadow: var(--shadow-xl);
 }
 .streaming-form-shell .form-card__body {
   padding: clamp(1.3rem, 4vw, 2.6rem);
 }
 .streaming-form-shell .form-section + .form-section {
-  border-top-color: var(--stream-line);
+  border-top-color: var(--border);
 }
 .streaming-form-shell .form-section__title {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: var(--font-display);
   font-size: 1.12rem;
   font-weight: 500;
-}
-.streaming-form-shell .mat-mdc-text-field-wrapper {
-  background: #f8f6f0 !important;
-}
-.streaming-form-shell .mat-mdc-form-field-focus-overlay {
-  background: rgba(184, 117, 61, 0.04);
 }
 
 .streaming-detail-shell {
@@ -352,15 +326,15 @@ select {
 }
 .streaming-detail-shell .detail-header {
   padding: 1.2rem 0 1.7rem;
-  border-bottom: 1px solid var(--stream-line);
+  border-bottom: 1px solid var(--border);
 }
 .streaming-detail-shell .detail-header__subtitle {
-  color: var(--stream-pine);
-  font-family: Georgia, 'Times New Roman', serif;
+  color: var(--brand-primary);
+  font-family: var(--font-display);
   font-size: 1.1rem;
 }
 .streaming-detail-shell .status-badge {
-  border-radius: 0.2rem;
+  border-radius: 999px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -373,43 +347,38 @@ select {
 .streaming-detail-shell .chat-card,
 .streaming-detail-shell .preview-card,
 .streaming-detail-shell .recording-card {
-  border-color: var(--stream-line);
-  border-radius: 0.35rem;
-  box-shadow: 0 12px 32px rgba(24, 37, 35, 0.06);
+  border-color: var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
 }
 .streaming-detail-shell .control-bar {
-  background: #f2f5f0;
+  background: var(--surface);
 }
 .streaming-detail-shell .creds-card__header {
-  background: #183b36;
+  background: oklch(21% 0.015 55);
   color: #fff;
   border: 0;
 }
 .streaming-detail-shell .creds-card__header mat-icon {
-  color: #dfb37a;
+  color: var(--candle);
 }
 .streaming-detail-shell .detail-tabs {
-  border-radius: 0.3rem;
-  background: #eeeae1;
+  border-radius: var(--radius-md);
+  background: var(--surface);
 }
 .streaming-detail-shell .detail-tab--active {
-  color: var(--stream-pine);
+  color: var(--brand-primary);
 }
 
 .streaming-public {
-  --public-ink: #172522;
-  --public-pine: #123e38;
-  --public-paper: #f6f3eb;
-  --public-copper: #c6854a;
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  color: var(--public-ink);
-  background-color: var(--public-paper) !important;
-  background-image: radial-gradient(circle at 7% 0%, rgba(198, 133, 74, 0.14), transparent 28%);
+  font-family: var(--font-sans);
+  color: var(--ink);
+  background-color: var(--surface) !important;
 }
 
 .streaming-public header {
-  background: rgba(255, 253, 249, 0.9) !important;
-  border-bottom: 1px solid rgba(23, 37, 34, 0.12);
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-bottom: 1px solid var(--border);
   box-shadow: none !important;
 }
 .streaming-public main {
@@ -418,27 +387,23 @@ select {
   padding-bottom: 4rem !important;
 }
 .streaming-public main > .aspect-video {
-  border-radius: 0.45rem !important;
-  box-shadow: 0 26px 52px rgba(13, 31, 28, 0.28);
-  border: 8px solid #142c29;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-xl);
+  border: 8px solid oklch(21% 0.015 55);
 }
 .streaming-public main > .bg-white {
-  border: 1px solid #dedbd1;
-  border-radius: 0.45rem !important;
-  box-shadow: 0 10px 28px rgba(24, 37, 35, 0.06);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-card);
 }
 .streaming-public h2,
 .streaming-public h3 {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: var(--font-display);
   font-weight: 500 !important;
-  letter-spacing: -0.02em;
-}
-.streaming-public .mat-mdc-raised-button {
-  border-radius: 0.3rem;
-  background: var(--public-pine) !important;
+  letter-spacing: 0;
 }
 .streaming-public .mat-mdc-icon-button {
-  color: var(--public-pine) !important;
+  color: var(--brand-primary) !important;
 }
 
 @media (max-width: 640px) {
