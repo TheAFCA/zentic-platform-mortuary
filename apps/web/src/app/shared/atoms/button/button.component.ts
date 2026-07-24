@@ -86,7 +86,11 @@ export type ButtonSize = 'sm' | 'md' | 'lg';
       }
 
       button[data-variant='secondary'] {
-        background: linear-gradient(135deg, #334155, #1f2937);
+        background: linear-gradient(
+          135deg,
+          var(--brand-secondary, #334155),
+          var(--brand-secondary-hover, #1f2937)
+        );
       }
 
       button[data-variant='danger'] {

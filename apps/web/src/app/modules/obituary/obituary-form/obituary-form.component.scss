@@ -49,6 +49,10 @@
 .obituary-form__biography {
   display: grid;
   gap: 0.35rem;
+  // Espacio extra además del gap del grid: el hint del editor Quill no tiene
+  // el padding inferior que sí trae el subscript-wrapper de mat-form-field,
+  // así que sin esto el label flotante del siguiente campo queda pegado al borde.
+  margin-bottom: 0.5rem;
 }
 
 .obituary-form__label {
@@ -81,4 +85,12 @@
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
+}
+
+.btn-primary {
+  @include panel.primary-button;
+}
+
+.btn-ghost {
+  @include panel.ghost-button;
 }

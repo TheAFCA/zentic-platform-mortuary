@@ -45,6 +45,7 @@ export class BrandThemeService {
       '--brand-primary-light': `color-mix(in srgb, ${primaryColor} 8%, white)`,
       '--brand-primary-subtle': `color-mix(in srgb, ${primaryColor} 4%, white)`,
       '--brand-secondary': secondaryColor,
+      '--brand-secondary-hover': `color-mix(in srgb, ${secondaryColor} 85%, black)`,
       '--brand-secondary-light': `color-mix(in srgb, ${secondaryColor} 6%, white)`,
     };
   }
