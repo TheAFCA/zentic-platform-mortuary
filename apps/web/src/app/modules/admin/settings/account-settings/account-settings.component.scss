@@ -9,13 +9,13 @@
 }
 
 .account-settings__success {
-  background: #ecfdf5;
-  color: #166534;
+  background: var(--success-bg, #ecfdf5);
+  color: var(--success-text, #166534);
 }
 
 .account-settings__error {
-  background: #fef2f2;
-  color: #b91c1c;
+  background: var(--error-bg, #fef2f2);
+  color: var(--error-text, #b91c1c);
 }
 
 .account-settings__form {

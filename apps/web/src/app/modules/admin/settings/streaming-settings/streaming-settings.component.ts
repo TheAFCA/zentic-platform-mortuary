@@ -32,15 +32,16 @@ import { RouterModule } from '@angular/router';
       }
 
       .ss-header h2 {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: #1f2937;
+        font-family: var(--font-display);
+        font-size: 1.3rem;
+        font-weight: 500;
+        color: var(--ink, #1f2937);
         margin: 0 0 0.25rem;
       }
 
       .ss-header p {
         margin: 0;
-        color: #6b7280;
+        color: var(--ink-secondary, #6b7280);
         font-size: 0.88rem;
       }
 
@@ -51,10 +52,10 @@ import { RouterModule } from '@angular/router';
       }
 
       .ss-card {
-        background: #fff;
-        border: 1px solid #e7e9ee;
-        border-radius: 1rem;
-        box-shadow: 0 4px 16px rgba(17, 24, 39, 0.05);
+        background: var(--surface-alt, #fff);
+        border: 1px solid var(--border, #e7e9ee);
+        border-radius: var(--radius-xl, 1rem);
+        box-shadow: var(--shadow-card, 0 4px 16px rgba(17, 24, 39, 0.05));
         overflow: hidden;
       }
 
@@ -69,7 +70,7 @@ import { RouterModule } from '@angular/router';
         font-size: 1.35rem;
         width: 1.35rem;
         height: 1.35rem;
-        color: #0f5e59;
+        color: var(--brand-primary, #0f5e59);
         flex-shrink: 0;
       }
 
@@ -77,12 +78,12 @@ import { RouterModule } from '@angular/router';
         margin: 0;
         font-size: 0.95rem;
         font-weight: 600;
-        color: #1f2937;
+        color: var(--ink, #1f2937);
       }
 
       .ss-card__header span {
         font-size: 0.8rem;
-        color: #9ca3af;
+        color: var(--muted-light, #9ca3af);
         font-weight: 400;
       }
 
@@ -110,8 +111,8 @@ import { RouterModule } from '@angular/router';
         width: 1.75rem;
         height: 1.75rem;
         border-radius: 50%;
-        background: #e9f2f1;
-        color: #0f5e59;
+        background: var(--brand-primary-light, #e9f2f1);
+        color: var(--brand-primary, #0f5e59);
         font-size: 0.75rem;
         font-weight: 700;
         flex-shrink: 0;
@@ -126,22 +127,22 @@ import { RouterModule } from '@angular/router';
       .ss-step__body p {
         margin: 0;
         font-size: 0.88rem;
-        color: #374151;
+        color: var(--ink-secondary, #374151);
         line-height: 1.5;
       }
 
       .ss-step__body strong {
-        color: #1f2937;
+        color: var(--ink, #1f2937);
       }
 
       .ss-step__body a {
-        color: #0f5e59;
+        color: var(--brand-primary, #0f5e59);
         text-decoration: underline;
       }
 
       .ss-step__body code {
         font-size: 0.78rem;
-        background: #f3f4f6;
+        background: var(--surface, #f3f4f6);
         padding: 0.1em 0.35em;
         border-radius: 4px;
         font-family: 'SF Mono', 'Fira Code', monospace;
@@ -184,7 +185,7 @@ import { RouterModule } from '@angular/router';
       }
 
       .ss-server-item {
-        background: #f9fafb;
+        background: var(--surface, #f9fafb);
         border-radius: 0.75rem;
         padding: 1rem;
       }
@@ -193,7 +194,7 @@ import { RouterModule } from '@angular/router';
         display: block;
         font-size: 0.72rem;
         font-weight: 600;
-        color: #6b7280;
+        color: var(--ink-secondary, #6b7280);
         text-transform: uppercase;
         letter-spacing: 0.04em;
         margin-bottom: 0.35rem;
@@ -202,14 +203,14 @@ import { RouterModule } from '@angular/router';
       .ss-server-item .value {
         font-size: 0.85rem;
         font-family: 'SF Mono', 'Fira Code', monospace;
-        color: #1f2937;
+        color: var(--ink, #1f2937);
         word-break: break-all;
         user-select: all;
       }
 
       .ss-server-item .hint {
         font-size: 0.76rem;
-        color: #9ca3af;
+        color: var(--muted-light, #9ca3af);
         margin-top: 0.35rem;
       }
 
@@ -225,12 +226,12 @@ import { RouterModule } from '@angular/router';
         display: flex;
         gap: 0.65rem;
         font-size: 0.88rem;
-        color: #374151;
+        color: var(--ink-secondary, #374151);
         line-height: 1.5;
       }
 
       .ss-obs-steps li .check {
-        color: #0f5e59;
+        color: var(--brand-primary, #0f5e59);
         font-size: 1rem;
         flex-shrink: 0;
         margin-top: 0.15rem;
@@ -238,7 +239,7 @@ import { RouterModule } from '@angular/router';
 
       .ss-obs-steps li code {
         font-size: 0.78rem;
-        background: #f3f4f6;
+        background: var(--surface, #f3f4f6);
         padding: 0.1em 0.35em;
         border-radius: 4px;
         font-family: 'SF Mono', 'Fira Code', monospace;
@@ -250,7 +251,7 @@ import { RouterModule } from '@angular/router';
       }
 
       .ss-events-empty p {
-        color: #9ca3af;
+        color: var(--muted-light, #9ca3af);
         font-size: 0.88rem;
         margin: 0 0 0.75rem;
       }
@@ -265,14 +266,14 @@ import { RouterModule } from '@angular/router';
         align-items: center;
         justify-content: space-between;
         padding: 0.75rem 1rem;
-        background: #f9fafb;
+        background: var(--surface, #f9fafb);
         border-radius: 0.625rem;
         text-decoration: none;
         transition: background 150ms ease;
       }
 
       .ss-event-item:hover {
-        background: #f3f4f6;
+        background: var(--border-light, #f3f4f6);
       }
 
       .ss-event-item__info {
@@ -282,13 +283,13 @@ import { RouterModule } from '@angular/router';
       .ss-event-item__info .title {
         font-size: 0.88rem;
         font-weight: 500;
-        color: #1f2937;
+        color: var(--ink, #1f2937);
         margin: 0;
       }
 
       .ss-event-item__info .meta {
         font-size: 0.78rem;
-        color: #9ca3af;
+        color: var(--muted-light, #9ca3af);
         margin: 0.1rem 0 0;
       }
 
@@ -418,7 +419,7 @@ import { RouterModule } from '@angular/router';
                     href="https://obsproject.com"
                     target="_blank"
                     rel="noopener"
-                    style="color:#0f5e59;text-decoration:underline;"
+                    style="color:var(--brand-primary,#0f5e59);text-decoration:underline;"
                     >obsproject.com</a
                   >
                   e instálalo en la computadora de la sede</span
@@ -535,10 +536,10 @@ export class StreamingSettingsComponent {
       SCHEDULED: 'background:#ecfdf5;color:#065f46;',
       LIVE: 'background:#fef3c7;color:#92400e;',
       PAUSED: 'background:#fef3c7;color:#92400e;',
-      FINISHED: 'background:#f3f4f6;color:#6b7280;',
+      FINISHED: 'background:var(--border-light,#f3f4f6);color:var(--muted,#6b7280);',
       CANCELLED: 'background:#fee2e2;color:#991b1b;',
     };
-    return map[status] ?? 'background:#f3f4f6;color:#6b7280;';
+    return map[status] ?? 'background:var(--border-light,#f3f4f6);color:var(--muted,#6b7280);';
   }
 
   statusLabel(status: string): string {
