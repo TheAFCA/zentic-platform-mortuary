@@ -1,5 +1,14 @@
 @use 'styles/material-theme';
 
+// Nunca se agregaron estas directivas en el scaffold original — confirmado con
+// `git log -S"@tailwind"` (cero apariciones en todo el historial). tailwind.config.js
+// y las clases utilitarias sueltas en varios componentes (app-badge, events-list, etc.)
+// llevaban existiendo sin efecto real: el plugin de Tailwind nunca tuvo dónde inyectar
+// el CSS generado.
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   color-scheme: light;
 
