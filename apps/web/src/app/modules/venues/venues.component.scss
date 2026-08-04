@@ -17,9 +17,10 @@
 
 .venues-page__title {
   margin: 0;
+  font-family: var(--font-display);
   font-size: 1.75rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-weight: 500;
+  letter-spacing: 0;
   color: panel.$ink;
 }
 
@@ -38,8 +39,8 @@
   margin: 0 0 0.75rem;
   padding: 0.6rem 0.85rem;
   border-radius: 0.6rem;
-  background: #fef2f2;
-  color: #b91c1c;
+  background: var(--error-bg, #fef2f2);
+  color: var(--error-text, #b91c1c);
   font-size: 0.85rem;
 }
 
@@ -94,17 +95,17 @@
 }
 
 .btn-ghost--danger {
-  color: #b91c1c;
+  color: var(--error-text, #b91c1c);
   border-color: #fecaca;
 
   &:hover:not(:disabled) {
-    background: #fef2f2;
+    background: var(--error-bg, #fef2f2);
     border-color: #fca5a5;
   }
 }
 
 .venue-card {
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--border-light, #f3f4f6);
   padding: 1rem 1.5rem;
 
   &:last-child {
@@ -149,7 +150,7 @@
   margin-top: 1rem;
   padding: 1rem;
   border-radius: 0.85rem;
-  background: #f9fafb;
+  background: var(--surface, #f9fafb);
   display: grid;
   gap: 0.75rem;
 }
@@ -178,7 +179,7 @@
 .rooms-table tbody td {
   padding: 0.5rem;
   font-size: 0.88rem;
-  border-top: 1px solid #eef0f3;
+  border-top: 1px solid var(--border-light, #eef0f3);
   vertical-align: middle;
 }
 

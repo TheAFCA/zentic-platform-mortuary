@@ -20,7 +20,7 @@
   width: 18rem;
   height: 18rem;
   border-radius: 999px;
-  background: rgba(107, 144, 128, 0.28);
+  background: var(--candle-soft);
   filter: blur(48px);
   pointer-events: none;
 }
@@ -56,9 +56,10 @@
   position: relative;
   z-index: 1;
   margin: 0.3rem 0 0.3rem;
-  font-size: 1.85rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  font-weight: 500;
+  letter-spacing: 0;
   color: #fff;
 }
 
@@ -112,7 +113,7 @@
     align-items: center;
     gap: 0.85rem;
     padding: 0.75rem 0;
-    border-bottom: 1px solid #f1f3f6;
+    border-bottom: 1px solid var(--border-light, #f1f3f6);
     font-size: 0.9rem;
 
     &:last-child {

@@ -5,20 +5,19 @@
     <p class="clients-page__subtitle">Familias que han contratado servicios con tu funeraria</p>
   </header>
 
-  <section class="panel-card" *ngIf="showForm()">
-    <div class="panel-card__header">
-      <h2>{{ editingClient() ? 'Editar cliente' : 'Nuevo cliente' }}</h2>
-    </div>
-    <div class="panel-card__body">
-      <app-client-form
-        [initialValue]="editingFormValue()"
-        [errorMessage]="formError()"
-        [saving]="saving()"
-        (save)="onSave($event)"
-        (cancel)="closeForm()"
-      />
-    </div>
-  </section>
+  <app-form-panel
+    *ngIf="showForm()"
+    [title]="editingClient() ? 'Editar cliente' : 'Nuevo cliente'"
+    (closed)="closeForm()"
+  >
+    <app-client-form
+      [initialValue]="editingFormValue()"
+      [errorMessage]="formError()"
+      [saving]="saving()"
+      (save)="onSave($event)"
+      (cancel)="closeForm()"
+    />
+  </app-form-panel>
 
   <section class="panel-card">
     <div class="panel-card__header panel-card__header--split">

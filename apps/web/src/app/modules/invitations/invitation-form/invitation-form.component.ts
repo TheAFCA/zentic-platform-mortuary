@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, Output } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { map } from 'rxjs/operators';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -69,9 +70,13 @@ export class InvitationFormComponent implements OnChanges {
     }),
   });
 
-  private readonly formValue = toSignal(this.form.valueChanges, {
-    initialValue: this.form.getRawValue(),
-  });
+  // `valueChanges` excluye del value emitido cualquier control deshabilitado (ej. `eventId`
+  // en modo edición, ver ngOnChanges) — usar `getRawValue()` dentro del map asegura que la
+  // vista previa siga viendo el evento seleccionado incluso con el campo deshabilitado.
+  private readonly formValue = toSignal(
+    this.form.valueChanges.pipe(map(() => this.form.getRawValue())),
+    { initialValue: this.form.getRawValue() },
+  );
 
   get isEditing(): boolean {
     return this.initialValue !== null;

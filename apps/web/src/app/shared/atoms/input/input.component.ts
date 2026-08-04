@@ -18,13 +18,13 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR, ReactiveFormsModule } from '@a
         width: 100%;
         min-height: 3.25rem;
         padding: 0.75rem 1rem;
-        border: 1px solid #e7e9ee;
-        border-radius: 0.85rem;
+        border: 1px solid var(--border, #e7e9ee);
+        border-radius: var(--radius-md, 0.85rem);
         background: #fff;
-        color: #1f2937;
+        color: var(--ink, #1f2937);
         font-size: 0.92rem;
         line-height: 1.5;
-        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        box-shadow: var(--shadow-xs, 0 1px 2px rgba(15, 23, 42, 0.04));
         transition:
           border-color 150ms ease,
           box-shadow 150ms ease,
@@ -32,24 +32,24 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR, ReactiveFormsModule } from '@a
       }
 
       input::placeholder {
-        color: #9ca3af;
+        color: var(--muted-light, #9ca3af);
       }
 
       input:focus {
         border-color: var(--brand-primary, #0f5e59);
-        box-shadow: 0 0 0 4px rgba(15, 94, 89, 0.12);
+        box-shadow: 0 0 0 4px var(--brand-primary-light, rgba(15, 94, 89, 0.12));
         outline: none;
         background: #fff;
       }
 
       input:disabled {
-        background: #f9fafb;
-        color: #9ca3af;
+        background: var(--surface, #f9fafb);
+        color: var(--muted-light, #9ca3af);
         cursor: not-allowed;
       }
 
       input[readonly] {
-        background: #f9fafb;
+        background: var(--surface, #f9fafb);
         cursor: default;
       }
     `,

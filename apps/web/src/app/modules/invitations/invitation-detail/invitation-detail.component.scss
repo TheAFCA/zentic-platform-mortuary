@@ -16,8 +16,8 @@
   margin: 0;
   padding: 0.75rem 1rem;
   border-radius: 0.75rem;
-  background: #fef2f2;
-  color: #b91c1c;
+  background: var(--error-bg, #fef2f2);
+  color: var(--error-text, #b91c1c);
   font-size: 0.9rem;
 }
 
@@ -25,8 +25,21 @@
   @include panel.panel-card;
 }
 
+.panel-card__header {
+  padding: 1.35rem 1.5rem 0.75rem;
+}
+
+.panel-card__header h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: panel.$ink;
+}
+
 .panel-card__body {
   padding: 1.5rem;
+  container-type: inline-size;
 }
 
 .invitation-detail__summary {

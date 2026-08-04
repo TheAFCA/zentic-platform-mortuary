@@ -5,20 +5,19 @@
     <p class="venues-page__subtitle">Ubicaciones físicas y salas de tu funeraria</p>
   </header>
 
-  <section class="panel-card" *ngIf="showForm()">
-    <div class="panel-card__header">
-      <h2>{{ editingVenue() ? 'Editar sede' : 'Nueva sede' }}</h2>
-    </div>
-    <div class="panel-card__body">
-      <app-venue-form
-        [initialValue]="editingFormValue()"
-        [errorMessage]="formError()"
-        [saving]="savingVenue()"
-        (save)="onSave($event)"
-        (cancel)="closeForm()"
-      />
-    </div>
-  </section>
+  <app-form-panel
+    *ngIf="showForm()"
+    [title]="editingVenue() ? 'Editar sede' : 'Nueva sede'"
+    (closed)="closeForm()"
+  >
+    <app-venue-form
+      [initialValue]="editingFormValue()"
+      [errorMessage]="formError()"
+      [saving]="savingVenue()"
+      (save)="onSave($event)"
+      (cancel)="closeForm()"
+    />
+  </app-form-panel>
 
   <section class="panel-card">
     <div class="panel-card__header panel-card__header--split">

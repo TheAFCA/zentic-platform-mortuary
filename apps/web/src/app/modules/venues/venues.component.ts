@@ -8,6 +8,7 @@ import { HasPermissionDirective } from '../../shared/directives/has-permission.d
 import { VenueFormComponent, VenueFormValue } from './venue-form/venue-form.component';
 import { RoomFormComponent, RoomFormValue } from './room-form/room-form.component';
 import { FeedbackBannerComponent } from '../../shared/molecules/feedback-banner/feedback-banner.component';
+import { FormPanelComponent } from '../../shared/organisms/form-panel/form-panel.component';
 import { NotificationService } from '../../core/services/notification.service';
 import { getErrorMessage } from '../../core/utils/error-message';
 
@@ -24,6 +25,7 @@ type ConfirmAction = 'delete-venue' | 'delete-room';
     VenueFormComponent,
     RoomFormComponent,
     FeedbackBannerComponent,
+    FormPanelComponent,
   ],
   templateUrl: './venues.component.html',
   styleUrl: './venues.component.scss',
@@ -41,11 +43,13 @@ export class VenuesComponent implements OnInit {
 
   readonly showForm = signal(false);
   readonly editingVenue = signal<Venue | null>(null);
+  readonly editingFormValue = signal<VenueFormValue | null>(null);
   readonly formError = signal('');
 
   readonly expandedVenueId = signal<string | null>(null);
   readonly showRoomForm = signal(false);
   readonly editingRoom = signal<Room | null>(null);
+  readonly editingRoomFormValue = signal<RoomFormValue | null>(null);
   readonly roomFormError = signal('');
 
   readonly confirmAction = signal<ConfirmAction | null>(null);
@@ -75,23 +79,19 @@ export class VenuesComponent implements OnInit {
   openCreate(): void {
     this.formError.set('');
     this.editingVenue.set(null);
+    this.editingFormValue.set(null);
     this.showForm.set(true);
   }
 
   openEdit(venue: Venue): void {
     this.formError.set('');
     this.editingVenue.set(venue);
+    this.editingFormValue.set({ name: venue.name, address: venue.address ?? '' });
     this.showForm.set(true);
   }
 
   closeForm(): void {
     this.showForm.set(false);
-  }
-
-  editingFormValue(): VenueFormValue | null {
-    const venue = this.editingVenue();
-    if (!venue) return null;
-    return { name: venue.name, address: venue.address ?? '' };
   }
 
   onSave(value: VenueFormValue): void {
@@ -127,23 +127,19 @@ export class VenuesComponent implements OnInit {
   openAddRoom(): void {
     this.roomFormError.set('');
     this.editingRoom.set(null);
+    this.editingRoomFormValue.set(null);
     this.showRoomForm.set(true);
   }
 
   openEditRoom(room: Room): void {
     this.roomFormError.set('');
     this.editingRoom.set(room);
+    this.editingRoomFormValue.set({ name: room.name, capacity: room.capacity });
     this.showRoomForm.set(true);
   }
 
   closeRoomForm(): void {
     this.showRoomForm.set(false);
-  }
-
-  editingRoomFormValue(): RoomFormValue | null {
-    const room = this.editingRoom();
-    if (!room) return null;
-    return { name: room.name, capacity: room.capacity };
   }
 
   onSaveRoom(value: RoomFormValue): void {

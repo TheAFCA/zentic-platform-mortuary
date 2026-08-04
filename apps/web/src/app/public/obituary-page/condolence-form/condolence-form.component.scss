@@ -7,17 +7,18 @@
 
 .condolence-form__title {
   margin: 0;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #1f2937;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: var(--ink, #1f2937);
 }
 
 .condolence-form__error {
   margin: 0;
   padding: 0.65rem 0.9rem;
   border-radius: 0.75rem;
-  background: #fef2f2;
-  color: #b91c1c;
+  background: var(--error-bg, #fef2f2);
+  color: var(--error-text, #b91c1c);
   font-size: 0.85rem;
 }
 
@@ -26,20 +27,20 @@
   gap: 0.3rem;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--ink, #1f2937);
 
   input,
   textarea {
     font: inherit;
     font-weight: 400;
-    border: 1px solid #e7e9ee;
+    border: 1px solid var(--border, #e7e9ee);
     border-radius: 0.75rem;
     padding: 0.6rem 0.8rem;
 
     &:focus {
       outline: none;
-      border-color: rgba(15, 94, 89, 0.4);
-      box-shadow: 0 0 0 4px rgba(15, 94, 89, 0.1);
+      border-color: var(--brand-primary, #0f5e59);
+      box-shadow: 0 0 0 4px var(--brand-primary-light, rgba(15, 94, 89, 0.1));
     }
   }
 }
@@ -51,7 +52,7 @@
   padding: 0.65rem 1.4rem;
   font-weight: 600;
   color: #fff;
-  background: linear-gradient(135deg, #0f5e59, #0b4c48);
+  background: linear-gradient(135deg, var(--brand-primary, #0f5e59), var(--brand-primary-hover, #0b4c48));
   cursor: pointer;
 
   &:disabled {
@@ -62,6 +63,6 @@
 
 .condolence-form__success {
   text-align: center;
-  color: #0f5e59;
+  color: var(--brand-primary, #0f5e59);
   font-weight: 600;
 }

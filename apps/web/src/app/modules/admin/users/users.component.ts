@@ -8,6 +8,7 @@ import { UserFormComponent, UserFormValue } from './user-form/user-form.componen
 import { FeedbackBannerComponent } from '../../../shared/molecules/feedback-banner/feedback-banner.component';
 import { NotificationService } from '../../../core/services/notification.service';
 import { getErrorMessage } from '../../../core/utils/error-message';
+import { FormPanelComponent } from '../../../shared/organisms/form-panel/form-panel.component';
 
 @Component({
   selector: 'app-users',
@@ -18,6 +19,7 @@ import { getErrorMessage } from '../../../core/utils/error-message';
     HasPermissionDirective,
     UserFormComponent,
     FeedbackBannerComponent,
+    FormPanelComponent,
   ],
   templateUrl: './users.component.html',
   styleUrl: './users.component.scss',

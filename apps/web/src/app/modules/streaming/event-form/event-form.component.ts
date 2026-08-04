@@ -49,7 +49,7 @@ import { Client, Venue } from '@zentic/shared-types';
         align-items: center;
         gap: 0.5rem;
         margin-bottom: 1.5rem;
-        color: #6b7280;
+        color: var(--ink-secondary, #6b7280);
         font-size: 0.9rem;
         font-weight: 500;
         cursor: pointer;
@@ -57,28 +57,29 @@ import { Client, Venue } from '@zentic/shared-types';
       }
 
       .form-back:hover {
-        color: #1f2937;
+        color: var(--ink, #1f2937);
       }
 
       .form-title {
-        font-size: 1.5rem;
-        font-weight: 700;
-        letter-spacing: -0.02em;
-        color: #1f2937;
+        font-family: var(--font-display);
+        font-size: 1.6rem;
+        font-weight: 500;
+        letter-spacing: 0;
+        color: var(--ink, #1f2937);
         margin: 0 0 0.15rem;
       }
 
       .form-subtitle {
         margin: 0 0 1.5rem;
-        color: #6b7280;
+        color: var(--ink-secondary, #6b7280);
         font-size: 0.92rem;
       }
 
       .form-card {
         border-radius: 1.25rem;
-        background: #fff;
-        border: 1px solid #e7e9ee;
-        box-shadow: 0 12px 32px rgba(17, 24, 39, 0.06);
+        background: var(--surface-alt, #fff);
+        border: 1px solid var(--border, #e7e9ee);
+        box-shadow: var(--shadow-card, 0 12px 32px rgba(17, 24, 39, 0.06));
         overflow: hidden;
       }
 
@@ -94,7 +95,7 @@ import { Client, Venue } from '@zentic/shared-types';
       .form-section + .form-section {
         margin-top: 1.5rem;
         padding-top: 1.5rem;
-        border-top: 1px solid #f1f3f6;
+        border-top: 1px solid var(--border-light, #f1f3f6);
       }
 
       .form-section__title {
@@ -103,7 +104,7 @@ import { Client, Venue } from '@zentic/shared-types';
         gap: 0.5rem;
         font-size: 0.92rem;
         font-weight: 600;
-        color: #1f2937;
+        color: var(--ink, #1f2937);
         margin: 0 0 1rem;
       }
 
@@ -111,7 +112,7 @@ import { Client, Venue } from '@zentic/shared-types';
         font-size: 1.15rem;
         width: 1.15rem;
         height: 1.15rem;
-        color: #0f5e59;
+        color: var(--brand-primary, #0f5e59);
       }
 
       .form-row {
