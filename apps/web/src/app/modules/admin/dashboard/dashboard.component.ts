@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { EMPTY, catchError, interval, startWith, switchMap } from 'rxjs';
-import { AdminDashboardMetrics } from '@zentic/shared-types';
+import { AdminDashboardMetrics, EventStatus } from '@zentic/shared-types';
 import { AdminDashboardApiService } from '../../../core/services/admin-dashboard-api.service';
 import { StreamingApiService, StreamingEvent } from '../../../core/services/streaming-api.service';
 import { StatCardComponent } from '../../../shared/molecules/stat-card/stat-card.component';
@@ -327,7 +327,11 @@ const STATUS_COLORS: Record<string, BadgeColor> = {
       .live-card {
         border-radius: var(--radius-xl, 1rem);
         overflow: hidden;
-        background: linear-gradient(160deg, var(--brand-primary, #0f5e59), var(--brand-primary-hover, #0b4c48));
+        background: linear-gradient(
+          160deg,
+          var(--brand-primary, #0f5e59),
+          var(--brand-primary-hover, #0b4c48)
+        );
         color: #fff;
         box-shadow: var(--shadow-xl, 0 24px 60px rgba(15, 23, 42, 0.22));
       }
@@ -536,17 +540,23 @@ const STATUS_COLORS: Record<string, BadgeColor> = {
                       <span class="today-table__name"
                         >{{ event.deceased.firstName }} {{ event.deceased.lastName }}</span
                       >
-                      <span class="today-table__meta">{{ event.scheduledAt | date: 'shortTime' }}</span>
+                      <span class="today-table__meta">{{
+                        event.scheduledAt | date: 'shortTime'
+                      }}</span>
                     </div>
                   </td>
                   <td>
                     <div class="today-table__location">
                       <span class="today-table__name">{{ locationLabel(event) }}</span>
-                      <span class="today-table__meta" *ngIf="event.room">{{ event.room.name }}</span>
+                      <span class="today-table__meta" *ngIf="event.room">{{
+                        event.room.name
+                      }}</span>
                     </div>
                   </td>
                   <td>
-                    <app-badge [color]="statusColor(event.status)">{{ statusLabel(event.status) }}</app-badge>
+                    <app-badge [color]="statusColor(event.status)">{{
+                      statusLabel(event.status)
+                    }}</app-badge>
                   </td>
                   <td class="today-table__actions">
                     <a
@@ -608,7 +618,9 @@ const STATUS_COLORS: Record<string, BadgeColor> = {
               />
               <span class="live-card__badge"><span class="live-card__dot"></span> EN VIVO</span>
               <div class="live-card__stats">
-                <span class="live-card__stat"><mat-icon>visibility</mat-icon> {{ live.viewerCount }} viendo</span>
+                <span class="live-card__stat"
+                  ><mat-icon>visibility</mat-icon> {{ live.viewerCount }} viendo</span
+                >
                 <span class="live-card__stat" *ngIf="live.hasAccessCode"
                   ><mat-icon>lock</mat-icon> Con código</span
                 >
@@ -616,8 +628,12 @@ const STATUS_COLORS: Record<string, BadgeColor> = {
             </div>
             <div class="live-card__body">
               <div>
-                <h3 class="live-card__name">{{ live.deceased.firstName }} {{ live.deceased.lastName }}</h3>
-                <p class="live-card__meta">{{ liveElapsedLabel(live) }} • {{ locationLabel(live) }}</p>
+                <h3 class="live-card__name">
+                  {{ live.deceased.firstName }} {{ live.deceased.lastName }}
+                </h3>
+                <p class="live-card__meta">
+                  {{ liveElapsedLabel(live) }} • {{ locationLabel(live) }}
+                </p>
               </div>
               <a class="live-card__cta" [routerLink]="['/admin/streaming', live.id]">
                 <mat-icon>videocam</mat-icon>
@@ -655,7 +671,7 @@ export class DashboardComponent implements OnInit {
   });
 
   readonly todayLiveCount = computed(
-    () => this.todayEvents().filter((event) => event.status === 'LIVE').length,
+    () => this.todayEvents().filter((event) => event.status === EventStatus.LIVE).length,
   );
 
   readonly upcomingEvents = computed(() => {
@@ -664,12 +680,14 @@ export class DashboardComponent implements OnInit {
     return this.events()
       .filter((event) => {
         const scheduledAt = new Date(event.scheduledAt).getTime();
-        return scheduledAt >= now && scheduledAt <= limit && event.status !== 'CANCELLED';
+        return scheduledAt >= now && scheduledAt <= limit && event.status !== EventStatus.CANCELLED;
       })
       .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
   });
 
-  readonly liveEvent = computed(() => this.events().find((event) => event.status === 'LIVE') ?? null);
+  readonly liveEvent = computed(
+    () => this.events().find((event) => event.status === EventStatus.LIVE) ?? null,
+  );
 
   ngOnInit(): void {
     interval(REFRESH_INTERVAL_MS)
@@ -743,7 +761,10 @@ export class DashboardComponent implements OnInit {
 
   liveElapsedLabel(event: StreamingEvent): string {
     if (!event.startedAt) return 'En vivo';
-    const minutes = Math.max(0, Math.floor((Date.now() - new Date(event.startedAt).getTime()) / 60_000));
+    const minutes = Math.max(
+      0,
+      Math.floor((Date.now() - new Date(event.startedAt).getTime()) / 60_000),
+    );
     if (minutes < 1) return 'Inició hace instantes';
     if (minutes < 60) return `Inició hace ${minutes} min`;
     const hours = Math.floor(minutes / 60);
@@ -753,6 +774,8 @@ export class DashboardComponent implements OnInit {
 
 function isSameDay(a: Date, b: Date): boolean {
   return (
-    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
   );
 }
