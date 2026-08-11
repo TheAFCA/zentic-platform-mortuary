@@ -67,6 +67,12 @@ export class CreateEventDto {
   @IsOptional()
   deceasedId?: string;
 
+  // Crea el evento reutilizando el difunto y los datos del servicio de este obituario;
+  // al terminar, el backend autovincula Obituary.eventId al evento nuevo.
+  @IsString()
+  @IsOptional()
+  obituaryId?: string;
+
   @ValidateNested()
   @Type(() => CreateDeceasedDto)
   @IsOptional()

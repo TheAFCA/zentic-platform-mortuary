@@ -52,10 +52,36 @@
             *ngIf="obituary.deceased.biography"
             [innerHTML]="obituary.deceased.biography"
           ></div>
+
+          <div class="obituary-detail__service" *ngIf="obituary.serviceType || obituary.serviceAt || obituary.room">
+            <h2 class="obituary-detail__service-title">Información del servicio</h2>
+            <p *ngIf="obituary.serviceType">{{ obituary.serviceType }}</p>
+            <p *ngIf="obituary.serviceAt">{{ obituary.serviceAt | date: 'medium' }}</p>
+            <p *ngIf="obituary.room">{{ obituary.room.name }} — {{ obituary.room.venue.name }}</p>
+          </div>
         </div>
       </div>
 
       <div class="panel-card__body obituary-detail__actions">
+        <ng-container *ngIf="!obituary.eventId">
+          <button
+            *appHasPermission="'streaming:create'"
+            type="button"
+            class="btn-ghost"
+            (click)="createStreamingFromObituary()"
+          >
+            <mat-icon>sensors</mat-icon>
+            <span>Crear transmisión de streaming</span>
+          </button>
+        </ng-container>
+
+        <ng-container *ngIf="obituary.eventId">
+          <button type="button" class="btn-ghost" (click)="viewStreaming()">
+            <mat-icon>sensors</mat-icon>
+            <span>Ver transmisión</span>
+          </button>
+        </ng-container>
+
         <button
           *appHasPermission="'obituary:update'"
           type="button"
@@ -122,7 +148,7 @@
         <app-obituary-form
           [initialValue]="editingFormValue()"
           [initialPhotoUrl]="obituary.deceased.photoUrl"
-          [eventOptions]="eventOptions()"
+          [venues]="venues()"
           [errorMessage]="formError()"
           [saving]="saving()"
           (save)="onSave($event)"

@@ -102,15 +102,67 @@
     <p class="obituary-form__hint">{{ form.controls.biography.value.length }}/2000</p>
   </div>
 
-  <mat-form-field appearance="outline">
-    <mat-label>Evento vinculado (opcional)</mat-label>
-    <mat-select formControlName="eventId" data-testid="obituary-event-select">
-      <mat-option [value]="''">Sin evento</mat-option>
-      <mat-option *ngFor="let event of eventOptions" [value]="event.id">
-        {{ event.scheduledAt | date: 'medium' }} — {{ event.slug }} ({{ event.status }})
-      </mat-option>
-    </mat-select>
-  </mat-form-field>
+  <div class="obituary-form__service">
+    <label class="obituary-form__label">Información del servicio</label>
+    <div class="obituary-form__grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo de servicio</mat-label>
+        <mat-select formControlName="serviceType" data-testid="obituary-service-type-select">
+          <mat-option value="VELATORIO">Velatorio</mat-option>
+          <mat-option value="ENTIERRO">Entierro</mat-option>
+          <mat-option value="CREMACION">Cremación</mat-option>
+          <mat-option value="MISA">Misa</mat-option>
+          <mat-option value="OTRO">Otro</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha del servicio</mat-label>
+        <input
+          matInput
+          type="date"
+          formControlName="serviceDate"
+          data-testid="obituary-service-date-input"
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Hora del servicio</mat-label>
+        <input
+          matInput
+          type="time"
+          formControlName="serviceTime"
+          data-testid="obituary-service-time-input"
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Sede</mat-label>
+        <mat-select
+          formControlName="venueId"
+          data-testid="obituary-venue-select"
+          (selectionChange)="onVenueChange($event.value)"
+        >
+          <mat-option [value]="null">Seleccionar sede</mat-option>
+          <mat-option *ngFor="let v of venues" [value]="v.id">{{ v.name }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Sala / Capilla</mat-label>
+        <mat-select
+          formControlName="roomId"
+          data-testid="obituary-room-select"
+          [disabled]="!selectedVenue()"
+        >
+          <mat-option [value]="null">Seleccionar sala</mat-option>
+          <mat-option *ngFor="let r of rooms()" [value]="r.id">
+            {{ r.name }}{{ r.capacity ? ' (' + r.capacity + ' pers.)' : '' }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
 
   <div class="obituary-form__visibility">
     <label class="obituary-form__checkbox">

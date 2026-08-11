@@ -16,6 +16,7 @@ const mockPrisma = {
   room: { findFirst: jest.fn() },
   client: { findFirst: jest.fn() },
   user: { findFirst: jest.fn() },
+  obituary: { findFirst: jest.fn(), updateMany: jest.fn() },
 };
 
 describe('StreamingRepository — multi-tenant isolation', () => {
@@ -159,6 +160,31 @@ describe('StreamingRepository — multi-tenant isolation', () => {
         where: { id: 'user-b', tenantId: tenantA, deletedAt: null },
       });
       expect(result).toBeNull();
+    });
+  });
+
+  describe('findObituaryByTenant', () => {
+    it('retorna null para obituario de otro tenant', async () => {
+      mockPrisma.obituary.findFirst.mockResolvedValueOnce(null);
+      const result = await repository.findObituaryByTenant(
+        tenantA,
+        'obituary-b',
+      );
+      expect(mockPrisma.obituary.findFirst).toHaveBeenCalledWith({
+        where: { id: 'obituary-b', tenantId: tenantA, deletedAt: null },
+      });
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('linkObituary', () => {
+    it('incluye tenantId en where — no vincula obituarios de otro tenant', async () => {
+      mockPrisma.obituary.updateMany.mockResolvedValue({ count: 0 });
+      await repository.linkObituary(tenantA, 'obituary-b', 'event-a');
+      expect(mockPrisma.obituary.updateMany).toHaveBeenCalledWith({
+        where: { id: 'obituary-b', tenantId: tenantA },
+        data: { eventId: 'event-a' },
+      });
     });
   });
 

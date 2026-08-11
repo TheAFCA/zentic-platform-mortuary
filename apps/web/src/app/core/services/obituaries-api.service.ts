@@ -25,16 +25,11 @@ export interface ObituaryFormPayload {
   deathCity?: string;
   biography?: string;
   epitaph?: string;
-  eventId?: string;
+  serviceType?: string;
+  serviceAt?: string;
+  roomId?: string;
   isPublic?: boolean;
   accessCode?: string;
-}
-
-export interface ObituaryEventOption {
-  id: string;
-  slug: string;
-  scheduledAt: string;
-  status: string;
 }
 
 export interface UploadPhotoResult {
@@ -97,10 +92,6 @@ export class ObituariesApiService {
 
   remove(id: string) {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
-  }
-
-  listEvents() {
-    return this.http.get<ObituaryEventOption[]>(`${this.baseUrl}/meta/events`);
   }
 
   uploadPhoto(id: string, file: File) {

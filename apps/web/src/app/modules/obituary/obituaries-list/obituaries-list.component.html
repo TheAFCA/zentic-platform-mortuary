@@ -7,7 +7,7 @@
 
   <app-form-panel *ngIf="showForm()" title="Nuevo obituario" (closed)="closeForm()">
     <app-obituary-form
-      [eventOptions]="eventOptions()"
+      [venues]="venues()"
       [errorMessage]="formError()"
       [saving]="saving()"
       (save)="onSave($event)"

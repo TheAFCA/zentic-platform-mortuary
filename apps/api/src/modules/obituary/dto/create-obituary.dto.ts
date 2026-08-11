@@ -1,11 +1,21 @@
 import {
   IsBoolean,
   IsDateString,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
 } from 'class-validator';
+
+// Mismo catálogo que streaming (CreateEventDto) — no divergir entre módulos.
+const VALID_SERVICE_TYPES = [
+  'VELATORIO',
+  'CREMACION',
+  'ENTIERRO',
+  'MISA',
+  'OTRO',
+] as const;
 
 export class CreateObituaryDto {
   @IsString()
@@ -49,8 +59,16 @@ export class CreateObituaryDto {
   epitaph?: string;
 
   @IsOptional()
+  @IsEnum(VALID_SERVICE_TYPES)
+  serviceType?: string;
+
+  @IsOptional()
+  @IsDateString()
+  serviceAt?: string;
+
+  @IsOptional()
   @IsString()
-  eventId?: string;
+  roomId?: string;
 
   @IsOptional()
   @IsBoolean()

@@ -25,7 +25,6 @@ import {
 } from '@zentic/shared-types';
 import { assertTenantContext } from '../../common/security/assert-tenant-context';
 import {
-  EventSummary,
   ObituaryRepository,
   ObituaryWithDeceased,
 } from './obituary.repository';
@@ -112,6 +111,7 @@ export class ObituaryService {
         publishedAt: existing.publishedAt?.toISOString() ?? null,
         accessGranted: false,
         deceased: null,
+        service: null,
         event: null,
         streamingAction: null,
         approvedMessages: [],
@@ -134,6 +134,7 @@ export class ObituaryService {
       publishedAt: existing.publishedAt?.toISOString() ?? null,
       accessGranted: true,
       deceased: this.toDeceased(existing.deceased),
+      service: this.toPublicService(existing),
       event: event
         ? {
             slug: event.slug,
@@ -145,17 +146,12 @@ export class ObituaryService {
     };
   }
 
-  async listAvailableEvents(tenantId: string): Promise<EventSummary[]> {
-    assertTenantContext(tenantId);
-    return this.obituaryRepo.listEventsForTenant(tenantId);
-  }
-
   async create(tenantId: string, dto: CreateObituaryDto): Promise<Obituary> {
     assertTenantContext(tenantId);
     this.validateDates(dto.birthDate, dto.deathDate);
 
-    if (dto.eventId) {
-      await this.assertEventBelongsToTenant(tenantId, dto.eventId);
+    if (dto.roomId) {
+      await this.assertRoomBelongsToTenant(tenantId, dto.roomId);
     }
 
     const slug = generateObituarySlug(dto.firstName, dto.lastName);
@@ -175,7 +171,9 @@ export class ObituaryService {
         epitaph: dto.epitaph,
       },
       {
-        eventId: dto.eventId,
+        serviceType: dto.serviceType,
+        serviceAt: dto.serviceAt ? new Date(dto.serviceAt) : undefined,
+        roomId: dto.roomId,
         isPublic: dto.isPublic,
         accessCode: dto.accessCode,
       },
@@ -199,8 +197,8 @@ export class ObituaryService {
       dto.deathDate ?? existing.deceased.deathDate?.toISOString();
     this.validateDates(birthDate, deathDate);
 
-    if (dto.eventId) {
-      await this.assertEventBelongsToTenant(tenantId, dto.eventId);
+    if (dto.roomId) {
+      await this.assertRoomBelongsToTenant(tenantId, dto.roomId);
     }
 
     await this.obituaryRepo.update(
@@ -222,7 +220,9 @@ export class ObituaryService {
       },
       // RN-OBT-004: slug inmutable — nunca se incluye en el payload de actualización.
       {
-        eventId: dto.eventId,
+        serviceType: dto.serviceType,
+        serviceAt: dto.serviceAt ? new Date(dto.serviceAt) : undefined,
+        roomId: dto.roomId,
         isPublic: dto.isPublic,
         accessCode: dto.accessCode,
       },
@@ -335,12 +335,12 @@ export class ObituaryService {
     return this.toObituaryMessage(created);
   }
 
-  private async assertEventBelongsToTenant(
+  private async assertRoomBelongsToTenant(
     tenantId: string,
-    eventId: string,
+    roomId: string,
   ): Promise<void> {
-    const event = await this.obituaryRepo.findEventById(tenantId, eventId);
-    if (!event) throw new NotFoundException('Evento vinculado no encontrado');
+    const room = await this.obituaryRepo.findRoomByTenant(tenantId, roomId);
+    if (!room) throw new NotFoundException('Sala no encontrada');
   }
 
   private validateDates(birthDate?: string, deathDate?: string): void {
@@ -373,6 +373,16 @@ export class ObituaryService {
       id: record.id,
       tenantId: record.tenantId,
       deceasedId: record.deceasedId,
+      serviceType: record.serviceType,
+      serviceAt: record.serviceAt?.toISOString() ?? null,
+      roomId: record.roomId,
+      room: record.room
+        ? {
+            id: record.room.id,
+            name: record.room.name,
+            venue: record.room.venue,
+          }
+        : null,
       eventId: record.eventId,
       slug: record.slug,
       status: record.status as Obituary['status'],
@@ -382,6 +392,19 @@ export class ObituaryService {
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
       deceased: this.toDeceased(record.deceased),
+    };
+  }
+
+  private toPublicService(
+    record: ObituaryWithDeceased,
+  ): PublicObituary['service'] {
+    if (!record.serviceType && !record.serviceAt && !record.room) return null;
+    return {
+      type: record.serviceType,
+      at: record.serviceAt?.toISOString() ?? null,
+      room: record.room
+        ? { name: record.room.name, venue: record.room.venue.name }
+        : null,
     };
   }
 

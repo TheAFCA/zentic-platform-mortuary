@@ -42,13 +42,6 @@ export class ObituaryController {
     return this.obituaryService.findAll(tenantId, query);
   }
 
-  // Alimenta el picker de "Evento vinculado" del formulario de creación/edición.
-  @Get('meta/events')
-  @RequirePermission('obituary:create')
-  listEvents(@TenantId() tenantId: string) {
-    return this.obituaryService.listAvailableEvents(tenantId);
-  }
-
   @Get(':id')
   @RequirePermission('obituary:read')
   findOne(@TenantId() tenantId: string, @Param('id') id: string) {

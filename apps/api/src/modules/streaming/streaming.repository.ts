@@ -444,6 +444,32 @@ export class StreamingRepository {
     });
   }
 
+  /**
+   * Busca un obituario del tenant, usado al crear un evento de streaming
+   * "desde" un obituario (reutiliza su difunto y se autovincula al terminar).
+   */
+  async findObituaryByTenant(tenantId: string, obituaryId: string) {
+    return this.prisma.obituary.findFirst({
+      where: { id: obituaryId, tenantId, deletedAt: null },
+    });
+  }
+
+  /**
+   * Autovincula el obituario de origen al evento recién creado
+   * (Obituary.eventId), dentro de la misma transacción de creación del evento.
+   */
+  async linkObituary(
+    tenantId: string,
+    obituaryId: string,
+    eventId: string,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    await db.obituary.updateMany({
+      where: { id: obituaryId, tenantId },
+      data: { eventId },
+    });
+  }
+
   // ── Deceased ────────────────────────────────────────────────────────
 
   /**

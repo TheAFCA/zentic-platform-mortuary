@@ -9,6 +9,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { of, throwError } from 'rxjs';
 import { VenuesApiService } from '../../../core/services/venues-api.service';
 import { ClientsApiService } from '../../../core/services/clients-api.service';
+import { ObituariesApiService } from '../../../core/services/obituaries-api.service';
 import { UsersService } from '../../../core/services/users.service';
 import { ClientStatus, EventStatus, Venue, Client } from '@zentic/shared-types';
 
@@ -106,6 +107,39 @@ const mockClients: Client[] = [
   },
 ];
 
+const mockObituary = {
+  id: 'obituary-1',
+  tenantId: 'tenant-1',
+  deceasedId: 'dec-obituary-1',
+  serviceType: 'ENTIERRO',
+  serviceAt: '2026-08-05T15:30:00.000Z',
+  roomId: 'room-2',
+  room: { id: 'room-2', name: 'Capilla B', venue: { id: 'venue-1', name: 'Funeraria Central' } },
+  eventId: null,
+  slug: 'maria-lopez-a1b2',
+  status: 'DRAFT',
+  isPublic: true,
+  accessCode: null,
+  publishedAt: null,
+  createdAt: '',
+  updatedAt: '',
+  deceased: {
+    id: 'dec-obituary-1',
+    tenantId: 'tenant-1',
+    firstName: 'María',
+    lastName: 'López',
+    birthDate: '1945-03-15T00:00:00.000Z',
+    deathDate: '2026-08-01T00:00:00.000Z',
+    birthCity: null,
+    deathCity: null,
+    biography: null,
+    epitaph: null,
+    photoUrl: null,
+    createdAt: '',
+    updatedAt: '',
+  },
+};
+
 const mockOperators = [
   { id: 'op-1', email: 'operator@test.com', role: 'OPERATOR', createdAt: '', lockedUntil: null },
   { id: 'op-2', email: 'admin@test.com', role: 'TENANT_ADMIN', createdAt: '', lockedUntil: null },
@@ -119,11 +153,15 @@ describe('EventFormComponent', () => {
   };
   let mockVenuesApi: { list: ReturnType<typeof vi.fn> };
   let mockClientsApi: { list: ReturnType<typeof vi.fn> };
+  let mockObituariesApi: { get: ReturnType<typeof vi.fn> };
   let mockUsersService: { list: ReturnType<typeof vi.fn> };
   let mockRouter: { navigate: ReturnType<typeof vi.fn> };
   let mockSnackBar: { open: ReturnType<typeof vi.fn> };
 
-  function createComponent(id: string | null): {
+  function createComponent(
+    id: string | null,
+    fromObituary: string | null = null,
+  ): {
     fixture: ComponentFixture<EventFormComponent>;
     component: EventFormComponent;
   } {
@@ -137,6 +175,9 @@ describe('EventFormComponent', () => {
         paramMap: {
           get: vi.fn().mockReturnValue(id),
         },
+        queryParamMap: {
+          get: vi.fn().mockReturnValue(fromObituary),
+        },
       },
     };
 
@@ -146,6 +187,7 @@ describe('EventFormComponent', () => {
         { provide: StreamingApiService, useValue: mockApi },
         { provide: VenuesApiService, useValue: mockVenuesApi },
         { provide: ClientsApiService, useValue: mockClientsApi },
+        { provide: ObituariesApiService, useValue: mockObituariesApi },
         { provide: UsersService, useValue: mockUsersService },
         { provide: Router, useValue: mockRouter },
         { provide: ActivatedRoute, useValue: mockRoute },
@@ -166,6 +208,7 @@ describe('EventFormComponent', () => {
     };
     mockVenuesApi = { list: vi.fn().mockReturnValue(of(mockVenues)) };
     mockClientsApi = { list: vi.fn().mockReturnValue(of({ data: mockClients })) };
+    mockObituariesApi = { get: vi.fn() };
     mockUsersService = { list: vi.fn().mockReturnValue(of(mockOperators)) };
     mockRouter = { navigate: vi.fn().mockResolvedValue(true) };
     mockSnackBar = { open: vi.fn() };
@@ -359,5 +402,39 @@ describe('EventFormComponent', () => {
         panelClass: ['zentic-notification', 'zentic-notification--error'],
       }),
     );
+  });
+
+  describe('creating from an obituary (fromObituary query param)', () => {
+    beforeEach(() => {
+      mockObituariesApi.get = vi.fn().mockReturnValue(of(mockObituary));
+    });
+
+    it('prefills title, ceremonyType, date/time and venue/room from the obituary', () => {
+      const { component } = createComponent(null, 'obituary-1');
+
+      expect(mockObituariesApi.get).toHaveBeenCalledWith('obituary-1');
+      expect(component.form.value.title).toBe('Entierro de María López');
+      expect(component.form.value.ceremonyType).toBe('ENTIERRO');
+      expect(component.form.value.scheduledDate).toBe('2026-08-05');
+      expect(component.form.value.roomId).toBe('room-2');
+      expect(component.obituaryDeceased()).toEqual({
+        firstName: 'María',
+        lastName: 'López',
+        birthDate: mockObituary.deceased.birthDate,
+        deathDate: mockObituary.deceased.deathDate,
+      });
+    });
+
+    it('sends obituaryId and the obituary deceasedId instead of building a new deceased', () => {
+      const { component } = createComponent(null, 'obituary-1');
+
+      component.onSubmit();
+
+      expect(mockApi.create).toHaveBeenCalledTimes(1);
+      const dto = mockApi.create.mock.calls[0][0];
+      expect(dto.obituaryId).toBe('obituary-1');
+      expect(dto.deceasedId).toBe('dec-obituary-1');
+      expect(dto.deceased).toBeUndefined();
+    });
   });
 });

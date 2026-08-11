@@ -5,9 +5,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { QuillEditorComponent } from 'ngx-quill';
+import { Venue } from '@zentic/shared-types';
 import { FileDropzoneComponent } from '../../../shared/molecules/file-dropzone/file-dropzone.component';
 import { InitialsAvatarComponent } from '../../../shared/atoms/initials-avatar/initials-avatar.component';
-import { ObituaryEventOption } from '../../../core/services/obituaries-api.service';
 
 export interface ObituaryFormValue {
   firstName: string;
@@ -18,7 +18,9 @@ export interface ObituaryFormValue {
   deathCity: string;
   epitaph: string;
   biography: string;
-  eventId: string;
+  serviceType: string;
+  serviceAt: string;
+  roomId: string;
   isPublic: boolean;
   accessCode: string;
 }
@@ -37,7 +39,9 @@ const EMPTY_VALUE: ObituaryFormValue = {
   deathCity: '',
   epitaph: '',
   biography: '',
-  eventId: '',
+  serviceType: 'VELATORIO',
+  serviceAt: '',
+  roomId: '',
   isPublic: true,
   accessCode: '',
 };
@@ -61,7 +65,7 @@ const EMPTY_VALUE: ObituaryFormValue = {
 export class ObituaryFormComponent implements OnChanges {
   @Input() initialValue: ObituaryFormValue | null = null;
   @Input() initialPhotoUrl: string | null = null;
-  @Input() eventOptions: ObituaryEventOption[] = [];
+  @Input() venues: Venue[] = [];
   @Input() errorMessage = '';
   @Input() saving = false;
   @Output() save = new EventEmitter<ObituaryFormSubmission>();
@@ -71,6 +75,8 @@ export class ObituaryFormComponent implements OnChanges {
   readonly quillModules = { toolbar: [['bold', 'italic']] };
   readonly dateError = signal('');
   readonly photoPreviewUrl = signal<string | null>(null);
+  readonly selectedVenue = signal<Venue | null>(null);
+  readonly rooms = signal<Venue['rooms']>([]);
   private photoFile: File | null = null;
 
   form = new FormGroup({
@@ -91,7 +97,11 @@ export class ObituaryFormComponent implements OnChanges {
       nonNullable: true,
       validators: [Validators.maxLength(2000)],
     }),
-    eventId: new FormControl('', { nonNullable: true }),
+    serviceType: new FormControl('VELATORIO', { nonNullable: true }),
+    serviceDate: new FormControl('', { nonNullable: true }),
+    serviceTime: new FormControl('', { nonNullable: true }),
+    venueId: new FormControl<string | null>(null),
+    roomId: new FormControl<string | null>(null),
     isPublic: new FormControl(true, { nonNullable: true }),
     accessCode: new FormControl('', { nonNullable: true }),
   });
@@ -106,10 +116,33 @@ export class ObituaryFormComponent implements OnChanges {
     this.dateError.set('');
 
     if (this.initialValue) {
-      this.form.patchValue(this.initialValue);
+      const { serviceAt, roomId, ...rest } = this.initialValue;
+      const serviceDate = serviceAt ? serviceAt.slice(0, 10) : '';
+      const serviceTime = serviceAt ? new Date(serviceAt).toTimeString().slice(0, 5) : '';
+      this.form.patchValue({ ...rest, roomId, serviceDate, serviceTime });
+
+      const parentVenue = roomId
+        ? this.venues.find((v) => v.rooms.some((r) => r.id === roomId))
+        : null;
+      if (parentVenue) {
+        this.onVenueChange(parentVenue.id);
+        this.form.patchValue({ venueId: parentVenue.id, roomId });
+      } else {
+        this.selectedVenue.set(null);
+        this.rooms.set([]);
+      }
     } else {
       this.form.reset(EMPTY_VALUE);
+      this.selectedVenue.set(null);
+      this.rooms.set([]);
     }
+  }
+
+  onVenueChange(venueId: string | null): void {
+    const venue = this.venues.find((v) => v.id === venueId) ?? null;
+    this.selectedVenue.set(venue);
+    this.rooms.set(venue?.rooms ?? []);
+    if (!venue) this.form.patchValue({ roomId: null });
   }
 
   onPhotoSelected(file: File): void {
@@ -125,10 +158,31 @@ export class ObituaryFormComponent implements OnChanges {
       return;
     }
 
-    const value = this.form.getRawValue();
-    if (!this.datesAreValid(value.birthDate, value.deathDate)) {
+    const raw = this.form.getRawValue();
+    if (!this.datesAreValid(raw.birthDate, raw.deathDate)) {
       return;
     }
+
+    const serviceAt =
+      raw.serviceDate && raw.serviceTime
+        ? new Date(`${raw.serviceDate}T${raw.serviceTime}:00`).toISOString()
+        : '';
+
+    const value: ObituaryFormValue = {
+      firstName: raw.firstName,
+      lastName: raw.lastName,
+      birthDate: raw.birthDate,
+      deathDate: raw.deathDate,
+      birthCity: raw.birthCity,
+      deathCity: raw.deathCity,
+      epitaph: raw.epitaph,
+      biography: raw.biography,
+      serviceType: raw.serviceType,
+      serviceAt,
+      roomId: raw.roomId ?? '',
+      isPublic: raw.isPublic,
+      accessCode: raw.accessCode,
+    };
 
     this.save.emit({ value, photoFile: this.photoFile });
   }

@@ -54,6 +54,10 @@ describe('ObituaryService', () => {
     id: 'obituary-1',
     tenantId: TENANT_ID,
     deceasedId: 'deceased-1',
+    serviceType: null,
+    serviceAt: null,
+    roomId: null,
+    room: null,
     eventId: null,
     slug: 'maria-lopez-a1b2',
     content: null,
@@ -130,7 +134,7 @@ describe('ObituaryService', () => {
             updateStatus: jest.fn(),
             softDelete: jest.fn(),
             findEventById: jest.fn(),
-            listEventsForTenant: jest.fn(),
+            findRoomByTenant: jest.fn(),
             findApprovedMessages: jest.fn(),
             createMessage: jest.fn(),
           },
@@ -198,16 +202,6 @@ describe('ObituaryService', () => {
     });
   });
 
-  describe('listAvailableEvents', () => {
-    it('delegates to the repository', async () => {
-      obituaryRepo.listEventsForTenant.mockResolvedValue([]);
-
-      await service.listAvailableEvents(TENANT_ID);
-
-      expect(obituaryRepo.listEventsForTenant).toHaveBeenCalledWith(TENANT_ID);
-    });
-  });
-
   describe('create', () => {
     it('creates an obituary with a generated slug', async () => {
       obituaryRepo.createWithDeceased.mockResolvedValue(obituaryRecord());
@@ -263,14 +257,14 @@ describe('ObituaryService', () => {
       expect(obituaryRepo.createWithDeceased).not.toHaveBeenCalled();
     });
 
-    it('throws NotFoundException when the linked event does not belong to the tenant', async () => {
-      obituaryRepo.findEventById.mockResolvedValue(null);
+    it('throws NotFoundException when the service room does not belong to the tenant', async () => {
+      obituaryRepo.findRoomByTenant.mockResolvedValue(null);
 
       await expect(
         service.create(TENANT_ID, {
           firstName: 'María',
           lastName: 'López',
-          eventId: 'event-999',
+          roomId: 'room-999',
         }),
       ).rejects.toThrow(NotFoundException);
       expect(obituaryRepo.createWithDeceased).not.toHaveBeenCalled();
