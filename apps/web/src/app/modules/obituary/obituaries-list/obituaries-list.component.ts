@@ -3,11 +3,9 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { Obituary, ObituaryStatus } from '@zentic/shared-types';
-import {
-  ObituariesApiService,
-  ObituaryEventOption,
-} from '../../../core/services/obituaries-api.service';
+import { Obituary, ObituaryStatus, Venue } from '@zentic/shared-types';
+import { ObituariesApiService } from '../../../core/services/obituaries-api.service';
+import { VenuesApiService } from '../../../core/services/venues-api.service';
 import {
   DataTableColumn,
   DataTableComponent,
@@ -40,6 +38,7 @@ import { FormPanelComponent } from '../../../shared/organisms/form-panel/form-pa
 })
 export class ObituariesListComponent implements OnInit {
   private readonly obituariesApi = inject(ObituariesApiService);
+  private readonly venuesApi = inject(VenuesApiService);
   private readonly router = inject(Router);
   private readonly notifications = inject(NotificationService);
 
@@ -53,7 +52,7 @@ export class ObituariesListComponent implements OnInit {
 
   readonly showForm = signal(false);
   readonly formError = signal('');
-  readonly eventOptions = signal<ObituaryEventOption[]>([]);
+  readonly venues = signal<Venue[]>([]);
 
   readonly statuses = Object.values(ObituaryStatus);
 
@@ -73,10 +72,10 @@ export class ObituariesListComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
-    this.obituariesApi.listEvents().subscribe({
-      next: (events) => this.eventOptions.set(events),
+    this.venuesApi.list().subscribe({
+      next: (venues) => this.venues.set(venues),
       error: (error: unknown) =>
-        this.notifications.apiError(error, 'No se pudieron cargar los eventos disponibles'),
+        this.notifications.apiError(error, 'No se pudieron cargar las sedes'),
     });
   }
 
@@ -147,7 +146,9 @@ export class ObituariesListComponent implements OnInit {
       deathCity: value.deathCity || undefined,
       biography: value.biography || undefined,
       epitaph: value.epitaph || undefined,
-      eventId: value.eventId || undefined,
+      serviceType: value.serviceType || undefined,
+      serviceAt: value.serviceAt || undefined,
+      roomId: value.roomId || undefined,
       isPublic: value.isPublic,
       accessCode: value.isPublic ? undefined : value.accessCode || undefined,
     };

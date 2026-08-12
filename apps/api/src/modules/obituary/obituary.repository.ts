@@ -7,10 +7,18 @@ import {
   ObituaryMessage,
   ObituaryStatus,
   Prisma,
+  Room,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
-export type ObituaryWithDeceased = Obituary & { deceased: Deceased };
+export type ObituaryWithDeceased = Obituary & {
+  deceased: Deceased;
+  room: (Room & { venue: { id: string; name: string } }) | null;
+};
+
+const ROOM_INCLUDE = {
+  room: { include: { venue: { select: { id: true, name: true } } } },
+} satisfies Prisma.ObituaryInclude;
 
 export interface ObituaryListFilters {
   status?: ObituaryStatus;
@@ -33,16 +41,11 @@ export interface CreateDeceasedData {
 export type UpdateDeceasedData = Partial<CreateDeceasedData>;
 
 export interface ObituaryFieldsData {
-  eventId?: string;
+  serviceType?: string;
+  serviceAt?: Date;
+  roomId?: string;
   isPublic?: boolean;
   accessCode?: string;
-}
-
-export interface EventSummary {
-  id: string;
-  slug: string;
-  scheduledAt: Date;
-  status: string;
 }
 
 export interface CreateObituaryMessageData {
@@ -63,7 +66,7 @@ export class ObituaryRepository {
     const [data, total] = await Promise.all([
       this.prisma.obituary.findMany({
         where,
-        include: { deceased: true },
+        include: { deceased: true, ...ROOM_INCLUDE },
         orderBy: { deceased: { deathDate: 'desc' } },
         skip: (filters.page - 1) * filters.limit,
         take: filters.limit,
@@ -76,7 +79,7 @@ export class ObituaryRepository {
   findById(tenantId: string, id: string): Promise<ObituaryWithDeceased | null> {
     return this.prisma.obituary.findFirst({
       where: { id, tenantId, deletedAt: null },
-      include: { deceased: true },
+      include: { deceased: true, ...ROOM_INCLUDE },
     });
   }
 
@@ -91,7 +94,7 @@ export class ObituaryRepository {
         status: ObituaryStatus.PUBLISHED,
         deletedAt: null,
       },
-      include: { deceased: true },
+      include: { deceased: true, ...ROOM_INCLUDE },
     });
   }
 
@@ -110,12 +113,20 @@ export class ObituaryRepository {
           tenantId,
           deceasedId: createdDeceased.id,
           slug,
-          eventId: obituary.eventId,
+          serviceType: obituary.serviceType,
+          serviceAt: obituary.serviceAt,
+          roomId: obituary.roomId,
           isPublic: obituary.isPublic ?? true,
           accessCode: obituary.accessCode,
         },
       });
-      return { ...createdObituary, deceased: createdDeceased };
+      const room = obituary.roomId
+        ? await tx.room.findUnique({
+            where: { id: obituary.roomId },
+            include: { venue: { select: { id: true, name: true } } },
+          })
+        : null;
+      return { ...createdObituary, deceased: createdDeceased, room };
     });
   }
 
@@ -175,17 +186,15 @@ export class ObituaryRepository {
     ]);
   }
 
-  findEventById(tenantId: string, eventId: string): Promise<Event | null> {
-    return this.prisma.event.findFirst({
-      where: { id: eventId, tenantId, deletedAt: null },
+  findRoomByTenant(tenantId: string, roomId: string): Promise<Room | null> {
+    return this.prisma.room.findFirst({
+      where: { id: roomId, tenantId, deletedAt: null },
     });
   }
 
-  listEventsForTenant(tenantId: string): Promise<EventSummary[]> {
-    return this.prisma.event.findMany({
-      where: { tenantId, deletedAt: null },
-      orderBy: { scheduledAt: 'desc' },
-      select: { id: true, slug: true, scheduledAt: true, status: true },
+  findEventById(tenantId: string, eventId: string): Promise<Event | null> {
+    return this.prisma.event.findFirst({
+      where: { id: eventId, tenantId, deletedAt: null },
     });
   }
 

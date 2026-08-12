@@ -427,7 +427,11 @@ model Obituary {
   tenant      Tenant         @relation(fields: [tenantId], references: [id])
   deceasedId  String         @unique
   deceased    Deceased       @relation(fields: [deceasedId], references: [id])
-  eventId     String?
+  serviceType String?        @default("VELATORIO")
+  serviceAt   DateTime?
+  roomId      String?
+  room        Room?          @relation(fields: [roomId], references: [id])
+  eventId     String?        // autocompletado al crear streaming desde el obituario
   slug        String         @unique
   content     String?        @db.Text // deprecated, no usar — ver Deceased.biography
   status      ObituaryStatus @default(DRAFT)
@@ -444,6 +448,7 @@ model Obituary {
   @@index([tenantId])
   @@index([tenantId, createdAt])
   @@index([tenantId, status])
+  @@index([roomId])
 }
 
 model ObituaryMessage {
@@ -622,7 +627,8 @@ model Room {
   createdAt DateTime  @default(now())
   deletedAt DateTime?
 
-  events Event[]
+  events     Event[]
+  obituaries Obituary[]
 
   @@index([tenantId])
   @@index([venueId])

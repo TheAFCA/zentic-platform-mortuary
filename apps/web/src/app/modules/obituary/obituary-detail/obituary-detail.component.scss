@@ -91,6 +91,25 @@
   line-height: 1.6;
 }
 
+.obituary-detail__service {
+  display: grid;
+  gap: 0.15rem;
+  margin-top: 0.5rem;
+
+  p {
+    margin: 0;
+    color: panel.$muted;
+    font-size: 0.9rem;
+  }
+}
+
+.obituary-detail__service-title {
+  margin: 0 0 0.15rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: panel.$ink;
+}
+
 .obituary-detail__actions {
   display: flex;
   gap: 0.75rem;

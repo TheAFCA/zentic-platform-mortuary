@@ -648,10 +648,20 @@ export interface Deceased {
   updatedAt: string;
 }
 
+export interface ObituaryRoom {
+  id: string;
+  name: string;
+  venue: { id: string; name: string };
+}
+
 export interface Obituary {
   id: string;
   tenantId: string;
   deceasedId: string;
+  serviceType: string | null;
+  serviceAt: string | null;
+  roomId: string | null;
+  room: ObituaryRoom | null;
   eventId: string | null;
   slug: string;
   status: ObituaryStatus;
@@ -736,6 +746,12 @@ export interface PublicObituaryEvent {
   status: EventStatus;
 }
 
+export interface PublicObituaryService {
+  type: string | null;
+  at: string | null;
+  room: { name: string; venue: string } | null;
+}
+
 /**
  * Respuesta de GET /obituaries/:slug/public — sin datos internos del tenant.
  * Cuando el obituario tiene isPublic=false y no se envió (o fue incorrecto) el accessCode,
@@ -751,6 +767,7 @@ export interface PublicObituary {
   publishedAt: string | null;
   accessGranted: boolean;
   deceased: Deceased | null;
+  service: PublicObituaryService | null;
   event: PublicObituaryEvent | null;
   streamingAction: 'LIVE' | 'RECORDING' | null;
   approvedMessages: ObituaryMessage[];

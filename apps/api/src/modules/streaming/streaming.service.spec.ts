@@ -200,6 +200,8 @@ describe('StreamingService', () => {
       findLeadsWithEmailByEvent: jest.fn().mockResolvedValue([]),
       findByProviderStreamId: jest.fn(),
       createCredentialAudit: jest.fn(),
+      findObituaryByTenant: jest.fn(),
+      linkObituary: jest.fn(),
     } as unknown as jest.Mocked<StreamingRepository>;
 
     mockRepo.update.mockImplementation((_tenantId: any, id: any, data: any) =>
@@ -792,6 +794,83 @@ describe('StreamingService', () => {
       expect(mockRepo.findDeceasedByTenant).not.toHaveBeenCalled();
       expect(mockRepo.create).toHaveBeenCalled();
       expect(result.id).toBe(eventId);
+    });
+
+    it('should create an event from an obituary, reusing its deceased and auto-linking it back', async () => {
+      const dtoFromObituary = {
+        title: 'Velatorio de Maria',
+        ceremonyType: 'VELATORIO',
+        scheduledAt: '2026-07-20T14:00:00Z',
+        obituaryId: 'obituary-1',
+      } as CreateEventDto;
+
+      mockRepo.findObituaryByTenant.mockResolvedValue({
+        id: 'obituary-1',
+        tenantId,
+        deceasedId,
+        eventId: null,
+      } as any);
+      mockRepo.findOverlappingByRoomAndTimeRange.mockResolvedValue(null);
+      mockRepo.create.mockResolvedValue({
+        ...baseEvent,
+        id: 'new-event-id',
+      } as any);
+
+      const result = await service.create(tenantId, dtoFromObituary);
+
+      expect(mockRepo.findObituaryByTenant).toHaveBeenCalledWith(
+        tenantId,
+        'obituary-1',
+      );
+      expect(mockRepo.createDeceased).not.toHaveBeenCalled();
+      expect(mockRepo.findDeceasedByTenant).not.toHaveBeenCalled();
+      expect(mockRepo.create).toHaveBeenCalled();
+      expect(mockRepo.linkObituary).toHaveBeenCalledWith(
+        tenantId,
+        'obituary-1',
+        'new-event-id',
+        mockPrisma,
+      );
+      expect(result.id).toBe('new-event-id');
+    });
+
+    it('should throw NotFoundException when the obituary does not belong to the tenant', async () => {
+      const dtoFromObituary = {
+        title: 'Velatorio de Maria',
+        ceremonyType: 'VELATORIO',
+        scheduledAt: '2026-07-20T14:00:00Z',
+        obituaryId: 'obituary-999',
+      } as CreateEventDto;
+
+      mockRepo.findObituaryByTenant.mockResolvedValue(null);
+
+      await expect(service.create(tenantId, dtoFromObituary)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(mockRepo.create).not.toHaveBeenCalled();
+      expect(mockRepo.linkObituary).not.toHaveBeenCalled();
+    });
+
+    it('should throw ConflictException when the obituary already has a linked event', async () => {
+      const dtoFromObituary = {
+        title: 'Velatorio de Maria',
+        ceremonyType: 'VELATORIO',
+        scheduledAt: '2026-07-20T14:00:00Z',
+        obituaryId: 'obituary-1',
+      } as CreateEventDto;
+
+      mockRepo.findObituaryByTenant.mockResolvedValue({
+        id: 'obituary-1',
+        tenantId,
+        deceasedId,
+        eventId: 'already-linked-event',
+      } as any);
+
+      await expect(service.create(tenantId, dtoFromObituary)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(mockRepo.create).not.toHaveBeenCalled();
+      expect(mockRepo.linkObituary).not.toHaveBeenCalled();
     });
 
     it('should throw ConflictException when room overlaps', async () => {

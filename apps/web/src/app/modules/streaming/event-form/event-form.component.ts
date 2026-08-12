@@ -17,9 +17,18 @@ import {
 } from '../../../core/services/streaming-api.service';
 import { VenuesApiService } from '../../../core/services/venues-api.service';
 import { ClientsApiService } from '../../../core/services/clients-api.service';
+import { ObituariesApiService } from '../../../core/services/obituaries-api.service';
 import { UsersService, AdminUser } from '../../../core/services/users.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { Client, Venue } from '@zentic/shared-types';
+
+const CEREMONY_LABELS: Record<string, string> = {
+  VELATORIO: 'Velatorio',
+  ENTIERRO: 'Entierro',
+  CREMACION: 'Cremación',
+  MISA: 'Misa',
+  OTRO: 'Otro',
+};
 
 @Component({
   selector: 'app-event-form',
@@ -113,6 +122,12 @@ import { Client, Venue } from '@zentic/shared-types';
         width: 1.15rem;
         height: 1.15rem;
         color: var(--brand-primary, #0f5e59);
+      }
+
+      .form-section__hint {
+        margin: -0.5rem 0 0.75rem;
+        color: var(--ink-secondary, #6b7280);
+        font-size: 0.85rem;
       }
 
       .form-row {
@@ -255,48 +270,64 @@ import { Client, Venue } from '@zentic/shared-types';
                   <mat-icon>person</mat-icon>
                   Datos del difunto
                 </h3>
-                <div class="form-row">
-                  <mat-form-field class="form-field">
-                    <mat-label>Nombre</mat-label>
-                    <input matInput formControlName="deceasedFirstName" placeholder="Nombre" />
-                  </mat-form-field>
-                  <mat-form-field class="form-field">
-                    <mat-label>Apellido</mat-label>
-                    <input matInput formControlName="deceasedLastName" placeholder="Apellido" />
-                  </mat-form-field>
-                </div>
-                <div class="form-row">
-                  <mat-form-field class="form-field">
-                    <mat-label>Fecha de nacimiento</mat-label>
-                    <input
-                      matInput
-                      [matDatepicker]="birthPicker"
-                      formControlName="deceasedBirthDate"
-                    />
-                    <mat-datepicker-toggle matSuffix [for]="birthPicker" />
-                    <mat-datepicker #birthPicker />
-                  </mat-form-field>
-                  <mat-form-field class="form-field">
-                    <mat-label>Fecha de fallecimiento</mat-label>
-                    <input
-                      matInput
-                      [matDatepicker]="deathPicker"
-                      formControlName="deceasedDeathDate"
-                    />
-                    <mat-datepicker-toggle matSuffix [for]="deathPicker" />
-                    <mat-datepicker #deathPicker />
-                  </mat-form-field>
-                </div>
-                <div class="form-row form-row--single">
-                  <mat-form-field class="form-field">
-                    <mat-label>Epitafio o frase (opcional)</mat-label>
-                    <input
-                      matInput
-                      formControlName="deceasedEpitaph"
-                      placeholder="Ej: Siempre vivirás en nuestros corazones"
-                    />
-                  </mat-form-field>
-                </div>
+
+                @if (obituaryDeceased(); as deceased) {
+                  <p class="form-section__hint">
+                    Estos datos vienen del obituario vinculado y no se editan aquí.
+                  </p>
+                  <div class="form-row">
+                    <div class="form-field">
+                      <strong>{{ deceased.firstName }} {{ deceased.lastName }}</strong>
+                    </div>
+                    <div class="form-field" *ngIf="deceased.birthDate || deceased.deathDate">
+                      {{ deceased.birthDate ? (deceased.birthDate | date: 'longDate') : '—' }} —
+                      {{ deceased.deathDate ? (deceased.deathDate | date: 'longDate') : '—' }}
+                    </div>
+                  </div>
+                } @else {
+                  <div class="form-row">
+                    <mat-form-field class="form-field">
+                      <mat-label>Nombre</mat-label>
+                      <input matInput formControlName="deceasedFirstName" placeholder="Nombre" />
+                    </mat-form-field>
+                    <mat-form-field class="form-field">
+                      <mat-label>Apellido</mat-label>
+                      <input matInput formControlName="deceasedLastName" placeholder="Apellido" />
+                    </mat-form-field>
+                  </div>
+                  <div class="form-row">
+                    <mat-form-field class="form-field">
+                      <mat-label>Fecha de nacimiento</mat-label>
+                      <input
+                        matInput
+                        [matDatepicker]="birthPicker"
+                        formControlName="deceasedBirthDate"
+                      />
+                      <mat-datepicker-toggle matSuffix [for]="birthPicker" />
+                      <mat-datepicker #birthPicker />
+                    </mat-form-field>
+                    <mat-form-field class="form-field">
+                      <mat-label>Fecha de fallecimiento</mat-label>
+                      <input
+                        matInput
+                        [matDatepicker]="deathPicker"
+                        formControlName="deceasedDeathDate"
+                      />
+                      <mat-datepicker-toggle matSuffix [for]="deathPicker" />
+                      <mat-datepicker #deathPicker />
+                    </mat-form-field>
+                  </div>
+                  <div class="form-row form-row--single">
+                    <mat-form-field class="form-field">
+                      <mat-label>Epitafio o frase (opcional)</mat-label>
+                      <input
+                        matInput
+                        formControlName="deceasedEpitaph"
+                        placeholder="Ej: Siempre vivirás en nuestros corazones"
+                      />
+                    </mat-form-field>
+                  </div>
+                }
               </div>
 
               <div class="form-section">
@@ -417,6 +448,7 @@ export class EventFormComponent {
   private readonly api = inject(StreamingApiService);
   private readonly venuesApi = inject(VenuesApiService);
   private readonly clientsApi = inject(ClientsApiService);
+  private readonly obituariesApi = inject(ObituariesApiService);
   private readonly usersService = inject(UsersService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -429,6 +461,21 @@ export class EventFormComponent {
   readonly selectedVenue = signal<Venue | null>(null);
   readonly clients = signal<Client[]>([]);
   readonly operators = signal<AdminUser[]>([]);
+  // Cuando el evento se crea "desde" un obituario, el difunto viene de ahí — se
+  // muestra en modo solo lectura en vez de dejarlo editar en "Datos del difunto".
+  readonly obituaryDeceased = signal<{
+    firstName: string;
+    lastName: string;
+    birthDate: string | null;
+    deathDate: string | null;
+  } | null>(null);
+  private fromObituaryId: string | null = null;
+  private fromObituaryDeceasedId: string | null = null;
+  // loadVenues()/loadEvent()/loadFromObituary() se disparan en paralelo en el constructor
+  // — si la sala a preseleccionar llega antes que las sedes (o viceversa), ninguna de las
+  // dos por sí sola tiene todo lo necesario. Se guarda el pendiente y ambos caminos
+  // reintentan aplicarlo; solo se limpia cuando realmente se encontró y aplicó.
+  private pendingRoomId: string | null = null;
 
   readonly isEdit = () => !!this.route.snapshot.paramMap.get('id');
 
@@ -459,6 +506,9 @@ export class EventFormComponent {
     this.loadVenues();
     this.loadClients();
     this.loadOperators();
+
+    const fromObituary = this.route.snapshot.queryParamMap.get('fromObituary');
+    if (fromObituary && !editId) this.loadFromObituary(fromObituary);
   }
 
   onVenueChange(venueId: string | null): void {
@@ -486,9 +536,57 @@ export class EventFormComponent {
 
   private loadVenues(): void {
     this.venuesApi.list().subscribe({
-      next: (list) => this.venues.set(list),
+      next: (list) => {
+        this.venues.set(list);
+        this.applyPendingRoomSelection();
+      },
       error: (error: unknown) =>
         this.notifications.apiError(error, 'No se pudieron cargar las sedes'),
+    });
+  }
+
+  private applyPendingRoomSelection(): void {
+    if (!this.pendingRoomId) return;
+    const parentVenue = this.venues().find((v) => v.rooms.some((r) => r.id === this.pendingRoomId));
+    if (!parentVenue) return;
+    this.onVenueChange(parentVenue.id);
+    this.form.patchValue({ venueId: parentVenue.id, roomId: this.pendingRoomId });
+    this.pendingRoomId = null;
+  }
+
+  private loadFromObituary(obituaryId: string): void {
+    this.obituariesApi.get(obituaryId).subscribe({
+      next: (obituary) => {
+        this.fromObituaryId = obituaryId;
+        this.fromObituaryDeceasedId = obituary.deceasedId;
+        this.obituaryDeceased.set({
+          firstName: obituary.deceased.firstName,
+          lastName: obituary.deceased.lastName,
+          birthDate: obituary.deceased.birthDate,
+          deathDate: obituary.deceased.deathDate,
+        });
+
+        const ceremonyType = obituary.serviceType ?? 'VELATORIO';
+        const ceremonyLabel = CEREMONY_LABELS[ceremonyType] ?? ceremonyType;
+        const patch: Record<string, unknown> = {
+          title: `${ceremonyLabel} de ${obituary.deceased.firstName} ${obituary.deceased.lastName}`,
+          ceremonyType,
+        };
+        if (obituary.serviceAt) {
+          const date = new Date(obituary.serviceAt);
+          patch['scheduledDate'] = date.toISOString().split('T')[0];
+          patch['scheduledTime'] =
+            `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+        }
+        this.form.patchValue(patch);
+
+        if (obituary.roomId) {
+          this.pendingRoomId = obituary.roomId;
+          this.applyPendingRoomSelection();
+        }
+      },
+      error: (error: unknown) =>
+        this.notifications.apiError(error, 'No se pudo cargar el obituario'),
     });
   }
 
@@ -516,11 +614,8 @@ export class EventFormComponent {
           moderationMode: ev.moderationMode,
         });
         if (ev.room) {
-          const parentVenue = this.venues().find((v) => v.rooms.some((r) => r.id === ev.room!.id));
-          if (parentVenue) {
-            this.onVenueChange(parentVenue.id);
-            this.form.patchValue({ venueId: parentVenue.id, roomId: ev.room.id });
-          }
+          this.pendingRoomId = ev.room.id;
+          this.applyPendingRoomSelection();
         }
         this.loading.set(false);
       },
@@ -561,7 +656,10 @@ export class EventFormComponent {
       assignedToId: this.form.controls.assignedToId.value || undefined,
     };
 
-    if (deceasedFirstName && deceasedLastName) {
+    if (this.fromObituaryId) {
+      dto.obituaryId = this.fromObituaryId;
+      dto.deceasedId = this.fromObituaryDeceasedId ?? undefined;
+    } else if (deceasedFirstName && deceasedLastName) {
       dto.deceased = {
         firstName: deceasedFirstName,
         lastName: deceasedLastName,

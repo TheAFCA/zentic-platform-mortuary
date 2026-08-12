@@ -96,16 +96,16 @@ export class DashboardLayoutComponent {
       title: 'Gestión',
       items: [
         {
-          path: '/admin/streaming',
-          label: 'Streaming',
-          icon: 'live_tv',
-          permission: 'streaming:read',
-        },
-        {
           path: '/admin/obituaries',
           label: 'Obituarios',
           icon: 'article',
           permission: 'obituary:read',
+        },
+        {
+          path: '/admin/streaming',
+          label: 'Streaming',
+          icon: 'live_tv',
+          permission: 'streaming:read',
         },
         {
           path: '/admin/invitations',

@@ -258,13 +258,30 @@ export class StreamingService {
   async create(tenantId: string, dto: CreateEventDto) {
     let deceasedId = dto.deceasedId;
 
+    // Crear streaming "desde" un obituario: el difunto viene del obituario
+    // (se ignora cualquier deceasedId/deceased que haya mandado el cliente),
+    // y al final se autovincula Obituary.eventId al evento nuevo.
+    if (dto.obituaryId) {
+      const obituary = await this.repo.findObituaryByTenant(
+        tenantId,
+        dto.obituaryId,
+      );
+      if (!obituary) throw new NotFoundException('Obituario no encontrado');
+      if (obituary.eventId) {
+        throw new ConflictException(
+          'Este obituario ya tiene una transmisión vinculada',
+        );
+      }
+      deceasedId = obituary.deceasedId;
+    }
+
     if (!deceasedId && !dto.deceased) {
       throw new BadRequestException(
         'Se requiere un difunto asociado (deceasedId o deceased)',
       );
     }
 
-    if (dto.deceasedId) {
+    if (dto.deceasedId && !dto.obituaryId) {
       const existingDeceased = await this.repo.findDeceasedByTenant(
         tenantId,
         dto.deceasedId,
@@ -348,7 +365,18 @@ export class StreamingService {
       eventData.scheduledAt,
       dto.estimatedDuration,
       undefined,
-      (tx) => this.repo.create(eventData, tx),
+      async (tx) => {
+        const created = await this.repo.create(eventData, tx);
+        if (dto.obituaryId) {
+          await this.repo.linkObituary(
+            tenantId,
+            dto.obituaryId,
+            created.id,
+            tx,
+          );
+        }
+        return created;
+      },
     );
 
     // Iniciar saga de aprovisionamiento asíncrona (LIFE-09, LIFE-10, LIFE-11, LIFE-12)

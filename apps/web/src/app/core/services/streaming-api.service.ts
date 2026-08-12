@@ -107,6 +107,7 @@ export interface Message {
 export interface CreateEventInput {
   title: string;
   deceasedId?: string;
+  obituaryId?: string;
   deceased?: {
     firstName: string;
     lastName: string;
