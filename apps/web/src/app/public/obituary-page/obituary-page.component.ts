@@ -11,6 +11,7 @@ import { InitialsAvatarComponent } from '../../shared/atoms/initials-avatar/init
 import { CondolenceFormComponent } from './condolence-form/condolence-form.component';
 import { ShareButtonsComponent } from '../../shared/molecules/share-buttons/share-buttons.component';
 import { FeedbackBannerComponent } from '../../shared/molecules/feedback-banner/feedback-banner.component';
+import { PoweredByBadgeComponent } from '../../shared/atoms/powered-by-badge/powered-by-badge.component';
 import { getErrorMessage } from '../../core/utils/error-message';
 
 @Component({
@@ -24,6 +25,7 @@ import { getErrorMessage } from '../../core/utils/error-message';
     CondolenceFormComponent,
     ShareButtonsComponent,
     FeedbackBannerComponent,
+    PoweredByBadgeComponent,
   ],
   templateUrl: './obituary-page.component.html',
   styleUrl: './obituary-page.component.scss',
