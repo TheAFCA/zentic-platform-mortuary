@@ -66,6 +66,7 @@ describe('Tribute Book (e2e)', () => {
       data: {
         slug: `e2e-tribute-book-${uniqueSuffix}`,
         name: 'Funeraria E2E Libro de Homenajes',
+        featureFlags: { create: [{ feature: 'tribute_book', enabled: true }] },
       },
     });
     tenantId = tenant.id;
@@ -138,6 +139,7 @@ describe('Tribute Book (e2e)', () => {
     await prisma.event.deleteMany({ where: { tenantId } });
     await prisma.deceased.deleteMany({ where: { tenantId } });
     await prisma.user.deleteMany({ where: { tenantId } });
+    await prisma.tenantFeatureFlag.deleteMany({ where: { tenantId } });
     await prisma.tenant.delete({ where: { id: tenantId } });
     await app.close();
   });
@@ -247,5 +249,23 @@ describe('Tribute Book (e2e)', () => {
     expect((active.data as MessageRow[]).map((m) => m.id)).toContain(
       approvedMessageId,
     );
+  });
+
+  it('rejects requests once the tribute_book module is disabled for the tenant (TenantModuleGuard)', async () => {
+    await prisma.tenantFeatureFlag.update({
+      where: { tenantId_feature: { tenantId, feature: 'tribute_book' } },
+      data: { enabled: false },
+    });
+
+    await request(app.getHttpServer())
+      .get(`/api/tribute-book/messages?eventId=${eventId}`)
+      .set('Authorization', `Bearer ${authToken}`)
+      .expect(403);
+
+    // Se reactiva para no afectar el orden de otros tests si este archivo se reordena.
+    await prisma.tenantFeatureFlag.update({
+      where: { tenantId_feature: { tenantId, feature: 'tribute_book' } },
+      data: { enabled: true },
+    });
   });
 });
