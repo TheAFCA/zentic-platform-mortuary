@@ -81,7 +81,8 @@ describe('HlsPlayerComponent', () => {
     vi.restoreAllMocks();
   });
 
-  it('uses native HLS when the browser reports Safari-compatible playback', async () => {
+  it('falls back to native HLS when hls.js is unsupported (Safari)', async () => {
+    hlsMockState.supported = false;
     vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('probably');
     const url = 'https://stream.example/live/manifest/video.m3u8';
 
@@ -89,15 +90,15 @@ describe('HlsPlayerComponent', () => {
     await fixture.whenStable();
 
     const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
-    expect(video.getAttribute('src')).toBe(url);
+    await vi.waitFor(() => expect(video.getAttribute('src')).toBe(url));
     expect(hlsMockState.instances).toHaveLength(0);
 
     video.dispatchEvent(new Event('canplay'));
     expect(fixture.componentInstance.status()).toBe('ready');
   });
 
-  it('uses hls.js when native HLS is unavailable', async () => {
-    vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('');
+  it('prefers hls.js over native playback even when canPlayType reports support', async () => {
+    vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('maybe');
     const url = 'https://stream.example/live/manifest/video.m3u8';
 
     fixture.componentRef.setInput('src', url);

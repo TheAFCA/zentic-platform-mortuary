@@ -212,16 +212,7 @@ export class HlsPlayerComponent implements OnDestroy {
 
     this.activeUrl = url;
     this.activeVideo = video;
-    this.initPlayer(url, video, generation);
-  }
-
-  private initPlayer(url: string, video: HTMLVideoElement, generation: number): void {
-    const canPlayNative = video.canPlayType('application/vnd.apple.mpegurl');
-    if (canPlayNative === 'probably' || canPlayNative === 'maybe') {
-      this.playNative(url, video, generation);
-    } else {
-      void this.playWithHlsJs(url, video, generation);
-    }
+    void this.playWithHlsJs(url, video, generation);
   }
 
   private playNative(url: string, video: HTMLVideoElement, generation: number): void {
@@ -265,7 +256,12 @@ export class HlsPlayerComponent implements OnDestroy {
 
       const Hls = HlsModule.default;
       if (!Hls.isSupported()) {
-        this.status.set('error');
+        const canPlayNative = video.canPlayType('application/vnd.apple.mpegurl');
+        if (canPlayNative === 'probably' || canPlayNative === 'maybe') {
+          this.playNative(url, video, generation);
+        } else {
+          this.status.set('error');
+        }
         return;
       }
 

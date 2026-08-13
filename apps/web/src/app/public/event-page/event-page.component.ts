@@ -252,31 +252,6 @@ const REACTION_ICONS = [
       height: 2.5rem;
       opacity: 0.6;
     }
-    .stream-room__player-bottom {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 2.5rem;
-      display: flex;
-      align-items: center;
-      padding: 0 1rem;
-      gap: 0.75rem;
-      background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
-      color: rgba(255, 255, 255, 0.8);
-    }
-    .stream-room__player-bottom mat-icon {
-      font-size: 1.125rem;
-      width: 1.125rem;
-      height: 1.125rem;
-    }
-    .stream-room__player-progress {
-      flex: 1;
-      height: 0.25rem;
-      border-radius: 0.125rem;
-      background: rgba(255, 255, 255, 0.2);
-    }
-
     /* ── Metadata (channel info below player) ── */
     .stream-room__metadata {
       padding: 1rem 1.5rem;
@@ -980,13 +955,6 @@ const REACTION_ICONS = [
                     }
                   </div>
                 }
-                <!-- Bottom overlay bar -->
-                <div class="stream-room__player-bottom">
-                  <mat-icon>play_arrow</mat-icon>
-                  <div class="stream-room__player-progress"></div>
-                  <mat-icon>volume_up</mat-icon>
-                  <mat-icon>fullscreen</mat-icon>
-                </div>
               </section>
 
               <!-- Metadata -->
