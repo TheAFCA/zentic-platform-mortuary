@@ -519,7 +519,7 @@ export class EventFormComponent {
   }
 
   private loadClients(): void {
-    this.clientsApi.list({ page: 1, limit: 200 }).subscribe({
+    this.clientsApi.list({ page: 1, limit: 100 }).subscribe({
       next: (res) => this.clients.set(res.data),
       error: (error: unknown) =>
         this.notifications.apiError(error, 'No se pudieron cargar los clientes'),
