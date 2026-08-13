@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
-import { JwtModule } from '@nestjs/jwt';
 import { StreamingController } from './streaming.controller';
 import { StreamWebhooksController } from './stream-webhooks.controller';
 import { StreamingService } from './streaming.service';
@@ -21,7 +20,6 @@ import { RecordingService } from './services/recording.service';
     ScheduleModule.forRoot(),
     NotificationsModule,
     EmailModule,
-    JwtModule.register({}),
     EventStateDomainModule,
   ],
   controllers: [StreamingController, StreamWebhooksController],
