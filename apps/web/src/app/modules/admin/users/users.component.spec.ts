@@ -48,6 +48,7 @@ describe('UsersComponent', () => {
       role: UserRole.VIEWER,
       tenantId: 'tenant-1',
       permissions: ['users:read'],
+      enabledModules: [],
     };
     authState.setUser(viewerUser);
     fixture.detectChanges();
@@ -67,6 +68,7 @@ describe('UsersComponent', () => {
       role: UserRole.TENANT_ADMIN,
       tenantId: 'tenant-1',
       permissions: [],
+      enabledModules: [],
     });
     fixture.detectChanges();
 

@@ -13,6 +13,7 @@ describe('AuthSessionService', () => {
     role: UserRole.TENANT_ADMIN,
     tenantId: 'tenant-1',
     permissions: ['users:manage'],
+    enabledModules: [],
   };
 
   let authApi: {

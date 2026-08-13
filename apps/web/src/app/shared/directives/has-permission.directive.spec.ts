@@ -34,6 +34,7 @@ describe('HasPermissionDirective', () => {
       role: UserRole.OPERATOR,
       tenantId: 'tenant-1',
       permissions: ['leads:read'],
+      enabledModules: [],
     });
 
     const fixture = createFixture();
@@ -48,6 +49,7 @@ describe('HasPermissionDirective', () => {
       role: UserRole.OPERATOR,
       tenantId: 'tenant-1',
       permissions: ['leads:export'],
+      enabledModules: [],
     });
 
     const fixture = createFixture();
@@ -62,6 +64,7 @@ describe('HasPermissionDirective', () => {
       role: UserRole.TENANT_ADMIN,
       tenantId: 'tenant-1',
       permissions: [],
+      enabledModules: [],
     };
     authState.setUser(admin);
 
