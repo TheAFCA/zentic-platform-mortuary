@@ -27,7 +27,6 @@ RUN npm install -g pnpm
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=build /app/apps/api/dist ./apps/api/dist
-COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/packages/shared-types/dist ./packages/shared-types/dist
 COPY prisma ./prisma
 
