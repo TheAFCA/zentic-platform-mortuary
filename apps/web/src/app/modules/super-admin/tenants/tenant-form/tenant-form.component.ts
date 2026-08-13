@@ -4,7 +4,8 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { TenantPlan } from '@zentic/shared-types';
+import { TENANT_MODULE_KEYS, TenantModuleKey, TenantPlan } from '@zentic/shared-types';
+import { TenantModuleTogglesComponent } from '../tenant-module-toggles/tenant-module-toggles.component';
 
 export interface TenantFormValue {
   name: string;
@@ -12,6 +13,7 @@ export interface TenantFormValue {
   country: string;
   adminEmail: string;
   plan: TenantPlan;
+  enabledModules: TenantModuleKey[];
 }
 
 const SLUG_PATTERN = /^[a-z0-9-]+$/;
@@ -19,7 +21,14 @@ const SLUG_PATTERN = /^[a-z0-9-]+$/;
 @Component({
   selector: 'app-tenant-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatSelectModule],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    TenantModuleTogglesComponent,
+  ],
   templateUrl: './tenant-form.component.html',
   styleUrl: './tenant-form.component.scss',
 })
@@ -31,6 +40,7 @@ export class TenantFormComponent implements OnChanges {
   @Output() cancel = new EventEmitter<void>();
 
   readonly plans = Object.values(TenantPlan);
+  enabledModules: TenantModuleKey[] = [...TENANT_MODULE_KEYS];
 
   form = new FormGroup({
     name: new FormControl('', {
@@ -61,10 +71,12 @@ export class TenantFormComponent implements OnChanges {
       this.form.patchValue(this.initialValue);
       this.form.controls.slug.disable();
       this.form.controls.adminEmail.disable();
+      this.enabledModules = this.initialValue.enabledModules;
     } else {
       this.form.reset({ name: '', slug: '', country: '', adminEmail: '', plan: TenantPlan.BASIC });
       this.form.controls.slug.enable();
       this.form.controls.adminEmail.enable();
+      this.enabledModules = [...TENANT_MODULE_KEYS];
     }
   }
 
@@ -74,11 +86,15 @@ export class TenantFormComponent implements OnChanges {
     this.form.controls.slug.setValue(sanitized, { emitEvent: false });
   }
 
+  onModulesChange(enabledModules: TenantModuleKey[]): void {
+    this.enabledModules = enabledModules;
+  }
+
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
-    this.save.emit(this.form.getRawValue());
+    this.save.emit({ ...this.form.getRawValue(), enabledModules: this.enabledModules });
   }
 }

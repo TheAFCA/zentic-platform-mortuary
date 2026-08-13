@@ -6,7 +6,7 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
-import { Permission } from '@zentic/shared-types';
+import { Permission, TenantModuleKey } from '@zentic/shared-types';
 import { ImpersonationSessionService } from '../../core/services/impersonation-session.service';
 import { ImpersonationApiService } from '../../core/services/impersonation-api.service';
 import { AuthStateService } from '../../core/services/auth-state.service';
@@ -15,12 +15,15 @@ import { AdminSettingsApiService } from '../../core/services/admin-settings-api.
 import { BrandThemeService } from '../../core/services/brand-theme.service';
 import { ImpersonationBannerComponent } from '../../shared/organisms/impersonation-banner/impersonation-banner.component';
 import { HasPermissionDirective } from '../../shared/directives/has-permission.directive';
+import { HasModuleDirective } from '../../shared/directives/has-module.directive';
 
 interface NavItem {
   path: string;
   label: string;
   icon: string;
   permission?: Permission;
+  /** Módulo configurable por Super Admin — omitido en ítems siempre-activos (Dashboard, Usuarios, Marca, Cuenta). */
+  module?: TenantModuleKey;
   /** Conteo reactivo mostrado como badge junto al label (ej: mensajes pendientes). */
   badgeCount?: () => number;
 }
@@ -45,6 +48,7 @@ interface NavSection {
     MatMenuModule,
     ImpersonationBannerComponent,
     HasPermissionDirective,
+    HasModuleDirective,
   ],
   templateUrl: './dashboard-layout.component.html',
   styleUrl: './dashboard-layout.component.scss',
@@ -62,7 +66,9 @@ export class DashboardLayoutComponent {
     // El badge de mensajes pendientes es del Libro de Homenajes, tenant-scoped: para
     // SUPER_ADMIN (sin tenantId) el backend responde 403 y el errorInterceptor global
     // redirige a /no-autorizado como efecto secundario, aunque la página cargue bien.
-    if (this.authState.currentUser()?.tenantId) {
+    // También hay que respetar el módulo: un tenant con "Libro de Homenajes" desactivado
+    // recibiría el mismo 403 (TenantModuleGuard) del polling en segundo plano.
+    if (this.authState.currentUser()?.tenantId && this.authState.hasModule('tribute_book')) {
       this.pendingMessagesBadge.start();
 
       this.settingsApi.getBrand().subscribe({
@@ -100,24 +106,28 @@ export class DashboardLayoutComponent {
           label: 'Obituarios',
           icon: 'article',
           permission: 'obituary:read',
+          module: 'obituaries',
         },
         {
           path: '/admin/streaming',
           label: 'Streaming',
           icon: 'live_tv',
           permission: 'streaming:read',
+          module: 'streaming',
         },
         {
           path: '/admin/invitations',
           label: 'Invitaciones',
           icon: 'mail',
           permission: 'invitations:read',
+          module: 'invitations',
         },
         {
           path: '/admin/tribute-book',
           label: 'Libro de Homenajes',
           icon: 'auto_stories',
           permission: 'messages:read',
+          module: 'tribute_book',
           badgeCount: () => this.pendingMessagesBadge.count(),
         },
         {
@@ -125,18 +135,21 @@ export class DashboardLayoutComponent {
           label: 'Clientes',
           icon: 'people',
           permission: 'clients:read',
+          module: 'clients',
         },
         {
           path: '/admin/leads',
           label: 'Leads',
           icon: 'campaign',
           permission: 'leads:read',
+          module: 'leads',
         },
         {
           path: '/admin/sedes',
           label: 'Sedes',
           icon: 'domain',
           permission: 'venues:read',
+          module: 'venues',
         },
       ],
     },
@@ -154,6 +167,7 @@ export class DashboardLayoutComponent {
           label: 'Descargas',
           icon: 'download',
           permission: 'downloads:access',
+          module: 'downloads',
         },
       ],
     },
@@ -177,6 +191,7 @@ export class DashboardLayoutComponent {
           label: 'Streaming',
           icon: 'live_tv',
           permission: 'settings:read',
+          module: 'streaming',
         },
       ],
     },

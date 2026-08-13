@@ -538,6 +538,74 @@ export const PERMISSION_PRESETS: PermissionPreset[] = [
   },
 ];
 
+// ---------- Módulos habilitables por tenant (Super Admin) -------------------
+// Segundo nivel de control de acceso, por encima del sistema de permisos por
+// usuario: el Super Admin decide qué módulos completos tiene disponibles un
+// tenant. Dashboard, Usuarios, Marca y Cuenta siempre están disponibles y no
+// aparecen aquí — solo los módulos que se pueden activar/desactivar por tenant.
+
+export const TENANT_MODULE_KEYS = [
+  'obituaries',
+  'streaming',
+  'invitations',
+  'tribute_book',
+  'clients',
+  'leads',
+  'venues',
+  'downloads',
+] as const;
+
+export type TenantModuleKey = (typeof TENANT_MODULE_KEYS)[number];
+
+export interface TenantModuleMeta {
+  key: TenantModuleKey;
+  label: string;
+  description: string;
+}
+
+export const TENANT_MODULE_CATALOG: Record<TenantModuleKey, TenantModuleMeta> = {
+  obituaries: {
+    key: 'obituaries',
+    label: 'Obituarios',
+    description: 'Gestión de obituarios y biografías',
+  },
+  streaming: {
+    key: 'streaming',
+    label: 'Streaming',
+    description: 'Transmisiones en vivo, incluida su configuración',
+  },
+  invitations: {
+    key: 'invitations',
+    label: 'Invitaciones',
+    description: 'Invitaciones a ceremonias',
+  },
+  tribute_book: {
+    key: 'tribute_book',
+    label: 'Libro de Homenajes',
+    description: 'Mensajes y libro de condolencias',
+  },
+  clients: {
+    key: 'clients',
+    label: 'Clientes',
+    description: 'Gestión de clientes y familias',
+  },
+  leads: {
+    key: 'leads',
+    label: 'Leads',
+    description: 'Gestión de prospectos comerciales',
+  },
+  venues: {
+    key: 'venues',
+    label: 'Sedes',
+    description: 'Sedes y salas de la funeraria',
+  },
+  downloads: {
+    key: 'downloads',
+    label: 'Descargas',
+    description: 'Exportación de datos a CSV',
+  },
+};
+
 // ---------- JWT Payload -----------------------------------------------------
 
 export interface JwtPayload {
@@ -565,6 +633,8 @@ export interface AuthUser {
   role: UserRole;
   tenantId: string | null;
   permissions: Permission[];
+  /** Módulos configurables habilitados para el tenant actual (o el tenant impersonado). */
+  enabledModules: TenantModuleKey[];
 }
 
 // ---------- Tenant ----------------------------------------------------------
@@ -580,6 +650,7 @@ export interface Tenant {
   suspendReason: string | null;
   createdAt: string;
   updatedAt: string;
+  enabledModules: TenantModuleKey[];
 }
 
 export interface TenantBrandConfig {

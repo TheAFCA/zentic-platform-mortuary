@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { permissionGuard } from '../../core/guards/permission.guard';
+import { moduleGuard } from '../../core/guards/module.guard';
 
 export const ADMIN_ROUTES: Routes = [
   {
@@ -16,36 +17,46 @@ export const ADMIN_ROUTES: Routes = [
       },
       {
         path: 'streaming',
+        canActivate: [moduleGuard],
+        data: { module: 'streaming' },
         loadChildren: () => import('../streaming/streaming.routes').then((m) => m.STREAMING_ROUTES),
       },
       {
         path: 'obituaries',
+        canActivate: [moduleGuard],
+        data: { module: 'obituaries' },
         loadChildren: () => import('../obituary/obituary.routes').then((m) => m.OBITUARY_ROUTES),
       },
       {
         path: 'invitations',
+        canActivate: [moduleGuard],
+        data: { module: 'invitations' },
         loadChildren: () =>
           import('../invitations/invitations.routes').then((m) => m.INVITATIONS_ROUTES),
       },
       {
         path: 'tribute-book',
+        canActivate: [moduleGuard],
+        data: { module: 'tribute_book' },
         loadChildren: () =>
           import('../tribute-book/tribute-book.routes').then((m) => m.TRIBUTE_BOOK_ROUTES),
       },
       {
         path: 'leads',
+        canActivate: [moduleGuard],
+        data: { module: 'leads' },
         loadChildren: () => import('../leads/leads.routes').then((m) => m.LEADS_ROUTES),
       },
       {
         path: 'clientes',
-        canActivate: [permissionGuard],
-        data: { permissions: ['clients:read'] },
+        canActivate: [permissionGuard, moduleGuard],
+        data: { permissions: ['clients:read'], module: 'clients' },
         loadChildren: () => import('../clients/clients.routes').then((m) => m.CLIENTS_ROUTES),
       },
       {
         path: 'sedes',
-        canActivate: [permissionGuard],
-        data: { permissions: ['venues:read'] },
+        canActivate: [permissionGuard, moduleGuard],
+        data: { permissions: ['venues:read'], module: 'venues' },
         loadChildren: () => import('../venues/venues.routes').then((m) => m.VENUES_ROUTES),
       },
       {
@@ -56,8 +67,8 @@ export const ADMIN_ROUTES: Routes = [
       },
       {
         path: 'descargas',
-        canActivate: [permissionGuard],
-        data: { permissions: ['downloads:access'] },
+        canActivate: [permissionGuard, moduleGuard],
+        data: { permissions: ['downloads:access'], module: 'downloads' },
         loadComponent: () =>
           import('./downloads/downloads.component').then((m) => m.DownloadsComponent),
       },

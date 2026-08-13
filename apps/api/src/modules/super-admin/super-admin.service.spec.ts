@@ -41,6 +41,7 @@ describe('SuperAdminService', () => {
     suspendReason: null,
     createdAt: new Date('2026-01-01'),
     updatedAt: new Date('2026-01-01'),
+    featureFlags: [] as { feature: string; enabled: boolean }[],
   };
 
   beforeEach(async () => {
@@ -55,6 +56,7 @@ describe('SuperAdminService', () => {
             findTenantBySlug: jest.fn(),
             createTenantWithAdmin: jest.fn(),
             updateTenant: jest.fn(),
+            setTenantModules: jest.fn(),
             suspendTenant: jest.fn(),
             reactivateTenant: jest.fn(),
             softDeleteTenant: jest.fn(),
@@ -221,6 +223,40 @@ describe('SuperAdminService', () => {
     });
   });
 
+  describe('updateTenantModules', () => {
+    it('throws NotFoundException when the tenant does not exist', async () => {
+      // ARRANGE
+      repo.findTenantById.mockResolvedValue(null);
+
+      // ACT & ASSERT
+      await expect(
+        service.updateTenantModules('ghost', actor, { enabledModules: ['leads'] }),
+      ).rejects.toThrow(NotFoundException);
+      expect(repo.setTenantModules).not.toHaveBeenCalled();
+    });
+
+    it('sets the enabled modules and returns the updated tenant', async () => {
+      // ARRANGE
+      repo.findTenantById.mockResolvedValue(baseTenant as never);
+      repo.setTenantModules.mockResolvedValue({
+        ...baseTenant,
+        featureFlags: [
+          { feature: 'leads', enabled: true },
+          { feature: 'venues', enabled: false },
+        ],
+      } as never);
+
+      // ACT
+      const result = await service.updateTenantModules('tenant-1', actor, {
+        enabledModules: ['leads'],
+      });
+
+      // ASSERT
+      expect(repo.setTenantModules).toHaveBeenCalledWith('tenant-1', ['leads'], actor.sub);
+      expect(result.enabledModules).toEqual(['leads']);
+    });
+  });
+
   describe('getAuditLogs / exportAuditLogsCsv', () => {
     const auditLog = {
       id: 'log-1',
@@ -375,6 +411,53 @@ describe('SuperAdminService', () => {
         expect.objectContaining({ to: 'admin@funeraria-demo.com' }),
       );
       expect(result.adminUserId).toBe('admin-user-1');
+    });
+
+    it('passes enabledModules through unchanged when provided', async () => {
+      // ARRANGE
+      repo.findTenantBySlug.mockResolvedValue(null);
+      repo.createTenantWithAdmin.mockResolvedValue({
+        tenant: baseTenant,
+        adminUserId: 'admin-user-1',
+      } as never);
+
+      // ACT
+      await service.createTenant(actor, {
+        name: 'Parque Cementerio',
+        slug: 'parque-cementerio',
+        adminEmail: 'admin@parque-cementerio.com',
+        plan: TenantPlan.BASIC,
+        enabledModules: ['obituaries', 'streaming', 'tribute_book', 'downloads'],
+      });
+
+      // ASSERT
+      expect(repo.createTenantWithAdmin).toHaveBeenCalledWith(
+        expect.objectContaining({
+          enabledModules: ['obituaries', 'streaming', 'tribute_book', 'downloads'],
+        }),
+      );
+    });
+
+    it('passes enabledModules as undefined when omitted (repository defaults to all 8)', async () => {
+      // ARRANGE
+      repo.findTenantBySlug.mockResolvedValue(null);
+      repo.createTenantWithAdmin.mockResolvedValue({
+        tenant: baseTenant,
+        adminUserId: 'admin-user-1',
+      } as never);
+
+      // ACT
+      await service.createTenant(actor, {
+        name: 'Funeraria Demo',
+        slug: 'funeraria-demo',
+        adminEmail: 'admin@funeraria-demo.com',
+        plan: TenantPlan.PRO,
+      });
+
+      // ASSERT
+      expect(repo.createTenantWithAdmin).toHaveBeenCalledWith(
+        expect.objectContaining({ enabledModules: undefined }),
+      );
     });
   });
 

@@ -41,6 +41,11 @@
     </mat-select>
   </mat-form-field>
 
+  <app-tenant-module-toggles
+    [value]="enabledModules"
+    (valueChange)="onModulesChange($event)"
+  />
+
   <div class="tenant-form__actions">
     <button type="button" class="btn-ghost" (click)="cancel.emit()" [disabled]="saving">
       Cancelar

@@ -4,13 +4,15 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 type UserPermissionRecord = { permission: string };
 
+type TenantFeatureFlagRecord = { feature: string; enabled: boolean };
+
 type AuthUserRecord = {
   id: string;
   email: string;
   passwordHash: string;
   role: UserRole;
   tenantId: string | null;
-  tenant: { status: TenantStatus } | null;
+  tenant: { status: TenantStatus; featureFlags: TenantFeatureFlagRecord[] } | null;
   lockedUntil: Date | null;
   loginAttempts: number;
   permissions: UserPermissionRecord[];
@@ -50,7 +52,7 @@ export class AuthRepository {
         role: true,
         tenantId: true,
         tenant: {
-          select: { status: true },
+          select: { status: true, featureFlags: { select: { feature: true, enabled: true } } },
         },
         lockedUntil: true,
         loginAttempts: true,
@@ -71,7 +73,7 @@ export class AuthRepository {
         role: true,
         tenantId: true,
         tenant: {
-          select: { status: true },
+          select: { status: true, featureFlags: { select: { feature: true, enabled: true } } },
         },
         lockedUntil: true,
         loginAttempts: true,
@@ -80,6 +82,13 @@ export class AuthRepository {
         },
       },
     }) as Promise<AuthUserRecord | null>;
+  }
+
+  findTenantFeatureFlags(tenantId: string): Promise<TenantFeatureFlagRecord[]> {
+    return this.prisma.tenantFeatureFlag.findMany({
+      where: { tenantId },
+      select: { feature: true, enabled: true },
+    });
   }
 
   findSessionById(sessionId: string) {

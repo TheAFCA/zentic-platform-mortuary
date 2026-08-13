@@ -16,8 +16,10 @@ import { JwtPayload } from '@zentic/shared-types';
 import { TributeBookService } from './tribute-book.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
+import { TenantModuleGuard } from '../../common/guards/tenant-module.guard';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { TenantId } from '../../common/decorators/tenant-id.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ListTributeMessagesQueryDto } from './dto/list-tribute-messages-query.dto';
@@ -29,7 +31,8 @@ import { GenerateTributeBookDto } from './dto/generate-tribute-book.dto';
 @ApiTags('tribute-book')
 @ApiBearerAuth()
 @Controller('tribute-book')
-@UseGuards(JwtAuthGuard, TenantGuard, PermissionGuard)
+@UseGuards(JwtAuthGuard, TenantGuard, TenantModuleGuard, PermissionGuard)
+@RequireModule('tribute_book')
 export class TributeBookController {
   constructor(private readonly tributeBookService: TributeBookService) {}
 

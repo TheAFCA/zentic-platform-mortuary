@@ -19,6 +19,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UserRole, JwtPayload } from '@zentic/shared-types';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
+import { UpdateTenantModulesDto } from './dto/update-tenant-modules.dto';
 import { SuspendTenantDto } from './dto/suspend-tenant.dto';
 import { ImpersonateTenantDto } from './dto/impersonate-tenant.dto';
 import { AuditLogQueryDto } from './dto/audit-log-query.dto';
@@ -61,6 +62,15 @@ export class SuperAdminController {
     @Body() dto: UpdateTenantDto,
   ) {
     return this.superAdminService.updateTenant(id, actor, dto);
+  }
+
+  @Patch('tenants/:id/modules')
+  updateTenantModules(
+    @Param('id') id: string,
+    @CurrentUser() actor: JwtPayload,
+    @Body() dto: UpdateTenantModulesDto,
+  ) {
+    return this.superAdminService.updateTenantModules(id, actor, dto);
   }
 
   @Post('tenants/:id/suspend')

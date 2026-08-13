@@ -17,8 +17,10 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ObituaryService } from './obituary.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
+import { TenantModuleGuard } from '../../common/guards/tenant-module.guard';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { TenantId } from '../../common/decorators/tenant-id.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { CreateObituaryDto } from './dto/create-obituary.dto';
@@ -29,7 +31,8 @@ import { CreateObituaryMessageDto } from './dto/create-obituary-message.dto';
 @ApiTags('obituaries')
 @ApiBearerAuth()
 @Controller('obituaries')
-@UseGuards(JwtAuthGuard, TenantGuard, PermissionGuard)
+@UseGuards(JwtAuthGuard, TenantGuard, TenantModuleGuard, PermissionGuard)
+@RequireModule('obituaries')
 export class ObituaryController {
   constructor(private readonly obituaryService: ObituaryService) {}
 

@@ -12,8 +12,10 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { VenuesService } from './venues.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
+import { TenantModuleGuard } from '../../common/guards/tenant-module.guard';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { TenantId } from '../../common/decorators/tenant-id.decorator';
 import { CreateVenueDto } from './dto/create-venue.dto';
 import { UpdateVenueDto } from './dto/update-venue.dto';
@@ -23,7 +25,8 @@ import { UpdateRoomDto } from './dto/update-room.dto';
 @ApiTags('admin/venues')
 @ApiBearerAuth()
 @Controller('admin/venues')
-@UseGuards(JwtAuthGuard, TenantGuard, PermissionGuard)
+@UseGuards(JwtAuthGuard, TenantGuard, TenantModuleGuard, PermissionGuard)
+@RequireModule('venues')
 export class VenuesController {
   constructor(private readonly venuesService: VenuesService) {}
 

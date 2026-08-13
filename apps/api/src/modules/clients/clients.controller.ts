@@ -13,8 +13,10 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ClientsService } from './clients.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
+import { TenantModuleGuard } from '../../common/guards/tenant-module.guard';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { TenantId } from '../../common/decorators/tenant-id.decorator';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
@@ -23,7 +25,8 @@ import { ListClientsQueryDto } from './dto/list-clients-query.dto';
 @ApiTags('admin/clients')
 @ApiBearerAuth()
 @Controller('admin/clients')
-@UseGuards(JwtAuthGuard, TenantGuard, PermissionGuard)
+@UseGuards(JwtAuthGuard, TenantGuard, TenantModuleGuard, PermissionGuard)
+@RequireModule('clients')
 export class ClientsController {
   constructor(private readonly clientsService: ClientsService) {}
 
@@ -35,6 +38,7 @@ export class ClientsController {
 
   @Get('export')
   @RequirePermission('downloads:access')
+  @RequireModule('downloads')
   @Header('Content-Type', 'text/csv')
   @Header('Content-Disposition', 'attachment; filename="clientes.csv"')
   async exportCsv(

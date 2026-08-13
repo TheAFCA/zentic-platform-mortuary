@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, TenantPlan, TenantStatus, UserRole } from '@prisma/client';
+import { TENANT_MODULE_KEYS, TenantModuleKey } from '@zentic/shared-types';
 import { PrismaService } from '../../prisma/prisma.service';
 
 const ACTIVE_EVENT_STATUSES = ['SCHEDULED', 'LIVE', 'PAUSED'] as const;
@@ -32,6 +33,7 @@ export class SuperAdminRepository {
         orderBy: { createdAt: 'desc' },
         skip: (filters.page - 1) * filters.limit,
         take: filters.limit,
+        include: { featureFlags: true },
       }),
       this.prisma.tenant.count({ where }),
     ]);
@@ -39,7 +41,10 @@ export class SuperAdminRepository {
   }
 
   findTenantById(id: string) {
-    return this.prisma.tenant.findFirst({ where: { id, deletedAt: null } });
+    return this.prisma.tenant.findFirst({
+      where: { id, deletedAt: null },
+      include: { featureFlags: true },
+    });
   }
 
   findTenantBySlug(slug: string) {
@@ -54,7 +59,10 @@ export class SuperAdminRepository {
     adminEmail: string;
     adminPasswordHash: string;
     actorId: string;
+    enabledModules?: TenantModuleKey[];
   }) {
+    const enabledModules = data.enabledModules ?? [...TENANT_MODULE_KEYS];
+
     return this.prisma.$transaction(async (tx) => {
       const tenant = await tx.tenant.create({
         data: {
@@ -75,6 +83,14 @@ export class SuperAdminRepository {
         },
       });
 
+      await tx.tenantFeatureFlag.createMany({
+        data: TENANT_MODULE_KEYS.map((feature) => ({
+          tenantId: tenant.id,
+          feature,
+          enabled: enabledModules.includes(feature),
+        })),
+      });
+
       await tx.auditLog.create({
         data: {
           actorId: data.actorId,
@@ -83,11 +99,20 @@ export class SuperAdminRepository {
           entityType: 'Tenant',
           entityId: tenant.id,
           tenantId: tenant.id,
-          metadata: { slug: tenant.slug, plan: tenant.plan },
+          metadata: { slug: tenant.slug, plan: tenant.plan, enabledModules },
         },
       });
 
-      return { tenant, adminUserId: adminUser.id };
+      return {
+        tenant: {
+          ...tenant,
+          featureFlags: TENANT_MODULE_KEYS.map((feature) => ({
+            feature,
+            enabled: enabledModules.includes(feature),
+          })),
+        },
+        adminUserId: adminUser.id,
+      };
     });
   }
 
@@ -97,7 +122,11 @@ export class SuperAdminRepository {
     actorId: string,
   ) {
     return this.prisma.$transaction(async (tx) => {
-      const tenant = await tx.tenant.update({ where: { id }, data });
+      const tenant = await tx.tenant.update({
+        where: { id },
+        data,
+        include: { featureFlags: true },
+      });
       await tx.auditLog.create({
         data: {
           actorId,
@@ -113,6 +142,36 @@ export class SuperAdminRepository {
     });
   }
 
+  async setTenantModules(id: string, enabledModules: TenantModuleKey[], actorId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      await Promise.all(
+        TENANT_MODULE_KEYS.map((feature) =>
+          tx.tenantFeatureFlag.upsert({
+            where: { tenantId_feature: { tenantId: id, feature } },
+            create: { tenantId: id, feature, enabled: enabledModules.includes(feature) },
+            update: { enabled: enabledModules.includes(feature) },
+          }),
+        ),
+      );
+      const tenant = await tx.tenant.findUniqueOrThrow({
+        where: { id },
+        include: { featureFlags: true },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          role: UserRole.SUPER_ADMIN,
+          action: 'TENANT_MODULES_UPDATED',
+          entityType: 'Tenant',
+          entityId: id,
+          tenantId: id,
+          metadata: { enabledModules },
+        },
+      });
+      return tenant;
+    });
+  }
+
   async suspendTenant(id: string, reason: string | undefined, actorId: string) {
     return this.prisma.$transaction(async (tx) => {
       const tenant = await tx.tenant.update({
@@ -122,6 +181,7 @@ export class SuperAdminRepository {
           suspendedAt: new Date(),
           suspendReason: reason ?? null,
         },
+        include: { featureFlags: true },
       });
       await tx.auditLog.create({
         data: {
@@ -147,6 +207,7 @@ export class SuperAdminRepository {
           suspendedAt: null,
           suspendReason: null,
         },
+        include: { featureFlags: true },
       });
       await tx.auditLog.create({
         data: {
@@ -167,6 +228,7 @@ export class SuperAdminRepository {
       const tenant = await tx.tenant.update({
         where: { id },
         data: { status: TenantStatus.DELETED, deletedAt: new Date() },
+        include: { featureFlags: true },
       });
       await tx.auditLog.create({
         data: {

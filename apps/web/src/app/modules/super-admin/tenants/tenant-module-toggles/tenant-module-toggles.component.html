@@ -1,0 +1,16 @@
+<div class="module-toggles">
+  <p class="module-toggles__title">Módulos habilitados</p>
+  <p class="module-toggles__hint">
+    Dashboard, Usuarios, Marca y Cuenta están siempre disponibles para todo tenant.
+  </p>
+  <div class="module-toggles__grid">
+    <mat-checkbox
+      *ngFor="let key of modules"
+      [checked]="isChecked(key)"
+      (change)="toggle(key, $event.checked)"
+      [attr.data-testid]="'module-toggle-' + key"
+    >
+      <span class="module-toggles__label">{{ catalog[key].label }}</span>
+    </mat-checkbox>
+  </div>
+</div>

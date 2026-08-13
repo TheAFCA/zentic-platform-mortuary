@@ -15,6 +15,7 @@ import {
   Tenant as TenantDto,
   TenantPlan,
   TenantStatus,
+  TENANT_MODULE_KEYS,
   UserRole,
 } from '@zentic/shared-types';
 import { SuperAdminRepository } from './super-admin.repository';
@@ -22,6 +23,7 @@ import { EmailService } from '../email/email.service';
 import { hashPassword } from '../../common/security/password.util';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
+import { UpdateTenantModulesDto } from './dto/update-tenant-modules.dto';
 import { SuspendTenantDto } from './dto/suspend-tenant.dto';
 import { ImpersonateTenantDto } from './dto/impersonate-tenant.dto';
 import { AuditLogQueryDto } from './dto/audit-log-query.dto';
@@ -41,6 +43,7 @@ type TenantRecord = {
   suspendReason: string | null;
   createdAt: Date;
   updatedAt: Date;
+  featureFlags: { feature: string; enabled: boolean }[];
 };
 
 type AuditLogRecord = {
@@ -151,6 +154,7 @@ export class SuperAdminService {
         adminEmail: dto.adminEmail,
         adminPasswordHash,
         actorId: actor.sub,
+        enabledModules: dto.enabledModules,
       });
 
     await this.emailService.sendNewUserCredentialsEmail({
@@ -167,6 +171,18 @@ export class SuperAdminService {
     if (!tenant) throw new NotFoundException('Tenant no encontrado');
 
     const updated = await this.superAdminRepo.updateTenant(id, dto, actor.sub);
+    return this.toTenantDto(updated);
+  }
+
+  async updateTenantModules(id: string, actor: JwtPayload, dto: UpdateTenantModulesDto) {
+    const tenant = await this.superAdminRepo.findTenantById(id);
+    if (!tenant) throw new NotFoundException('Tenant no encontrado');
+
+    const updated = await this.superAdminRepo.setTenantModules(
+      id,
+      dto.enabledModules,
+      actor.sub,
+    );
     return this.toTenantDto(updated);
   }
 
@@ -458,6 +474,9 @@ export class SuperAdminService {
       suspendReason: tenant.suspendReason,
       createdAt: tenant.createdAt.toISOString(),
       updatedAt: tenant.updatedAt.toISOString(),
+      enabledModules: TENANT_MODULE_KEYS.filter(
+        (key) => tenant.featureFlags?.find((f) => f.feature === key)?.enabled === true,
+      ),
     };
   }
 
