@@ -6,6 +6,7 @@ import { StreamingService } from './streaming.service';
 import { StreamingRepository } from './streaming.repository';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { EmailModule } from '../email/email.module';
+import { InvitationsModule } from '../invitations/invitations.module';
 import { MuxStreamProvider } from './providers/mux-stream.provider';
 import { CloudflareStreamProvider } from './providers/cloudflare-stream.provider';
 import { streamProviderFactory } from './providers/stream-provider.factory';
@@ -21,6 +22,7 @@ import { RecordingService } from './services/recording.service';
     NotificationsModule,
     EmailModule,
     EventStateDomainModule,
+    InvitationsModule,
   ],
   controllers: [StreamingController, StreamWebhooksController],
   providers: [

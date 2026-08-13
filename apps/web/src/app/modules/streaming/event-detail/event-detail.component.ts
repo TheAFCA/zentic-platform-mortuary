@@ -866,17 +866,20 @@ import { getErrorMessage } from '../../../core/utils/error-message';
         }
 
         @if (activeTab() === 'recording') {
-          @if (ev.playbackUrl && (ev.status === 'LIVE' || ev.status === 'FINISHED')) {
+          @if (
+            ev.playbackUrl &&
+            (ev.status === 'LIVE' || ev.status === 'FINISHED' || ev.status === 'INTERRUPTED')
+          ) {
             <div class="recording-card">
               <app-hls-player
                 [src]="ev.playbackUrl"
                 [posterUrl]="ev.deceased.photoUrl ?? ''"
-                [mode]="ev.status === 'FINISHED' ? 'recording' : 'live'"
+                [mode]="ev.status === 'LIVE' ? 'live' : 'recording'"
                 (playbackRefreshRequested)="refreshPlaybackUrl()"
               >
                 La grabación estará disponible cuando finalice el evento
               </app-hls-player>
-              @if (ev.status === 'FINISHED') {
+              @if (ev.status === 'FINISHED' || ev.status === 'INTERRUPTED') {
                 <div class="recording-card__footer">
                   Grabación disponible — descárgala desde el panel de administración
                 </div>
@@ -890,6 +893,8 @@ import { getErrorMessage } from '../../../core/utils/error-message';
                   <p>La grabación estará disponible cuando finalice el evento</p>
                 } @else if (ev.status === 'SCHEDULED') {
                   <p>El evento aún no ha iniciado</p>
+                } @else if (ev.status === 'INTERRUPTED') {
+                  <p>La transmisión se interrumpió y la grabación aún se está procesando</p>
                 } @else {
                   <p>No hay grabación disponible</p>
                 }

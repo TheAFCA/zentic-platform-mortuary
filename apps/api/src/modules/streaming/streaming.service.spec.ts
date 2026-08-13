@@ -28,6 +28,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { StreamAccessService } from './stream-access.service';
 import { EventStateMachineService } from './domain/event-state-machine.service';
 import { ProvisioningSagaService } from './domain/provisioning-saga.service';
+import { InvitationsService } from '../invitations/invitations.service';
 
 describe('StreamingService', () => {
   let service: StreamingService;
@@ -42,6 +43,7 @@ describe('StreamingService', () => {
   let mockEmailService: jest.Mocked<EmailService>;
   let mockStreamAccess: jest.Mocked<StreamAccessService>;
   let mockStateMachine: any;
+  let mockInvitationsService: any;
   let mockPrisma: any;
   let randomBytesSpy: jest.SpyInstance;
 
@@ -331,6 +333,10 @@ describe('StreamingService', () => {
       transitionIdempotent: idempotentMock,
     } as any;
 
+    mockInvitationsService = {
+      archiveByEventId: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
     mockPrisma = {
       event: {
         update: jest.fn(),
@@ -371,6 +377,7 @@ describe('StreamingService', () => {
           },
         },
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: InvitationsService, useValue: mockInvitationsService },
       ],
     }).compile();
 
@@ -429,6 +436,31 @@ describe('StreamingService', () => {
       await expect(service.findOne(tenantId, eventId)).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    it('should expose playbackUrl for an INTERRUPTED event (recording may already exist)', async () => {
+      const recordingUrl = 'https://example.com/recording.mp4';
+      mockRepo.findById.mockResolvedValue({
+        ...mockEventFindById,
+        status: 'INTERRUPTED',
+        recordingUrl,
+      } as any);
+
+      const result = await service.findOne(tenantId, eventId);
+
+      expect(result.playbackUrl).toBe(recordingUrl);
+    });
+
+    it('should NOT expose playbackUrl for a SCHEDULED event', async () => {
+      mockRepo.findById.mockResolvedValue({
+        ...mockEventFindById,
+        status: 'SCHEDULED',
+        recordingUrl: 'https://example.com/recording.mp4',
+      } as any);
+
+      const result = await service.findOne(tenantId, eventId);
+
+      expect(result.playbackUrl).toBeNull();
     });
   });
 
@@ -498,6 +530,19 @@ describe('StreamingService', () => {
       } as any);
 
       const result = await service.findPublic('finished-event');
+
+      expect(result.recordingUrl).toBe(recordingUrl);
+    });
+
+    it('should include recordingUrl when status is INTERRUPTED (recording may already exist)', async () => {
+      const recordingUrl = 'https://example.com/recording.mp4';
+      mockRepo.findBySlug.mockResolvedValue({
+        ...mockEventFindBySlug,
+        status: 'INTERRUPTED',
+        recordingUrl,
+      } as any);
+
+      const result = await service.findPublic('interrupted-event');
 
       expect(result.recordingUrl).toBe(recordingUrl);
     });
@@ -1217,6 +1262,11 @@ describe('StreamingService', () => {
 
       expect(mockRepo.softDelete).toHaveBeenCalledWith(tenantId, eventId);
       expect(result.status).toBe('CANCELLED');
+      // RN-INV-002: cancelar un evento debe archivar sus invitaciones.
+      expect(mockInvitationsService.archiveByEventId).toHaveBeenCalledWith(
+        tenantId,
+        eventId,
+      );
     });
 
     it('should throw NotFoundException when event not found', async () => {

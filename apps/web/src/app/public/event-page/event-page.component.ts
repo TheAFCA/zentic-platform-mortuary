@@ -16,6 +16,7 @@ import {
 } from '../../core/services/streaming-socket.service';
 import { EventStatus } from '@zentic/shared-types';
 import { HlsPlayerComponent } from '../../shared/molecules/hls-player/hls-player.component';
+import { PoweredByBadgeComponent } from '../../shared/atoms/powered-by-badge/powered-by-badge.component';
 import { getErrorMessage } from '../../core/utils/error-message';
 
 /** Iconos de reacción rápida disponibles */
@@ -54,6 +55,7 @@ const REACTION_ICONS = [
     MatSnackBarModule,
     MatTooltipModule,
     HlsPlayerComponent,
+    PoweredByBadgeComponent,
   ],
   styles: `
     :host {
@@ -800,6 +802,7 @@ const REACTION_ICONS = [
     }
   `,
   template: `
+    <app-powered-by-badge />
     @if (loading()) {
       <div class="stream-room__loading">
         <mat-spinner diameter="40" />
@@ -938,11 +941,15 @@ const REACTION_ICONS = [
             <div class="stream-room__main">
               <!-- Player -->
               <section class="stream-room__player" aria-label="Reproductor de transmisión">
-                @if (event.status === 'LIVE' || event.status === 'FINISHED') {
+                @if (
+                  event.status === 'LIVE' ||
+                  event.status === 'FINISHED' ||
+                  event.status === 'INTERRUPTED'
+                ) {
                   <app-hls-player
                     [src]="event.playbackUrl"
                     [posterUrl]="event.deceased?.photoUrl ?? ''"
-                    [mode]="event.status === 'FINISHED' ? 'recording' : 'live'"
+                    [mode]="event.status === 'LIVE' ? 'live' : 'recording'"
                     (playbackRefreshRequested)="refreshPlaybackUrl()"
                   />
                 } @else {
@@ -1230,7 +1237,7 @@ export class EventPageComponent {
     this.socket.streamStatus$.subscribe((status) => {
       const prevStatus = this.evt()?.status as string | undefined;
       this.evt.update((e) => (e ? { ...e, status: status as EventStatus } : e));
-      if (prevStatus === 'LIVE' && status === 'FINISHED') {
+      if (prevStatus === 'LIVE' && (status === 'FINISHED' || status === 'INTERRUPTED')) {
         this.pollRecordingUrl();
       }
     });
@@ -1259,7 +1266,10 @@ export class EventPageComponent {
           this.connectSocket();
         }
 
-        if ((ev.status as string) === 'FINISHED' && !ev.recordingReady) {
+        if (
+          (ev.status === EventStatus.FINISHED || ev.status === EventStatus.INTERRUPTED) &&
+          !ev.recordingReady
+        ) {
           this.pollRecordingUrl();
         }
       },
@@ -1291,7 +1301,9 @@ export class EventPageComponent {
     const hasPrivatePlayback =
       !event.isPublic &&
       Boolean(event.playbackUrl) &&
-      (event.status === EventStatus.LIVE || event.status === EventStatus.FINISHED);
+      (event.status === EventStatus.LIVE ||
+        event.status === EventStatus.FINISHED ||
+        event.status === EventStatus.INTERRUPTED);
     if (!hasPrivatePlayback) return;
 
     this.playbackRefreshTimer = setInterval(() => this.refreshPlaybackUrl(), 45 * 60 * 1000);
