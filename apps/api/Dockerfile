@@ -17,6 +17,7 @@ RUN pnpm install --frozen-lockfile
 COPY prisma ./prisma
 COPY packages/shared-types ./packages/shared-types
 COPY apps/api ./apps/api
+RUN pnpm --filter @zentic/shared-types build
 RUN pnpm prisma generate
 RUN pnpm --filter @zentic/api build
 
@@ -27,6 +28,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build /app/packages/shared-types/dist ./packages/shared-types/dist
 COPY prisma ./prisma
 
 EXPOSE 3000
