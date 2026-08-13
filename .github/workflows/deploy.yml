@@ -65,25 +65,3 @@ jobs:
           tags: |
             ghcr.io/${{ env.OWNER_LC }}/zentic-web:latest
             ghcr.io/${{ env.OWNER_LC }}/zentic-web:${{ github.ref_name }}
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build-and-push
-
-    steps:
-      #######################################
-      # Trigger Portainer Stack Redeploy
-      #######################################
-      - name: Deploy API stack via Portainer webhook
-        env:
-          PORTAINER_WEBHOOK_API: ${{ secrets.PORTAINER_WEBHOOK_API }}
-        run: |
-          test -n "$PORTAINER_WEBHOOK_API"
-          curl -X POST "$PORTAINER_WEBHOOK_API"
-
-      - name: Deploy Web stack via Portainer webhook
-        env:
-          PORTAINER_WEBHOOK_WEB: ${{ secrets.PORTAINER_WEBHOOK_WEB }}
-        run: |
-          test -n "$PORTAINER_WEBHOOK_WEB"
-          curl -X POST "$PORTAINER_WEBHOOK_WEB"
