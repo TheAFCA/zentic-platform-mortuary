@@ -116,6 +116,49 @@ describe('HlsPlayerComponent', () => {
     expect(fixture.componentInstance.status()).toBe('ready');
   });
 
+  it('renders no native controls in live mode and auto-unmutes once ready', async () => {
+    vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('');
+    fixture.componentRef.setInput('src', 'https://stream.example/live.m3u8');
+    fixture.componentRef.setInput('mode', 'live');
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(hlsMockState.instances).toHaveLength(1));
+    const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+    expect(video.hasAttribute('controls')).toBe(false);
+    expect(video.muted).toBe(true);
+
+    emitHls(latestHlsInstance(), 'manifest-parsed');
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.status()).toBe('ready');
+    expect(video.muted).toBe(false);
+  });
+
+  it('keeps native controls (with seek) for finished recordings', async () => {
+    vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('');
+    fixture.componentRef.setInput('src', 'https://stream.example/recording.m3u8');
+    fixture.componentRef.setInput('mode', 'recording');
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(hlsMockState.instances).toHaveLength(1));
+
+    const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+    expect(video.hasAttribute('controls')).toBe(true);
+  });
+
+  it('refuses to pause a live stream', async () => {
+    vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('');
+    const playSpy = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+    fixture.componentRef.setInput('src', 'https://stream.example/live.m3u8');
+    fixture.componentRef.setInput('mode', 'live');
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(hlsMockState.instances).toHaveLength(1));
+    const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+    playSpy.mockClear();
+
+    video.dispatchEvent(new Event('pause'));
+
+    expect(playSpy).toHaveBeenCalledOnce();
+  });
+
   it('destroys playback and removes listeners when src becomes null', async () => {
     vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('');
     fixture.componentRef.setInput('src', 'https://stream.example/first.m3u8');
