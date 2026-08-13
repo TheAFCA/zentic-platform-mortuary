@@ -3,7 +3,8 @@
 // Naming: tablas en PascalCase (Prisma), columnas en camelCase (Prisma) / snake_case en DB
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
