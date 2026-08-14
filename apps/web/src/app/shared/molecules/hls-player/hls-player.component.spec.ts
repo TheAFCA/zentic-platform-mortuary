@@ -116,7 +116,7 @@ describe('HlsPlayerComponent', () => {
     expect(fixture.componentInstance.status()).toBe('ready');
   });
 
-  it('renders no native controls in live mode and auto-unmutes once ready', async () => {
+  it('renders no native controls in live mode and stays muted until ready (no auto-unmute without a gesture)', async () => {
     vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('');
     fixture.componentRef.setInput('src', 'https://stream.example/live.m3u8');
     fixture.componentRef.setInput('mode', 'live');
@@ -130,6 +130,24 @@ describe('HlsPlayerComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.status()).toBe('ready');
+    expect(video.muted).toBe(true);
+  });
+
+  it('unmutes only on a genuine user interaction, never automatically', async () => {
+    vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('');
+    fixture.componentRef.setInput('src', 'https://stream.example/live.m3u8');
+    fixture.componentRef.setInput('mode', 'live');
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(hlsMockState.instances).toHaveLength(1));
+    const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+
+    emitHls(latestHlsInstance(), 'manifest-parsed');
+    fixture.detectChanges();
+    expect(video.muted).toBe(true);
+
+    document.dispatchEvent(new Event('scroll'));
+    fixture.detectChanges();
+
     expect(video.muted).toBe(false);
   });
 

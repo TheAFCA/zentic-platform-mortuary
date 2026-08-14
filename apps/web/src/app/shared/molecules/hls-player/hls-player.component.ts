@@ -258,6 +258,13 @@ export class HlsPlayerComponent implements OnDestroy {
    * scrollear o pasar a pantalla completa "destrababa" el stream: eran los primeros
    * eventos reales de interacción. Este listener automatiza exactamente eso, una sola
    * vez por interacción real, en vez de depender de que el usuario lo descubra solo.
+   *
+   * También es el único momento seguro para activar el audio automáticamente: en una
+   * pestaña sin Media Engagement Index alto para este origen (primera visita del
+   * espectador, típico en la página pública tras un enlace compartido), Chrome bloquea
+   * — y pausa — un `video.muted = false` disparado por script sin un gesto real, aunque
+   * el video ya estuviera reproduciéndose muted. Por eso el auto-unmute NO se dispara al
+   * llegar a "ready" (ver markReady) sino acá, donde si hay un gesto legítimo.
    */
   private static readonly INTERACTION_EVENTS: Array<keyof DocumentEventMap> = [
     'pointerdown',
@@ -268,7 +275,11 @@ export class HlsPlayerComponent implements OnDestroy {
   ];
   private readonly onInteraction = (): void => {
     const video = this.activeVideo;
-    if (video && this.mode() === 'live' && video.paused) {
+    if (!video || this.mode() !== 'live') return;
+    if (!this.userToggledMute && this.liveMuted()) {
+      this.liveMuted.set(false);
+    }
+    if (video.paused) {
       video.play().catch(() => {});
     }
   };
@@ -432,11 +443,15 @@ export class HlsPlayerComponent implements OnDestroy {
     this.playbackRefreshRequested.emit();
   }
 
+  /**
+   * No auto-unmutea acá: hacerlo sin un gesto real del usuario dispara el bloqueo de
+   * autoplay-con-audio de Chrome en pestañas sin engagement previo con el origen,
+   * pausando el video silenciosamente (ver el comentario de onInteraction). El video
+   * arranca y se queda muted hasta la primera interacción real — sigue reproduciéndose
+   * en vivo siempre, con o sin esa interacción.
+   */
   private markReady(): void {
     this.status.set('ready');
-    if (this.mode() === 'live' && !this.userToggledMute) {
-      this.liveMuted.set(false);
-    }
   }
 
   /** Impide pausar o retroceder en vivo: sin barra de progreso ni botón de play, el usuario siempre ve el borde en vivo. */
