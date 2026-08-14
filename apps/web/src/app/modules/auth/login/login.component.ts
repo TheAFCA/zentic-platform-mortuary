@@ -11,6 +11,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthSessionService } from '../../../core/services/auth-session.service';
+import { TenantBrandingApiService } from '../../../core/services/tenant-branding-api.service';
 
 type LoginBenefit = {
   icon: string;
@@ -49,6 +50,7 @@ type TenantBrand = {
 export class LoginComponent {
   private readonly fb = inject(FormBuilder);
   private readonly session = inject(AuthSessionService);
+  private readonly brandingApi = inject(TenantBrandingApiService);
 
   readonly loading = signal(false);
   readonly showPassword = signal(false);
@@ -56,13 +58,38 @@ export class LoginComponent {
   readonly submitLabel = computed(() => (this.loading() ? 'Ingresando...' : 'Ingresar'));
 
   readonly tenantBrand = signal<TenantBrand>({
-    name: 'Funeraria La Esperanza',
-    logo: 'FE',
+    name: 'Tu funeraria',
+    logo: '··',
     subtitle: 'Tenant activo',
     primary: '#0F5E59',
     primaryHover: '#0B4C48',
     secondary: '#6B9080',
   });
+
+  constructor() {
+    this.brandingApi.getBranding().subscribe({
+      next: (branding) => {
+        if (!branding) return;
+        this.tenantBrand.set({
+          name: branding.name,
+          logo: this.deriveInitials(branding.name),
+          subtitle: 'Tenant activo',
+          primary: branding.primaryColor,
+          primaryHover: `color-mix(in srgb, ${branding.primaryColor} 85%, black)`,
+          secondary: branding.secondaryColor,
+        });
+      },
+      // Si falla, se queda con el placeholder genérico de arriba — no bloquea el login.
+      error: () => {},
+    });
+  }
+
+  private deriveInitials(name: string): string {
+    const words = name.trim().split(/\s+/).filter(Boolean);
+    if (words.length === 0) return '';
+    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+    return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+  }
 
   readonly benefits: LoginBenefit[] = [
     {
