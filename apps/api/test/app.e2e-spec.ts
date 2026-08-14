@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
+// Sin esModuleInterop en tsconfig, el default import de supertest resuelve a `.default`
+// (undefined) en runtime — mismo patrón que en invitations.e2e-spec.ts.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import request = require('supertest');
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 

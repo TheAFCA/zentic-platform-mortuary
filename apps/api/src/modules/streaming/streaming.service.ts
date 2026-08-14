@@ -41,6 +41,7 @@ import { StreamAccessService } from './stream-access.service';
 import { EventStateMachineService } from './domain/event-state-machine.service';
 import { TransitionContext } from './domain/event-state-machine.service';
 import { ProvisioningSagaService } from './domain/provisioning-saga.service';
+import { InvitationsService } from '../invitations/invitations.service';
 
 /**
  * Servicio principal del módulo de Streaming.
@@ -75,6 +76,7 @@ export class StreamingService {
     private readonly stateMachine: EventStateMachineService,
     private readonly prisma: PrismaService,
     private readonly provisioningSaga: ProvisioningSagaService,
+    private readonly invitationsService: InvitationsService,
   ) {}
 
   // ── CRUD Events ────────────────────────────────────────────────────
@@ -100,8 +102,13 @@ export class StreamingService {
    */
   async findOne(tenantId: string, id: string) {
     const event = await this.findOneEntity(tenantId, id);
+    // Un evento INTERRUPTED (señal perdida) puede tener una grabación válida ya generada
+    // por el proveedor (recording.ready no depende del estado local) — se expone igual
+    // que en LIVE/FINISHED en vez de esperar a que el operador finalice manualmente.
     const needsPlayback =
-      event.status === 'LIVE' || event.status === 'FINISHED';
+      event.status === 'LIVE' ||
+      event.status === 'FINISHED' ||
+      event.status === 'INTERRUPTED';
     const playbackUrl = needsPlayback
       ? await this.resolvePlaybackUrl(event)
       : null;
@@ -198,8 +205,9 @@ export class StreamingService {
 
   /**
    * Obtiene los datos públicos de un evento para la página del viewer.
-   * No requiere autenticación. La grabación solo se expone si el evento
-   * está en estado FINISHED.
+   * No requiere autenticación. La grabación se expone en FINISHED e
+   * INTERRUPTED (un evento interrumpido puede tener ya una grabación
+   * válida generada por el proveedor, independiente del estado local).
    *
    * @param slug - Slug único del evento
    * @throws NotFoundException si el evento no existe o fue eliminado
@@ -215,6 +223,8 @@ export class StreamingService {
       (await this.streamAccess.canAccess(accessToken, event.id));
 
     const playbackUrl = hasAccess ? await this.resolvePlaybackUrl(event) : null;
+    const isRecordingStatus =
+      event.status === 'FINISHED' || event.status === 'INTERRUPTED';
 
     return {
       id: hasAccess ? event.id : null,
@@ -225,8 +235,7 @@ export class StreamingService {
       scheduledAt: event.scheduledAt,
       startedAt: event.startedAt,
       finishedAt: event.finishedAt,
-      recordingUrl:
-        hasAccess && event.status === 'FINISHED' ? playbackUrl : null,
+      recordingUrl: hasAccess && isRecordingStatus ? playbackUrl : null,
       playbackUrl,
       recordingReady: event.recordingReady,
       isPublic: event.isPublic,
@@ -520,6 +529,9 @@ export class StreamingService {
       );
     }
     const removed = await this.repo.softDelete(tenantId, id);
+    // RN-INV-002: al cancelar un evento, sus invitaciones se archivan (no se borran) —
+    // el enlace público sigue resolviendo (RN-INV-003), solo cambia de estado.
+    await this.invitationsService.archiveByEventId(tenantId, id);
     return this.withoutStreamingSecrets(removed);
   }
 

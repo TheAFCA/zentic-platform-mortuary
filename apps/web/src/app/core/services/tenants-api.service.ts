@@ -1,6 +1,12 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { PaginatedResponse, Tenant, TenantPlan, TenantStatus } from '@zentic/shared-types';
+import {
+  PaginatedResponse,
+  Tenant,
+  TenantModuleKey,
+  TenantPlan,
+  TenantStatus,
+} from '@zentic/shared-types';
 import { environment } from '../../../environments/environment';
 
 export interface TenantListFilters {
@@ -17,6 +23,7 @@ export interface CreateTenantPayload {
   country?: string;
   adminEmail: string;
   plan: TenantPlan;
+  enabledModules?: TenantModuleKey[];
 }
 
 export interface UpdateTenantPayload {
@@ -65,6 +72,10 @@ export class TenantsApiService {
 
   update(id: string, payload: UpdateTenantPayload) {
     return this.http.patch<Tenant>(`${this.baseUrl}/${id}`, payload);
+  }
+
+  setModules(id: string, enabledModules: TenantModuleKey[]) {
+    return this.http.patch<Tenant>(`${this.baseUrl}/${id}/modules`, { enabledModules });
   }
 
   suspend(id: string, reason?: string) {

@@ -263,7 +263,7 @@ describe('EventFormComponent', () => {
   it('should load venues, clients, and operators on init', () => {
     createComponent(null);
     expect(mockVenuesApi.list).toHaveBeenCalledTimes(1);
-    expect(mockClientsApi.list).toHaveBeenCalledWith({ page: 1, limit: 200 });
+    expect(mockClientsApi.list).toHaveBeenCalledWith({ page: 1, limit: 100 });
     expect(mockUsersService.list).toHaveBeenCalledTimes(1);
   });
 

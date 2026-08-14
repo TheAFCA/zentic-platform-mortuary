@@ -15,8 +15,10 @@ import { JwtPayload } from '@zentic/shared-types';
 import { InvitationsService } from './invitations.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
+import { TenantModuleGuard } from '../../common/guards/tenant-module.guard';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { TenantId } from '../../common/decorators/tenant-id.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
@@ -27,7 +29,8 @@ import { ListInvitationsQueryDto } from './dto/list-invitations-query.dto';
 @ApiTags('invitations')
 @ApiBearerAuth()
 @Controller('invitations')
-@UseGuards(JwtAuthGuard, TenantGuard, PermissionGuard)
+@UseGuards(JwtAuthGuard, TenantGuard, TenantModuleGuard, PermissionGuard)
+@RequireModule('invitations')
 export class InvitationsController {
   constructor(private readonly invitationsService: InvitationsService) {}
 

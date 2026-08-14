@@ -32,6 +32,7 @@ describe('permissionGuard', () => {
       role: UserRole.TENANT_ADMIN,
       tenantId: 'tenant-1',
       permissions: [],
+      enabledModules: [],
     };
     authState.setUser(user);
 
@@ -45,6 +46,7 @@ describe('permissionGuard', () => {
       role: UserRole.OPERATOR,
       tenantId: 'tenant-1',
       permissions: ['leads:read'],
+      enabledModules: [],
     });
 
     const result = runGuard({ permissions: ['settings:manage'] });
@@ -59,6 +61,7 @@ describe('permissionGuard', () => {
       role: UserRole.OPERATOR,
       tenantId: 'tenant-1',
       permissions: ['leads:read'],
+      enabledModules: [],
     });
 
     expect(runGuard({ permissions: ['leads:read'] })).toBe(true);
@@ -71,6 +74,7 @@ describe('permissionGuard', () => {
       role: UserRole.TENANT_ADMIN,
       tenantId: 'tenant-1',
       permissions: [],
+      enabledModules: [],
     });
 
     const result = runGuard({ role: UserRole.SUPER_ADMIN });
@@ -85,6 +89,7 @@ describe('permissionGuard', () => {
       role: UserRole.OPERATOR,
       tenantId: 'tenant-1',
       permissions: [],
+      enabledModules: [],
     });
 
     expect(runGuard({})).toBe(true);

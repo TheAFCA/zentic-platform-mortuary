@@ -27,6 +27,7 @@ import {
 } from '../../common/security/token.util';
 import { EmailService } from '../email/email.service';
 import { SecurityEventsService } from '../security-events/security-events.service';
+import { toEnabledModules } from '../../common/utils/tenant-modules.util';
 
 type AuthUserRecord = NonNullable<
   Awaited<ReturnType<AuthRepository['findUserForLogin']>>
@@ -196,7 +197,24 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
-    return this.toAuthUser(currentUser);
+    const authUser = this.toAuthUser(currentUser);
+
+    // Un Super Admin impersonando debe reflejar el tenant impersonado (tenantId
+    // y enabledModules), no su propio "tenant" (null) — antes de este fix,
+    // dashboard-layout.component.ts tenía que trabajar alrededor de este hueco
+    // (ver el guard de pendingMessagesBadge en el frontend).
+    if (user.impersonatedTenantId) {
+      const flags = await this.authRepository.findTenantFeatureFlags(
+        user.impersonatedTenantId,
+      );
+      return {
+        ...authUser,
+        tenantId: user.impersonatedTenantId,
+        enabledModules: toEnabledModules(flags),
+      };
+    }
+
+    return authUser;
   }
 
   async changePassword(
@@ -256,6 +274,7 @@ export class AuthService {
       role: user.role,
       tenantId: user.tenantId,
       permissions: this.toPermissions(user.permissions),
+      enabledModules: toEnabledModules(user.tenant?.featureFlags),
     };
   }
 

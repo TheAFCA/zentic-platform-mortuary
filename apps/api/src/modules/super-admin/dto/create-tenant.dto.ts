@@ -1,12 +1,18 @@
 import {
+  IsArray,
   IsEmail,
   IsEnum,
+  IsIn,
   IsOptional,
   IsString,
   Matches,
   MaxLength,
 } from 'class-validator';
-import { TenantPlan } from '@zentic/shared-types';
+import {
+  TenantPlan,
+  TENANT_MODULE_KEYS,
+  TenantModuleKey,
+} from '@zentic/shared-types';
 
 export class CreateTenantDto {
   @IsString()
@@ -29,4 +35,10 @@ export class CreateTenantDto {
 
   @IsEnum(TenantPlan)
   plan!: TenantPlan;
+
+  /** Si se omite, se habilitan los 8 módulos configurables por defecto. */
+  @IsOptional()
+  @IsArray()
+  @IsIn(TENANT_MODULE_KEYS, { each: true })
+  enabledModules?: TenantModuleKey[];
 }

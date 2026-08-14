@@ -34,36 +34,21 @@
 
 .dashboard-layout__brand {
   display: flex;
-  align-items: center;
-  gap: 0.85rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
   padding: 0.1rem 0.35rem;
 }
 
-.dashboard-layout__brand-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  flex: 0 0 auto;
-  border-radius: 0.8rem;
-  background: linear-gradient(135deg, panel.$brand-primary, panel.$brand-primary-hover);
-  color: #fff;
-  font-weight: 700;
-  font-size: 1rem;
-  box-shadow: 0 8px 20px rgba(15, 94, 89, 0.35);
-}
-
-.dashboard-layout__brand-name {
-  margin: 0;
-  color: #fff;
-  font-weight: 700;
-  font-size: 1.05rem;
-  letter-spacing: 0.02em;
+.dashboard-layout__brand-logo {
+  display: block;
+  height: 3.5rem;
+  width: auto;
+  max-width: 100%;
 }
 
 .dashboard-layout__brand-tag {
-  margin: 0.05rem 0 0;
+  margin: 0;
   color: rgba(255, 255, 255, 0.4);
   font-size: 0.72rem;
 }
@@ -268,7 +253,7 @@
     padding: 1rem 0.5rem;
   }
 
-  .dashboard-layout__brand-name,
+  .dashboard-layout__brand-logo,
   .dashboard-layout__brand-tag {
     display: none;
   }

@@ -39,6 +39,7 @@ type AuthRepositoryMock = jest.Mocked<
     AuthRepository,
     | 'findUserForLogin'
     | 'findUserById'
+    | 'findTenantFeatureFlags'
     | 'findSessionById'
     | 'findPasswordResetByTokenHash'
     | 'createSession'
@@ -119,7 +120,7 @@ describe('AuthService', () => {
       passwordHash: 'stored-hash',
       role: UserRole.TENANT_ADMIN,
       tenantId: 'tenant-1',
-      tenant: { status: TenantStatus.ACTIVE },
+      tenant: { status: TenantStatus.ACTIVE, featureFlags: [] },
       lockedUntil: null,
       loginAttempts: 0,
       permissions: [{ permission: 'users:manage' }],
@@ -142,6 +143,7 @@ describe('AuthService', () => {
     authRepository = {
       findUserForLogin: jest.fn(),
       findUserById: jest.fn(),
+      findTenantFeatureFlags: jest.fn(),
       findSessionById: jest.fn(),
       findPasswordResetByTokenHash: jest.fn(),
       createSession: jest.fn(),
@@ -237,6 +239,7 @@ describe('AuthService', () => {
       role: UserRole.TENANT_ADMIN,
       tenantId: 'tenant-1',
       permissions: ['users:manage'],
+      enabledModules: [],
     });
     expect(authRepository.updateLoginState).toHaveBeenCalledWith('user-1', {
       loginAttempts: 0,
@@ -311,7 +314,7 @@ describe('AuthService', () => {
   it('rejects login for inactive tenants', async () => {
     authRepository.findUserForLogin.mockResolvedValue({
       ...createTenantUser(),
-      tenant: { status: TenantStatus.SUSPENDED },
+      tenant: { status: TenantStatus.SUSPENDED, featureFlags: [] },
     });
 
     await expect(
@@ -437,6 +440,66 @@ describe('AuthService', () => {
       }),
     ).resolves.toEqual(
       expect.objectContaining({ id: 'user-1', role: UserRole.TENANT_ADMIN }),
+    );
+  });
+
+  it("returns the tenant's enabledModules derived from its feature flags", async () => {
+    authRepository.findUserById.mockResolvedValue({
+      ...createTenantUser(),
+      tenant: {
+        status: TenantStatus.ACTIVE,
+        featureFlags: [
+          { feature: 'leads', enabled: true },
+          { feature: 'venues', enabled: false },
+        ],
+      },
+    });
+
+    await expect(
+      service.me({
+        sub: 'user-1',
+        email: 'tenant@example.com',
+        role: UserRole.TENANT_ADMIN,
+        tenantId: 'tenant-1',
+        permissions: ['users:manage'],
+      }),
+    ).resolves.toEqual(expect.objectContaining({ enabledModules: ['leads'] }));
+  });
+
+  it('resolves tenantId and enabledModules from the impersonated tenant, not the super admin own (null) tenant', async () => {
+    authRepository.findUserById.mockResolvedValue({
+      id: 'super-1',
+      email: 'super@zentic.pro',
+      passwordHash: 'stored-hash',
+      role: UserRole.SUPER_ADMIN,
+      tenantId: null,
+      tenant: null,
+      lockedUntil: null,
+      loginAttempts: 0,
+      permissions: [],
+    } as AuthUserRecord);
+    authRepository.findTenantFeatureFlags.mockResolvedValue([
+      { feature: 'obituaries', enabled: true },
+      { feature: 'streaming', enabled: true },
+    ]);
+
+    const result = await service.me({
+      sub: 'super-1',
+      email: 'super@zentic.pro',
+      role: UserRole.SUPER_ADMIN,
+      tenantId: null,
+      permissions: [],
+      impersonatedTenantId: 'tenant-impersonated',
+    });
+
+    expect(authRepository.findTenantFeatureFlags).toHaveBeenCalledWith(
+      'tenant-impersonated',
+    );
+    expect(result).toEqual(
+      expect.objectContaining({
+        tenantId: 'tenant-impersonated',
+        enabledModules: expect.arrayContaining(['obituaries', 'streaming']),
+      }),
     );
   });
 

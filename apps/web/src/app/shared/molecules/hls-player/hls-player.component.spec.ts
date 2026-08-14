@@ -81,7 +81,8 @@ describe('HlsPlayerComponent', () => {
     vi.restoreAllMocks();
   });
 
-  it('uses native HLS when the browser reports Safari-compatible playback', async () => {
+  it('falls back to native HLS when hls.js is unsupported (Safari)', async () => {
+    hlsMockState.supported = false;
     vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('probably');
     const url = 'https://stream.example/live/manifest/video.m3u8';
 
@@ -89,15 +90,15 @@ describe('HlsPlayerComponent', () => {
     await fixture.whenStable();
 
     const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
-    expect(video.getAttribute('src')).toBe(url);
+    await vi.waitFor(() => expect(video.getAttribute('src')).toBe(url));
     expect(hlsMockState.instances).toHaveLength(0);
 
     video.dispatchEvent(new Event('canplay'));
     expect(fixture.componentInstance.status()).toBe('ready');
   });
 
-  it('uses hls.js when native HLS is unavailable', async () => {
-    vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('');
+  it('prefers hls.js over native playback even when canPlayType reports support', async () => {
+    vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('maybe');
     const url = 'https://stream.example/live/manifest/video.m3u8';
 
     fixture.componentRef.setInput('src', url);
@@ -113,6 +114,49 @@ describe('HlsPlayerComponent', () => {
 
     emitHls(hls, 'manifest-parsed');
     expect(fixture.componentInstance.status()).toBe('ready');
+  });
+
+  it('renders no native controls in live mode and auto-unmutes once ready', async () => {
+    vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('');
+    fixture.componentRef.setInput('src', 'https://stream.example/live.m3u8');
+    fixture.componentRef.setInput('mode', 'live');
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(hlsMockState.instances).toHaveLength(1));
+    const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+    expect(video.hasAttribute('controls')).toBe(false);
+    expect(video.muted).toBe(true);
+
+    emitHls(latestHlsInstance(), 'manifest-parsed');
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.status()).toBe('ready');
+    expect(video.muted).toBe(false);
+  });
+
+  it('keeps native controls (with seek) for finished recordings', async () => {
+    vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('');
+    fixture.componentRef.setInput('src', 'https://stream.example/recording.m3u8');
+    fixture.componentRef.setInput('mode', 'recording');
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(hlsMockState.instances).toHaveLength(1));
+
+    const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+    expect(video.hasAttribute('controls')).toBe(true);
+  });
+
+  it('refuses to pause a live stream', async () => {
+    vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('');
+    const playSpy = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+    fixture.componentRef.setInput('src', 'https://stream.example/live.m3u8');
+    fixture.componentRef.setInput('mode', 'live');
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(hlsMockState.instances).toHaveLength(1));
+    const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+    playSpy.mockClear();
+
+    video.dispatchEvent(new Event('pause'));
+
+    expect(playSpy).toHaveBeenCalledOnce();
   });
 
   it('destroys playback and removes listeners when src becomes null', async () => {

@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
-import { JwtModule } from '@nestjs/jwt';
 import { StreamingController } from './streaming.controller';
 import { StreamWebhooksController } from './stream-webhooks.controller';
 import { StreamingService } from './streaming.service';
 import { StreamingRepository } from './streaming.repository';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { EmailModule } from '../email/email.module';
+import { InvitationsModule } from '../invitations/invitations.module';
 import { MuxStreamProvider } from './providers/mux-stream.provider';
 import { CloudflareStreamProvider } from './providers/cloudflare-stream.provider';
 import { streamProviderFactory } from './providers/stream-provider.factory';
@@ -21,8 +21,8 @@ import { RecordingService } from './services/recording.service';
     ScheduleModule.forRoot(),
     NotificationsModule,
     EmailModule,
-    JwtModule.register({}),
     EventStateDomainModule,
+    InvitationsModule,
   ],
   controllers: [StreamingController, StreamWebhooksController],
   providers: [

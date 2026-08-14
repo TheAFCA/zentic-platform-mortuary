@@ -46,6 +46,7 @@ export class TenantsComponent implements OnInit {
   readonly saving = signal(false);
   readonly showForm = signal(false);
   readonly editingTenant = signal<Tenant | null>(null);
+  readonly editingFormValue = signal<TenantFormValue | null>(null);
   readonly formError = signal('');
 
   readonly confirmAction = signal<ConfirmAction | null>(null);
@@ -102,12 +103,21 @@ export class TenantsComponent implements OnInit {
   openCreate(): void {
     this.formError.set('');
     this.editingTenant.set(null);
+    this.editingFormValue.set(null);
     this.showForm.set(true);
   }
 
   openEdit(tenant: Tenant): void {
     this.formError.set('');
     this.editingTenant.set(tenant);
+    this.editingFormValue.set({
+      name: tenant.name,
+      slug: tenant.slug,
+      country: tenant.country || '',
+      adminEmail: '',
+      plan: tenant.plan,
+      enabledModules: tenant.enabledModules,
+    });
     this.showForm.set(true);
   }
 
@@ -121,26 +131,32 @@ export class TenantsComponent implements OnInit {
     this.formError.set('');
     this.saving.set(true);
 
-    const request = editing
-      ? this.tenantsApi.update(editing.id, {
-          name: value.name,
-          country: value.country,
-          plan: value.plan,
-        })
-      : this.tenantsApi.create(value);
+    const onSuccess = () => {
+      this.saving.set(false);
+      this.showForm.set(false);
+      this.notifications.success(editing ? 'Tenant actualizado' : 'Tenant creado');
+      this.load();
+    };
+    const onError = (error: unknown) => {
+      this.saving.set(false);
+      this.formError.set(getErrorMessage(error, 'No se pudo guardar el tenant'));
+    };
 
-    request.subscribe({
-      next: () => {
-        this.saving.set(false);
-        this.showForm.set(false);
-        this.notifications.success(editing ? 'Tenant actualizado' : 'Tenant creado');
-        this.load();
-      },
-      error: (error: unknown) => {
-        this.saving.set(false);
-        this.formError.set(getErrorMessage(error, 'No se pudo guardar el tenant'));
-      },
-    });
+    if (editing) {
+      this.tenantsApi
+        .update(editing.id, { name: value.name, country: value.country, plan: value.plan })
+        .subscribe({
+          next: () => {
+            this.tenantsApi.setModules(editing.id, value.enabledModules).subscribe({
+              next: onSuccess,
+              error: onError,
+            });
+          },
+          error: onError,
+        });
+    } else {
+      this.tenantsApi.create(value).subscribe({ next: onSuccess, error: onError });
+    }
   }
 
   askSuspend(tenant: Tenant): void {

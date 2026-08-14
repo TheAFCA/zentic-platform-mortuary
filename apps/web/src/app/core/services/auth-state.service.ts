@@ -1,5 +1,5 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { AuthUser, Permission, UserRole } from '@zentic/shared-types';
+import { AuthUser, Permission, TenantModuleKey, UserRole } from '@zentic/shared-types';
 
 @Injectable({ providedIn: 'root' })
 export class AuthStateService {
@@ -21,6 +21,18 @@ export class AuthStateService {
     if (!user) return false;
     if (user.role === UserRole.SUPER_ADMIN || user.role === UserRole.TENANT_ADMIN) return true;
     return user.permissions.includes(permission);
+  }
+
+  /**
+   * Segundo nivel de acceso, por encima de hasPermission(): a diferencia de esa, aquí NO hay
+   * bypass para TENANT_ADMIN — la restricción de módulos la decide el Super Admin y aplica al
+   * tenant completo, igual que TenantModuleGuard en el backend.
+   */
+  hasModule(module: TenantModuleKey): boolean {
+    const user = this._user();
+    if (!user) return false;
+    if (user.role === UserRole.SUPER_ADMIN) return true;
+    return user.enabledModules.includes(module);
   }
 
   clear() {

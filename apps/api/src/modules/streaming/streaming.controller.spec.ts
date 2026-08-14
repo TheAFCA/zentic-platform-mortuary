@@ -7,6 +7,7 @@ import { SendMessageDto } from './dto/send-message.dto';
 import { SendReactionDto } from './dto/send-reaction.dto';
 import { AccessCodeDto } from './dto/access-code.dto';
 import { StreamAccessService } from './stream-access.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
 describe('StreamingController', () => {
   let controller: StreamingController;
@@ -49,6 +50,7 @@ describe('StreamingController', () => {
       providers: [
         { provide: StreamingService, useValue: mockService },
         { provide: StreamAccessService, useValue: mockStreamAccess },
+        { provide: PrismaService, useValue: {} },
       ],
     }).compile();
 

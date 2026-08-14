@@ -54,7 +54,18 @@ describe('Invitations (e2e)', () => {
     const uniqueSuffix = Date.now();
     tenantSlug = `e2e-invitations-${uniqueSuffix}`;
     const tenant = await prisma.tenant.create({
-      data: { slug: tenantSlug, name: 'Funeraria E2E Invitaciones' },
+      data: {
+        slug: tenantSlug,
+        name: 'Funeraria E2E Invitaciones',
+        // 'streaming' hace falta porque RN-INV-002 ejercita DELETE /api/events/:id, del módulo
+        // de streaming, como parte de la cascada de archivado.
+        featureFlags: {
+          create: [
+            { feature: 'invitations', enabled: true },
+            { feature: 'streaming', enabled: true },
+          ],
+        },
+      },
     });
     tenantId = tenant.id;
 
@@ -114,6 +125,7 @@ describe('Invitations (e2e)', () => {
     await prisma.venue.deleteMany({ where: { tenantId } });
     await prisma.deceased.deleteMany({ where: { tenantId } });
     await prisma.user.deleteMany({ where: { tenantId } });
+    await prisma.tenantFeatureFlag.deleteMany({ where: { tenantId } });
     await prisma.tenant.delete({ where: { id: tenantId } });
     await app.close();
   });

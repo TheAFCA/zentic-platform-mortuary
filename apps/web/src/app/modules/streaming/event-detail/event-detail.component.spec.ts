@@ -301,6 +301,35 @@ describe('EventDetailComponent', () => {
     });
   });
 
+  describe('recording tab', () => {
+    it('renders the player for an INTERRUPTED event with a playbackUrl (the recording may already exist)', () => {
+      const { component, fixture } = setup();
+      component.event.set({
+        ...mockEvent,
+        status: 'INTERRUPTED',
+        playbackUrl: 'https://example.com/recording.m3u8',
+      } as any);
+      component.activeTab.set('recording');
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('app-hls-player')).not.toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain('No hay grabación disponible');
+    });
+
+    it('shows the empty state for a SCHEDULED event with no playbackUrl', () => {
+      const { component, fixture } = setup();
+      component.event.set({
+        ...mockEvent,
+        status: 'SCHEDULED',
+        playbackUrl: null,
+      } as any);
+      component.activeTab.set('recording');
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('app-hls-player')).toBeNull();
+    });
+  });
+
   describe('stopStream', () => {
     it('should call api.stopStream and disconnect socket', () => {
       const { component, api, socket, snackBar } = setup();

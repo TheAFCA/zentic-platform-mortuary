@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { permissionGuard } from '../../../core/guards/permission.guard';
+import { moduleGuard } from '../../../core/guards/module.guard';
 
 export const SETTINGS_ROUTES: Routes = [
   {
@@ -24,8 +25,8 @@ export const SETTINGS_ROUTES: Routes = [
       },
       {
         path: 'streaming',
-        canActivate: [permissionGuard],
-        data: { permissions: ['settings:read'] },
+        canActivate: [permissionGuard, moduleGuard],
+        data: { permissions: ['settings:read'], module: 'streaming' },
         loadComponent: () =>
           import('./streaming-settings/streaming-settings.component').then(
             (m) => m.StreamingSettingsComponent,

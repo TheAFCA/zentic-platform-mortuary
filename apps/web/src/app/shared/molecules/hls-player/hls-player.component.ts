@@ -28,10 +28,10 @@ export type PlayerMode = 'live' | 'recording';
       >
         <video
           #videoEl
-          controls
+          [attr.controls]="mode() === 'recording' ? true : null"
           class="hls-player__video"
           playsinline
-          [muted]="mode() === 'live' && status() !== 'ready'"
+          [muted]="mode() === 'live' ? liveMuted() : false"
           [attr.poster]="posterUrl() || null"
         ></video>
 
@@ -75,6 +75,24 @@ export type PlayerMode = 'live' | 'recording';
           <div class="hls-player__live-badge">
             <span class="hls-player__dot"></span>
             EN VIVO
+          </div>
+          <div class="hls-player__live-controls">
+            <button
+              type="button"
+              class="hls-player__live-btn"
+              (click)="toggleMute()"
+              [attr.aria-label]="liveMuted() ? 'Activar sonido' : 'Silenciar'"
+            >
+              <mat-icon>{{ liveMuted() ? 'volume_off' : 'volume_up' }}</mat-icon>
+            </button>
+            <button
+              type="button"
+              class="hls-player__live-btn"
+              (click)="toggleFullscreen()"
+              aria-label="Pantalla completa"
+            >
+              <mat-icon>fullscreen</mat-icon>
+            </button>
           </div>
         }
       </div>
@@ -141,6 +159,34 @@ export type PlayerMode = 'live' | 'recording';
       font-size: 0.75rem;
       font-weight: 600;
     }
+    .hls-player__live-controls {
+      position: absolute;
+      bottom: 0.75rem;
+      right: 0.75rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+    .hls-player__live-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.25rem;
+      height: 2.25rem;
+      border: none;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.55);
+      color: #fff;
+      cursor: pointer;
+      padding: 0;
+    }
+    .hls-player__live-btn:hover {
+      background: rgba(0, 0, 0, 0.75);
+    }
+    .hls-player__live-btn mat-icon {
+      font-size: 1.25rem;
+      width: 1.25rem;
+      height: 1.25rem;
+    }
     .hls-player__dot {
       width: 0.5rem;
       height: 0.5rem;
@@ -189,6 +235,8 @@ export class HlsPlayerComponent implements OnDestroy {
   readonly videoEl = viewChild<ElementRef<HTMLVideoElement>>('videoEl');
 
   readonly status = signal<PlayerStatus>('loading');
+  readonly liveMuted = signal(true);
+  private userToggledMute = false;
 
   readonly src = input<string | null>(null);
   readonly posterUrl = input('');
@@ -208,20 +256,13 @@ export class HlsPlayerComponent implements OnDestroy {
     this.refreshRequestedGeneration = null;
     this.destroyPlayback();
     this.status.set('loading');
+    this.liveMuted.set(true);
+    this.userToggledMute = false;
     if (!url || !video) return;
 
     this.activeUrl = url;
     this.activeVideo = video;
-    this.initPlayer(url, video, generation);
-  }
-
-  private initPlayer(url: string, video: HTMLVideoElement, generation: number): void {
-    const canPlayNative = video.canPlayType('application/vnd.apple.mpegurl');
-    if (canPlayNative === 'probably' || canPlayNative === 'maybe') {
-      this.playNative(url, video, generation);
-    } else {
-      void this.playWithHlsJs(url, video, generation);
-    }
+    void this.playWithHlsJs(url, video, generation);
   }
 
   private playNative(url: string, video: HTMLVideoElement, generation: number): void {
@@ -229,7 +270,8 @@ export class HlsPlayerComponent implements OnDestroy {
 
     this.addNativeListener(video, 'loadedmetadata', () => {
       if (!this.isCurrentPlayback(url, video, generation)) return;
-      this.status.set('ready');
+      this.markReady();
+      video.play().catch(() => {});
     });
     this.addNativeListener(video, 'error', () => {
       if (!this.isCurrentPlayback(url, video, generation)) return;
@@ -246,12 +288,13 @@ export class HlsPlayerComponent implements OnDestroy {
     });
     this.addNativeListener(video, 'canplay', () => {
       if (!this.isCurrentPlayback(url, video, generation)) return;
-      this.status.set('ready');
+      this.markReady();
     });
     this.addNativeListener(video, 'playing', () => {
       if (!this.isCurrentPlayback(url, video, generation)) return;
-      this.status.set('ready');
+      this.markReady();
     });
+    this.addLiveGuards(video, url, generation);
   }
 
   private async playWithHlsJs(
@@ -265,7 +308,12 @@ export class HlsPlayerComponent implements OnDestroy {
 
       const Hls = HlsModule.default;
       if (!Hls.isSupported()) {
-        this.status.set('error');
+        const canPlayNative = video.canPlayType('application/vnd.apple.mpegurl');
+        if (canPlayNative === 'probably' || canPlayNative === 'maybe') {
+          this.playNative(url, video, generation);
+        } else {
+          this.status.set('error');
+        }
         return;
       }
 
@@ -281,7 +329,7 @@ export class HlsPlayerComponent implements OnDestroy {
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         if (!this.isCurrentPlayback(url, video, generation)) return;
-        this.status.set('ready');
+        this.markReady();
         video.play().catch(() => {});
       });
 
@@ -319,7 +367,7 @@ export class HlsPlayerComponent implements OnDestroy {
       hls.on(Hls.Events.FRAG_LOADED, () => {
         if (!this.isCurrentPlayback(url, video, generation)) return;
         if (this.status() === 'reconnecting' || this.status() === 'loading') {
-          this.status.set('ready');
+          this.markReady();
         }
       });
 
@@ -329,8 +377,9 @@ export class HlsPlayerComponent implements OnDestroy {
       });
       this.addNativeListener(video, 'playing', () => {
         if (!this.isCurrentPlayback(url, video, generation)) return;
-        this.status.set('ready');
+        this.markReady();
       });
+      this.addLiveGuards(video, url, generation);
     } catch {
       if (this.isCurrentPlayback(url, video, generation)) {
         this.status.set('error');
@@ -348,6 +397,53 @@ export class HlsPlayerComponent implements OnDestroy {
     if (this.refreshRequestedGeneration === generation) return;
     this.refreshRequestedGeneration = generation;
     this.playbackRefreshRequested.emit();
+  }
+
+  private markReady(): void {
+    this.status.set('ready');
+    if (this.mode() === 'live' && !this.userToggledMute) {
+      this.liveMuted.set(false);
+    }
+  }
+
+  /** Impide pausar o retroceder en vivo: sin barra de progreso ni botón de play, el usuario siempre ve el borde en vivo. */
+  private addLiveGuards(video: HTMLVideoElement, url: string, generation: number): void {
+    this.addNativeListener(video, 'pause', () => {
+      if (!this.isCurrentPlayback(url, video, generation)) return;
+      if (this.mode() === 'live') video.play().catch(() => {});
+    });
+    this.addNativeListener(video, 'keydown', (event) => {
+      if (this.mode() !== 'live') return;
+      const blocked = [
+        ' ',
+        'k',
+        'K',
+        'ArrowLeft',
+        'ArrowRight',
+        'ArrowUp',
+        'ArrowDown',
+        'Home',
+        'End',
+      ];
+      if (blocked.includes((event as KeyboardEvent).key)) {
+        event.preventDefault();
+      }
+    });
+  }
+
+  toggleMute(): void {
+    this.userToggledMute = true;
+    this.liveMuted.update((muted) => !muted);
+  }
+
+  toggleFullscreen(): void {
+    const video = this.videoEl()?.nativeElement;
+    if (!video) return;
+    if (document.fullscreenElement) {
+      void document.exitFullscreen();
+    } else {
+      void video.requestFullscreen();
+    }
   }
 
   private addNativeListener(el: HTMLElement, type: string, fn: EventListener): void {

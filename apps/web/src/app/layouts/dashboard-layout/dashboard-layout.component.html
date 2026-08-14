@@ -9,11 +9,11 @@
 <mat-sidenav-container class="dashboard-layout">
   <mat-sidenav mode="side" opened class="dashboard-layout__sidenav">
     <div class="dashboard-layout__brand">
-      <span class="dashboard-layout__brand-mark">Z</span>
-      <div>
-        <p class="dashboard-layout__brand-name">ZENTIC</p>
-        <p class="dashboard-layout__brand-tag">Panel operativo</p>
-      </div>
+      <img
+        src="/brand/zentic-logo-horizontal.png"
+        alt="ZENTIC.pro"
+        class="dashboard-layout__brand-logo"
+      />
     </div>
 
     <nav class="dashboard-layout__nav" *ngIf="isSuperAdmin">
@@ -43,22 +43,24 @@
         </button>
         <div *ngIf="expandedSections()[section.title]" class="dashboard-layout__nav-items">
           <ng-container *ngFor="let item of section.items">
-            <a
-              *appHasPermission="item.permission ?? []"
-              class="dashboard-layout__nav-link"
-              routerLinkActive="dashboard-layout__nav-link--active"
-              [routerLink]="item.path"
-            >
-              <mat-icon>{{ item.icon }}</mat-icon>
-              <span>{{ item.label }}</span>
-              <span
-                *ngIf="item.badgeCount && item.badgeCount() > 0"
-                class="dashboard-layout__nav-badge"
-                data-testid="nav-badge"
+            <ng-container *appHasPermission="item.permission ?? []">
+              <a
+                *appHasModule="item.module ?? null"
+                class="dashboard-layout__nav-link"
+                routerLinkActive="dashboard-layout__nav-link--active"
+                [routerLink]="item.path"
               >
-                {{ item.badgeCount() }}
-              </span>
-            </a>
+                <mat-icon>{{ item.icon }}</mat-icon>
+                <span>{{ item.label }}</span>
+                <span
+                  *ngIf="item.badgeCount && item.badgeCount() > 0"
+                  class="dashboard-layout__nav-badge"
+                  data-testid="nav-badge"
+                >
+                  {{ item.badgeCount() }}
+                </span>
+              </a>
+            </ng-container>
           </ng-container>
         </div>
       </ng-container>

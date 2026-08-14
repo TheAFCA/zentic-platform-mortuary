@@ -18,17 +18,7 @@
     </div>
     <div class="panel-card__body">
       <app-tenant-form
-        [initialValue]="
-          editingTenant()
-            ? {
-                name: editingTenant()!.name,
-                slug: editingTenant()!.slug,
-                country: editingTenant()!.country || '',
-                adminEmail: '',
-                plan: editingTenant()!.plan,
-              }
-            : null
-        "
+        [initialValue]="editingFormValue()"
         [errorMessage]="formError()"
         [saving]="saving()"
         (save)="onSave($event)"

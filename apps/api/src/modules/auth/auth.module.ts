@@ -15,6 +15,7 @@ import { SecurityEventsModule } from '../security-events/security-events.module'
     SecurityEventsModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
+      global: true,
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.getOrThrow('JWT_SECRET'),

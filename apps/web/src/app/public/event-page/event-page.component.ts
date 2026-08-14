@@ -16,6 +16,7 @@ import {
 } from '../../core/services/streaming-socket.service';
 import { EventStatus } from '@zentic/shared-types';
 import { HlsPlayerComponent } from '../../shared/molecules/hls-player/hls-player.component';
+import { PoweredByBadgeComponent } from '../../shared/atoms/powered-by-badge/powered-by-badge.component';
 import { getErrorMessage } from '../../core/utils/error-message';
 
 /** Iconos de reacción rápida disponibles */
@@ -54,6 +55,7 @@ const REACTION_ICONS = [
     MatSnackBarModule,
     MatTooltipModule,
     HlsPlayerComponent,
+    PoweredByBadgeComponent,
   ],
   styles: `
     :host {
@@ -252,31 +254,6 @@ const REACTION_ICONS = [
       height: 2.5rem;
       opacity: 0.6;
     }
-    .stream-room__player-bottom {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 2.5rem;
-      display: flex;
-      align-items: center;
-      padding: 0 1rem;
-      gap: 0.75rem;
-      background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
-      color: rgba(255, 255, 255, 0.8);
-    }
-    .stream-room__player-bottom mat-icon {
-      font-size: 1.125rem;
-      width: 1.125rem;
-      height: 1.125rem;
-    }
-    .stream-room__player-progress {
-      flex: 1;
-      height: 0.25rem;
-      border-radius: 0.125rem;
-      background: rgba(255, 255, 255, 0.2);
-    }
-
     /* ── Metadata (channel info below player) ── */
     .stream-room__metadata {
       padding: 1rem 1.5rem;
@@ -825,6 +802,7 @@ const REACTION_ICONS = [
     }
   `,
   template: `
+    <app-powered-by-badge />
     @if (loading()) {
       <div class="stream-room__loading">
         <mat-spinner diameter="40" />
@@ -963,11 +941,15 @@ const REACTION_ICONS = [
             <div class="stream-room__main">
               <!-- Player -->
               <section class="stream-room__player" aria-label="Reproductor de transmisión">
-                @if (event.status === 'LIVE' || event.status === 'FINISHED') {
+                @if (
+                  event.status === 'LIVE' ||
+                  event.status === 'FINISHED' ||
+                  event.status === 'INTERRUPTED'
+                ) {
                   <app-hls-player
                     [src]="event.playbackUrl"
                     [posterUrl]="event.deceased?.photoUrl ?? ''"
-                    [mode]="event.status === 'FINISHED' ? 'recording' : 'live'"
+                    [mode]="event.status === 'LIVE' ? 'live' : 'recording'"
                     (playbackRefreshRequested)="refreshPlaybackUrl()"
                   />
                 } @else {
@@ -980,13 +962,6 @@ const REACTION_ICONS = [
                     }
                   </div>
                 }
-                <!-- Bottom overlay bar -->
-                <div class="stream-room__player-bottom">
-                  <mat-icon>play_arrow</mat-icon>
-                  <div class="stream-room__player-progress"></div>
-                  <mat-icon>volume_up</mat-icon>
-                  <mat-icon>fullscreen</mat-icon>
-                </div>
               </section>
 
               <!-- Metadata -->
@@ -1262,7 +1237,7 @@ export class EventPageComponent {
     this.socket.streamStatus$.subscribe((status) => {
       const prevStatus = this.evt()?.status as string | undefined;
       this.evt.update((e) => (e ? { ...e, status: status as EventStatus } : e));
-      if (prevStatus === 'LIVE' && status === 'FINISHED') {
+      if (prevStatus === 'LIVE' && (status === 'FINISHED' || status === 'INTERRUPTED')) {
         this.pollRecordingUrl();
       }
     });
@@ -1291,7 +1266,10 @@ export class EventPageComponent {
           this.connectSocket();
         }
 
-        if ((ev.status as string) === 'FINISHED' && !ev.recordingReady) {
+        if (
+          (ev.status === EventStatus.FINISHED || ev.status === EventStatus.INTERRUPTED) &&
+          !ev.recordingReady
+        ) {
           this.pollRecordingUrl();
         }
       },
@@ -1323,7 +1301,9 @@ export class EventPageComponent {
     const hasPrivatePlayback =
       !event.isPublic &&
       Boolean(event.playbackUrl) &&
-      (event.status === EventStatus.LIVE || event.status === EventStatus.FINISHED);
+      (event.status === EventStatus.LIVE ||
+        event.status === EventStatus.FINISHED ||
+        event.status === EventStatus.INTERRUPTED);
     if (!hasPrivatePlayback) return;
 
     this.playbackRefreshTimer = setInterval(() => this.refreshPlaybackUrl(), 45 * 60 * 1000);

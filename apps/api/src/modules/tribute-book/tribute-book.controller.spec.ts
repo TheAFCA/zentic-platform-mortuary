@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TributeBookController } from './tribute-book.controller';
 import { TributeBookService } from './tribute-book.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
 describe('TributeBookController', () => {
   let controller: TributeBookController;
@@ -24,7 +25,10 @@ describe('TributeBookController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [TributeBookController],
-      providers: [{ provide: TributeBookService, useValue: mockService }],
+      providers: [
+        { provide: TributeBookService, useValue: mockService },
+        { provide: PrismaService, useValue: {} },
+      ],
     }).compile();
 
     controller = module.get(TributeBookController);

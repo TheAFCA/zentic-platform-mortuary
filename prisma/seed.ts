@@ -1,5 +1,6 @@
 import { PrismaClient, UserRole, TenantPlan, TenantStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { TENANT_MODULE_KEYS } from '@zentic/shared-types';
 
 const prisma = new PrismaClient();
 
@@ -41,15 +42,7 @@ async function main() {
           },
         },
         featureFlags: {
-          create: [
-            { feature: 'streaming', enabled: true },
-            { feature: 'obituaries', enabled: true },
-            { feature: 'leads', enabled: true },
-            { feature: 'allies_store', enabled: true },
-            { feature: 'album', enabled: true },
-            { feature: 'permanent_memorial', enabled: true },
-            { feature: 'service_management', enabled: true },
-          ],
+          create: TENANT_MODULE_KEYS.map((feature) => ({ feature, enabled: true })),
         },
       },
     });
