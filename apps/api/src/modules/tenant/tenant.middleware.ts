@@ -9,6 +9,13 @@ const RESERVED_HOST_SLUGS = new Set([
   'www',
 ]);
 
+const IPV4_PATTERN = /^(\d{1,3}\.){3}\d{1,3}$/;
+const IPV6_CHARS_PATTERN = /^[0-9a-fA-F:]+$/;
+
+/** req.hostname para IPv6 no trae corchetes, por eso se detecta por ':' + solo hex. */
+const isIpAddress = (host: string): boolean =>
+  IPV4_PATTERN.test(host) || (host.includes(':') && IPV6_CHARS_PATTERN.test(host));
+
 @Injectable()
 export class TenantMiddleware implements NestMiddleware {
   constructor(private prisma: PrismaService) {}
@@ -36,6 +43,12 @@ export class TenantMiddleware implements NestMiddleware {
     }
 
     const host = req.hostname;
+
+    // Acceso por IP directa (ej. pruebas sin dominio todavía) — nunca es un subdominio de tenant,
+    // y el reemplazo de abajo no la detectaría de forma confiable si PLATFORM_DOMAIN no coincide.
+    if (isIpAddress(host)) {
+      return next();
+    }
 
     // Extract subdomain: {slug}.plataforma.com
     const slug = host.replace(`.${platformDomain}`, '');
