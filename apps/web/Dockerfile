@@ -7,6 +7,7 @@ COPY packages/shared-types/package.json ./packages/shared-types/
 RUN pnpm install --frozen-lockfile
 COPY packages/shared-types ./packages/shared-types
 COPY apps/web ./apps/web
+RUN pnpm --filter @zentic/shared-types build
 RUN pnpm --filter @zentic/web build:prod
 
 FROM nginx:alpine AS runner
