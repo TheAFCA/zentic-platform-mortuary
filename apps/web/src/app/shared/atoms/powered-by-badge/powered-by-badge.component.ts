@@ -7,7 +7,9 @@ import { Component, input } from '@angular/core';
 @Component({
   selector: 'app-powered-by-badge',
   standalone: true,
-  template: `<span class="powered-by-badge" [class.powered-by-badge--left]="corner() === 'bottom-left'"
+  template: `<span
+    class="powered-by-badge"
+    [class.powered-by-badge--left]="corner() === 'bottom-left'"
     >Created by ZENTIC.pro</span
   >`,
   styles: `
