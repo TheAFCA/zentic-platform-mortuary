@@ -22,6 +22,7 @@ export type PlayerMode = 'live' | 'recording';
   template: `
     @if (src(); as url) {
       <div
+        #playerContainer
         class="hls-player"
         role="application"
         aria-label="Reproductor de video {{ mode() === 'live' ? 'en vivo' : 'grabación' }}"
@@ -31,7 +32,9 @@ export type PlayerMode = 'live' | 'recording';
           [attr.controls]="mode() === 'recording' ? true : null"
           class="hls-player__video"
           playsinline
+          [autoplay]="mode() === 'live'"
           [muted]="mode() === 'live' ? liveMuted() : false"
+          [attr.muted]="mode() === 'live' && liveMuted() ? '' : null"
           [attr.poster]="posterUrl() || null"
         ></video>
 
@@ -226,6 +229,9 @@ export class HlsPlayerComponent implements OnDestroy {
   private activeVideo: HTMLVideoElement | null = null;
   private playbackGeneration = 0;
   private refreshRequestedGeneration: number | null = null;
+  private frozenFrameInterval: ReturnType<typeof setInterval> | null = null;
+  private lastObservedTime = -1;
+  private stalledFrameChecks = 0;
   private nativeListeners: Array<{
     el: HTMLElement;
     type: string;
@@ -233,6 +239,7 @@ export class HlsPlayerComponent implements OnDestroy {
   }> = [];
 
   readonly videoEl = viewChild<ElementRef<HTMLVideoElement>>('videoEl');
+  readonly playerContainer = viewChild<ElementRef<HTMLElement>>('playerContainer');
 
   readonly status = signal<PlayerStatus>('loading');
   readonly liveMuted = signal(true);
@@ -243,8 +250,34 @@ export class HlsPlayerComponent implements OnDestroy {
   readonly mode = input<PlayerMode>('live');
   readonly playbackRefreshRequested = output<void>();
 
+  /**
+   * Chrome exige "user activation" real (un evento confiable del DOM: click, tecla,
+   * touch, scroll) para desbloquear el autoplay en ciertos escenarios de MSE/hls.js —
+   * un setInterval o un cambio de estilo por JS nunca cuentan para esto, sin importar
+   * cuántas veces se reintente .play() programáticamente. Por eso el usuario notaba que
+   * scrollear o pasar a pantalla completa "destrababa" el stream: eran los primeros
+   * eventos reales de interacción. Este listener automatiza exactamente eso, una sola
+   * vez por interacción real, en vez de depender de que el usuario lo descubra solo.
+   */
+  private static readonly INTERACTION_EVENTS: Array<keyof DocumentEventMap> = [
+    'pointerdown',
+    'keydown',
+    'touchstart',
+    'scroll',
+    'wheel',
+  ];
+  private readonly onInteraction = (): void => {
+    const video = this.activeVideo;
+    if (video && this.mode() === 'live' && video.paused) {
+      video.play().catch(() => {});
+    }
+  };
+
   constructor() {
     afterRenderEffect({ write: () => this.onSrcChange() });
+    for (const type of HlsPlayerComponent.INTERACTION_EVENTS) {
+      document.addEventListener(type, this.onInteraction, { passive: true });
+    }
   }
 
   private onSrcChange(): void {
@@ -429,6 +462,78 @@ export class HlsPlayerComponent implements OnDestroy {
         event.preventDefault();
       }
     });
+    if (this.mode() === 'live') {
+      this.startFrozenFrameWatchdog(video, url, generation);
+    }
+  }
+
+  /**
+   * Bug conocido de Chrome: el <video> deja de repintar el frame visualmente aunque
+   * hls.js sigue decodificando bien por debajo (currentTime avanza) — parece que el
+   * streaming murió cuando en realidad solo se congeló la composición. Pasar a pantalla
+   * completa lo destraba manualmente; este vigilante lo detecta y lo corrige solo.
+   */
+  private startFrozenFrameWatchdog(video: HTMLVideoElement, url: string, generation: number): void {
+    this.stopFrozenFrameWatchdog();
+    this.lastObservedTime = -1;
+    this.stalledFrameChecks = 0;
+    this.frozenFrameInterval = setInterval(() => {
+      if (!this.isCurrentPlayback(url, video, generation)) {
+        this.stopFrozenFrameWatchdog();
+        return;
+      }
+      if (this.status() !== 'ready') {
+        // Mismo bug de Chrome, pero antes de llegar a "ready": el pipeline de video/MSE
+        // puede quedar completamente estancado en "Conectando..." hasta que la pestaña
+        // recibe cualquier interacción (scroll, fullscreen, cambiar de pestaña) — un
+        // empujón periódico evita depender de que el usuario lo descubra por accidente.
+        this.nudgeRepaint(video);
+        video.play().catch(() => {});
+        this.lastObservedTime = video.currentTime;
+        this.stalledFrameChecks = 0;
+        return;
+      }
+      if (video.paused) {
+        // El listener de 'pause' ya intenta reanudar, pero si ese play() fue rechazado
+        // en ese momento puntual (autoplay bloqueado, promesa rechazada y descartada),
+        // nadie vuelve a intentarlo — sobre todo tras una recarga completa de la página
+        // pública, donde no hay ninguna interacción previa del usuario en la pestaña.
+        // Reintentamos acá cada 2s en vez de quedar pausado indefinidamente.
+        this.lastObservedTime = video.currentTime;
+        this.stalledFrameChecks = 0;
+        video.play().catch(() => {});
+        return;
+      }
+      if (video.currentTime !== this.lastObservedTime) {
+        this.lastObservedTime = video.currentTime;
+        this.stalledFrameChecks = 0;
+        return;
+      }
+      this.stalledFrameChecks++;
+      if (this.stalledFrameChecks === 1) {
+        this.nudgeRepaint(video);
+      } else if (this.stalledFrameChecks === 2) {
+        video.play().catch(() => {});
+      } else if (this.stalledFrameChecks >= 3) {
+        this.stalledFrameChecks = 0;
+        this.requestPlaybackRefresh(generation);
+      }
+    }, 2000);
+  }
+
+  /** Fuerza al navegador a recomponer el frame sin tocar la posición de reproducción. */
+  private nudgeRepaint(video: HTMLVideoElement): void {
+    video.style.transform = 'translateZ(0)';
+    requestAnimationFrame(() => {
+      video.style.transform = '';
+    });
+  }
+
+  private stopFrozenFrameWatchdog(): void {
+    if (this.frozenFrameInterval) {
+      clearInterval(this.frozenFrameInterval);
+      this.frozenFrameInterval = null;
+    }
   }
 
   toggleMute(): void {
@@ -436,13 +541,20 @@ export class HlsPlayerComponent implements OnDestroy {
     this.liveMuted.update((muted) => !muted);
   }
 
+  /**
+   * Pide fullscreen sobre el contenedor, no sobre el <video> directamente: al
+   * fullscreenear el <video> el navegador activa su propia UI nativa de video
+   * (barra de progreso + botón de play), que no se puede ocultar con el atributo
+   * `controls`. Fullscreeneando el div se evita ese modo especial y de paso el
+   * badge de EN VIVO y los botones propios (mute/fullscreen) siguen visibles.
+   */
   toggleFullscreen(): void {
-    const video = this.videoEl()?.nativeElement;
-    if (!video) return;
+    const container = this.playerContainer()?.nativeElement;
+    if (!container) return;
     if (document.fullscreenElement) {
       void document.exitFullscreen();
     } else {
-      void video.requestFullscreen();
+      void container.requestFullscreen();
     }
   }
 
@@ -463,6 +575,7 @@ export class HlsPlayerComponent implements OnDestroy {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
+    this.stopFrozenFrameWatchdog();
     this.removeNativeListeners();
     if (this.hls) {
       try {
@@ -484,5 +597,8 @@ export class HlsPlayerComponent implements OnDestroy {
   ngOnDestroy(): void {
     this.playbackGeneration++;
     this.destroyPlayback();
+    for (const type of HlsPlayerComponent.INTERACTION_EVENTS) {
+      document.removeEventListener(type, this.onInteraction);
+    }
   }
 }

@@ -228,15 +228,23 @@ const REACTION_ICONS = [
       width: 100%;
       aspect-ratio: 16 / 9;
       max-height: calc(100vh - 3.125rem - 10rem);
+      overflow: hidden;
     }
     .stream-room__player app-hls-player {
       display: block;
       width: 100%;
       height: 100%;
     }
-    /* Override hls-player border-radius in full-width context */
+    /* Override hls-player border-radius en este contexto de ancho completo. También se
+       anula su aspect-ratio propio: como este wrapper ya fija 16:9 + max-height, dejar
+       que el componente recalculara SU aspect-ratio a partir del ancho (ignorando el
+       max-height del padre) lo hacía más alto de lo permitido y se desbordaba tapando
+       el contenido de abajo (perfil del difunto) — aquí solo debe llenar el espacio ya
+       calculado por el padre. */
     .stream-room__player ::ng-deep .hls-player {
       border-radius: 0 !important;
+      aspect-ratio: unset;
+      height: 100%;
     }
     .stream-room__player-placeholder {
       width: 100%;
@@ -1395,7 +1403,28 @@ export class EventPageComponent {
         content: this.messageForm.controls.content.value,
       })
       .subscribe({
-        next: () => {
+        next: (message) => {
+          // No esperamos al eco del WebSocket para mostrar el propio mensaje: si el socket
+          // todavía no terminó de unirse a la sala del evento cuando este POST responde
+          // (carrera muy común justo después de cargar la página), el broadcast del backend
+          // llega mientras esta pestaña todavía no está suscrita y el mensaje nunca aparece
+          // hasta recargar. El dedup por id evita duplicarlo si el eco sí llega después.
+          if (message.status === 'APPROVED') {
+            this.messages.update((prev) =>
+              prev.some((current) => current.id === message.id)
+                ? prev
+                : [
+                    ...prev,
+                    {
+                      id: message.id,
+                      authorName: message.authorName,
+                      content: message.content,
+                      iconType: message.iconType,
+                      createdAt: message.createdAt,
+                    },
+                  ],
+            );
+          }
           this.messageForm.reset({
             authorName: this.messageForm.controls.authorName.value,
             content: '',
