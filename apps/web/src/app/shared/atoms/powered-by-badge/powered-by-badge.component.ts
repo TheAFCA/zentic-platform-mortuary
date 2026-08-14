@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, input } from '@angular/core';
 
 /**
  * Marca de agua discreta para páginas públicas (evento/obituario) — crédito de
@@ -7,7 +7,9 @@ import { Component } from '@angular/core';
 @Component({
   selector: 'app-powered-by-badge',
   standalone: true,
-  template: `<span class="powered-by-badge">Created by ZENTIC.pro</span>`,
+  template: `<span class="powered-by-badge" [class.powered-by-badge--left]="corner() === 'bottom-left'"
+    >Created by ZENTIC.pro</span
+  >`,
   styles: `
     .powered-by-badge {
       position: fixed;
@@ -25,6 +27,15 @@ import { Component } from '@angular/core';
       pointer-events: none;
       user-select: none;
     }
+
+    // Usado en la pantalla de streaming: la esquina inferior derecha ya la ocupa
+    // el botón "Enviar" del chat, el badge quedaba encima tapándolo visualmente.
+    .powered-by-badge--left {
+      right: auto;
+      left: 0.75rem;
+    }
   `,
 })
-export class PoweredByBadgeComponent {}
+export class PoweredByBadgeComponent {
+  readonly corner = input<'bottom-right' | 'bottom-left'>('bottom-right');
+}

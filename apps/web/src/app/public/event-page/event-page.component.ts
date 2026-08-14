@@ -810,7 +810,7 @@ const REACTION_ICONS = [
     }
   `,
   template: `
-    <app-powered-by-badge />
+    <app-powered-by-badge corner="bottom-left" />
     @if (loading()) {
       <div class="stream-room__loading">
         <mat-spinner diameter="40" />
