@@ -174,7 +174,11 @@ export class SuperAdminService {
     return this.toTenantDto(updated);
   }
 
-  async updateTenantModules(id: string, actor: JwtPayload, dto: UpdateTenantModulesDto) {
+  async updateTenantModules(
+    id: string,
+    actor: JwtPayload,
+    dto: UpdateTenantModulesDto,
+  ) {
     const tenant = await this.superAdminRepo.findTenantById(id);
     if (!tenant) throw new NotFoundException('Tenant no encontrado');
 
@@ -475,7 +479,8 @@ export class SuperAdminService {
       createdAt: tenant.createdAt.toISOString(),
       updatedAt: tenant.updatedAt.toISOString(),
       enabledModules: TENANT_MODULE_KEYS.filter(
-        (key) => tenant.featureFlags?.find((f) => f.feature === key)?.enabled === true,
+        (key) =>
+          tenant.featureFlags?.find((f) => f.feature === key)?.enabled === true,
       ),
     };
   }

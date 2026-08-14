@@ -24,7 +24,9 @@ describe('TenantsComponent', () => {
 
   function createFixture() {
     const tenantsApi = {
-      list: vi.fn().mockReturnValue(of({ data: tenants, total: 1, page: 1, limit: 100, totalPages: 1 })),
+      list: vi
+        .fn()
+        .mockReturnValue(of({ data: tenants, total: 1, page: 1, limit: 100, totalPages: 1 })),
       update: vi.fn().mockReturnValue(of(tenants[0])),
       setModules: vi.fn().mockReturnValue(of(tenants[0])),
       create: vi.fn().mockReturnValue(of({ ...tenants[0], adminUserId: 'admin-1' })),
@@ -92,7 +94,7 @@ describe('TenantsComponent', () => {
     expect(secondValue).toBe(firstValue);
   });
 
-  it('onSave for an existing tenant updates the base fields, then sets modules', async () => {
+  it('onSave for an existing tenant updates the base fields, then sets modules', () => {
     const { fixture, tenantsApi } = createFixture();
     fixture.componentInstance.openEdit(tenants[0]);
 

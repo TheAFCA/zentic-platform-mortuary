@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { Tenant, TenantStatus, TENANT_MODULE_KEYS } from '@zentic/shared-types';
+import { Tenant, TenantStatus } from '@zentic/shared-types';
 import { TenantsApiService } from '../../../core/services/tenants-api.service';
 import { ImpersonationApiService } from '../../../core/services/impersonation-api.service';
 import {

@@ -414,7 +414,17 @@ export class HlsPlayerComponent implements OnDestroy {
     });
     this.addNativeListener(video, 'keydown', (event) => {
       if (this.mode() !== 'live') return;
-      const blocked = [' ', 'k', 'K', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
+      const blocked = [
+        ' ',
+        'k',
+        'K',
+        'ArrowLeft',
+        'ArrowRight',
+        'ArrowUp',
+        'ArrowDown',
+        'Home',
+        'End',
+      ];
       if (blocked.includes((event as KeyboardEvent).key)) {
         event.preventDefault();
       }

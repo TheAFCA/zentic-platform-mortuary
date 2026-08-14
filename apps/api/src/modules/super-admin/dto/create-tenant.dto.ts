@@ -8,7 +8,11 @@ import {
   Matches,
   MaxLength,
 } from 'class-validator';
-import { TenantPlan, TENANT_MODULE_KEYS, TenantModuleKey } from '@zentic/shared-types';
+import {
+  TenantPlan,
+  TENANT_MODULE_KEYS,
+  TenantModuleKey,
+} from '@zentic/shared-types';
 
 export class CreateTenantDto {
   @IsString()

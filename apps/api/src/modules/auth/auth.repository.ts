@@ -12,7 +12,10 @@ type AuthUserRecord = {
   passwordHash: string;
   role: UserRole;
   tenantId: string | null;
-  tenant: { status: TenantStatus; featureFlags: TenantFeatureFlagRecord[] } | null;
+  tenant: {
+    status: TenantStatus;
+    featureFlags: TenantFeatureFlagRecord[];
+  } | null;
   lockedUntil: Date | null;
   loginAttempts: number;
   permissions: UserPermissionRecord[];
@@ -52,7 +55,10 @@ export class AuthRepository {
         role: true,
         tenantId: true,
         tenant: {
-          select: { status: true, featureFlags: { select: { feature: true, enabled: true } } },
+          select: {
+            status: true,
+            featureFlags: { select: { feature: true, enabled: true } },
+          },
         },
         lockedUntil: true,
         loginAttempts: true,
@@ -73,7 +79,10 @@ export class AuthRepository {
         role: true,
         tenantId: true,
         tenant: {
-          select: { status: true, featureFlags: { select: { feature: true, enabled: true } } },
+          select: {
+            status: true,
+            featureFlags: { select: { feature: true, enabled: true } },
+          },
         },
         lockedUntil: true,
         loginAttempts: true,

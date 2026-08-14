@@ -14,7 +14,8 @@ const IPV6_CHARS_PATTERN = /^[0-9a-fA-F:]+$/;
 
 /** req.hostname para IPv6 no trae corchetes, por eso se detecta por ':' + solo hex. */
 const isIpAddress = (host: string): boolean =>
-  IPV4_PATTERN.test(host) || (host.includes(':') && IPV6_CHARS_PATTERN.test(host));
+  IPV4_PATTERN.test(host) ||
+  (host.includes(':') && IPV6_CHARS_PATTERN.test(host));
 
 @Injectable()
 export class TenantMiddleware implements NestMiddleware {

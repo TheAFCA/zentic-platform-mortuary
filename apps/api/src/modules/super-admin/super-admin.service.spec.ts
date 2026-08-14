@@ -230,7 +230,9 @@ describe('SuperAdminService', () => {
 
       // ACT & ASSERT
       await expect(
-        service.updateTenantModules('ghost', actor, { enabledModules: ['leads'] }),
+        service.updateTenantModules('ghost', actor, {
+          enabledModules: ['leads'],
+        }),
       ).rejects.toThrow(NotFoundException);
       expect(repo.setTenantModules).not.toHaveBeenCalled();
     });
@@ -252,7 +254,11 @@ describe('SuperAdminService', () => {
       });
 
       // ASSERT
-      expect(repo.setTenantModules).toHaveBeenCalledWith('tenant-1', ['leads'], actor.sub);
+      expect(repo.setTenantModules).toHaveBeenCalledWith(
+        'tenant-1',
+        ['leads'],
+        actor.sub,
+      );
       expect(result.enabledModules).toEqual(['leads']);
     });
   });
@@ -427,13 +433,23 @@ describe('SuperAdminService', () => {
         slug: 'parque-cementerio',
         adminEmail: 'admin@parque-cementerio.com',
         plan: TenantPlan.BASIC,
-        enabledModules: ['obituaries', 'streaming', 'tribute_book', 'downloads'],
+        enabledModules: [
+          'obituaries',
+          'streaming',
+          'tribute_book',
+          'downloads',
+        ],
       });
 
       // ASSERT
       expect(repo.createTenantWithAdmin).toHaveBeenCalledWith(
         expect.objectContaining({
-          enabledModules: ['obituaries', 'streaming', 'tribute_book', 'downloads'],
+          enabledModules: [
+            'obituaries',
+            'streaming',
+            'tribute_book',
+            'downloads',
+          ],
         }),
       );
     });

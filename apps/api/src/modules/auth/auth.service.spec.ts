@@ -492,7 +492,9 @@ describe('AuthService', () => {
       impersonatedTenantId: 'tenant-impersonated',
     });
 
-    expect(authRepository.findTenantFeatureFlags).toHaveBeenCalledWith('tenant-impersonated');
+    expect(authRepository.findTenantFeatureFlags).toHaveBeenCalledWith(
+      'tenant-impersonated',
+    );
     expect(result).toEqual(
       expect.objectContaining({
         tenantId: 'tenant-impersonated',

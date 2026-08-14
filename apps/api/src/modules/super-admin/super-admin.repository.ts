@@ -142,13 +142,21 @@ export class SuperAdminRepository {
     });
   }
 
-  async setTenantModules(id: string, enabledModules: TenantModuleKey[], actorId: string) {
+  async setTenantModules(
+    id: string,
+    enabledModules: TenantModuleKey[],
+    actorId: string,
+  ) {
     return this.prisma.$transaction(async (tx) => {
       await Promise.all(
         TENANT_MODULE_KEYS.map((feature) =>
           tx.tenantFeatureFlag.upsert({
             where: { tenantId_feature: { tenantId: id, feature } },
-            create: { tenantId: id, feature, enabled: enabledModules.includes(feature) },
+            create: {
+              tenantId: id,
+              feature,
+              enabled: enabledModules.includes(feature),
+            },
             update: { enabled: enabledModules.includes(feature) },
           }),
         ),

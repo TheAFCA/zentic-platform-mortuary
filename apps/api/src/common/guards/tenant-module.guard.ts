@@ -35,10 +35,10 @@ export class TenantModuleGuard implements CanActivate {
     ]);
     if (isPublic) return true;
 
-    const requiredModule = this.reflector.getAllAndOverride<TenantModuleKey>(MODULE_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const requiredModule = this.reflector.getAllAndOverride<TenantModuleKey>(
+      MODULE_KEY,
+      [context.getHandler(), context.getClass()],
+    );
     if (!requiredModule) return true;
 
     const request = context.switchToHttp().getRequest<TenantModuleRequest>();
@@ -61,7 +61,9 @@ export class TenantModuleGuard implements CanActivate {
     });
 
     if (!flag?.enabled) {
-      throw new ForbiddenException(`El módulo "${requiredModule}" no está habilitado para este tenant`);
+      throw new ForbiddenException(
+        `El módulo "${requiredModule}" no está habilitado para este tenant`,
+      );
     }
     return true;
   }

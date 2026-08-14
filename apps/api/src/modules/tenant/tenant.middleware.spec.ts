@@ -72,7 +72,10 @@ describe('TenantMiddleware', () => {
 
   it('skips tenant resolution when accessed by raw IPv4 (no subdomain possible)', async () => {
     const next = jest.fn();
-    const request = { hostname: '169.58.175.212', headers: {} } as TenantRequest;
+    const request = {
+      hostname: '169.58.175.212',
+      headers: {},
+    } as TenantRequest;
     const response = {} as Response;
 
     await middleware.use(request, response, next);
