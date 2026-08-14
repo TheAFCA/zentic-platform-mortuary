@@ -77,6 +77,23 @@ export class DashboardLayoutComponent {
         error: () => undefined,
       });
     }
+
+    // El shell se monta una sola vez por área (tenant/super admin viven en hosts
+    // distintos, así que cambiar de una a otra siempre implica una recarga completa
+    // de la página) — alcanza con fijar el favicon acá, sin reaccionar a router events.
+    if (this.isSuperAdmin) {
+      // Mutar el href del <link> existente no siempre repinta el ícono de la
+      // pestaña cuando el cambio ocurre tras una navegación SPA (login → redirect
+      // a /super-admin/dashboard sin recarga completa) — algunos Chrome se quedan
+      // con el favicon con el que arrancó el documento. Quitar el nodo viejo y
+      // agregar uno nuevo fuerza el refetch/repintado de forma confiable.
+      document.querySelectorAll<HTMLLinkElement>('link[rel="icon"]').forEach((el) => el.remove());
+      const icon = document.createElement('link');
+      icon.rel = 'icon';
+      icon.type = 'image/png';
+      icon.href = '/brand/favicon-super-admin.png';
+      document.head.appendChild(icon);
+    }
   }
 
   protected readonly superAdminNavItems: NavItem[] = [
