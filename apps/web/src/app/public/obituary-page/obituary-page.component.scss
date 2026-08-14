@@ -48,6 +48,7 @@
   font-style: italic;
   color: var(--ink-secondary, #374151);
   font-size: 1.05rem;
+  overflow-wrap: anywhere;
 }
 
 .obituary-page__stream-link {
@@ -70,6 +71,12 @@
   line-height: 1.7;
   color: var(--ink, #1f2937);
   box-shadow: var(--shadow-card, 0 12px 32px rgba(17, 24, 39, 0.06));
+  // Ítem de un grid de una sola columna: sin min-width:0 el track del grid crece
+  // para acomodar el min-content del texto, empujando toda la página de ancho.
+  // overflow-wrap: anywhere hereda a los <p>/<strong>/<em> que inyecta el
+  // [innerHTML] del editor Quill.
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .obituary-page__condolences {

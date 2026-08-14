@@ -63,6 +63,10 @@
   display: grid;
   gap: 0.5rem;
   flex: 1 1 20rem;
+  // Sin esto, un flex item nunca se encoge por debajo del ancho de su contenido
+  // (min-width: auto por defecto) — un epitafio/biografía largo sin puntos de
+  // corte empujaba todo el layout y generaba scroll horizontal en la página.
+  min-width: 0;
 }
 
 .obituary-detail__name {
@@ -84,11 +88,15 @@
   margin: 0;
   font-style: italic;
   color: panel.$ink;
+  overflow-wrap: anywhere;
 }
 
 .obituary-detail__biography {
   color: panel.$ink;
   line-height: 1.6;
+  // overflow-wrap hereda a los <p>/<strong>/<em> que inyecta el [innerHTML] del
+  // editor Quill, así que no hace falta ::ng-deep para que también ajusten ahí.
+  overflow-wrap: anywhere;
 }
 
 .obituary-detail__service {
