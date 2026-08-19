@@ -248,6 +248,34 @@ describe('EventDetailComponent', () => {
     expect(component.event()).toBeNull();
   });
 
+  describe('eager socket connection', () => {
+    it.each(['SCHEDULED', 'LIVE', 'PAUSED', 'INTERRUPTED'] as const)(
+      'connects the socket on load when the event is %s, so a webhook-driven status change can be received without a manual click',
+      (status) => {
+        const { socket } = setup({
+          apiOverrides: {
+            findOne: vi.fn().mockReturnValue(of({ ...mockEvent, status })),
+          },
+        });
+
+        expect(socket.connect).toHaveBeenCalledWith('evt-1', true);
+      },
+    );
+
+    it.each(['FINISHED', 'CANCELLED'] as const)(
+      'does not connect the socket on load when the event is %s',
+      (status) => {
+        const { socket } = setup({
+          apiOverrides: {
+            findOne: vi.fn().mockReturnValue(of({ ...mockEvent, status })),
+          },
+        });
+
+        expect(socket.connect).not.toHaveBeenCalled();
+      },
+    );
+  });
+
   describe('copyToClipboard', () => {
     it('should write to clipboard and show snackbar', async () => {
       const writeText = vi.fn().mockResolvedValue(undefined);
@@ -292,6 +320,10 @@ describe('EventDetailComponent', () => {
     it('should handle error from API', () => {
       const { component, api, socket, snackBar } = setup();
       api.startStream.mockReturnValue(throwError(() => new Error('Error de red')));
+      // La carga inicial ya conecta el socket (evento no-terminal) para poder
+      // recibir el LIVE que dispare el webhook sin acción del operador — solo
+      // interesa que startStream() no dispare una conexión adicional al fallar.
+      socket.connect.mockClear();
 
       component.startStream();
 

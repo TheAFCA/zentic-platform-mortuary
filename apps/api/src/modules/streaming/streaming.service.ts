@@ -602,17 +602,38 @@ export class StreamingService {
       );
     }
 
+    await this.announceStreamLive(tenantId, id, {
+      slug: event.slug,
+      title: event.title,
+      wasFirstStart: event.status === 'SCHEDULED',
+    });
+
+    this.logger.log(`Stream started: ${id}`);
+    const updated = await this.findOneEntity(tenantId, id);
+    return this.withoutStreamingSecrets(updated);
+  }
+
+  /**
+   * Centraliza los efectos secundarios de que un evento pase a LIVE, sin
+   * importar si lo dispara el operador (start_stream) o el webhook del
+   * proveedor (signal_recovered): notifica a los viewers conectados por
+   * socket y, solo si es el primer arranque real (no una recuperación de
+   * señal tras PAUSED/INTERRUPTED), envía el email a los leads.
+   */
+  private async announceStreamLive(
+    tenantId: string,
+    id: string,
+    opts: { slug: string; title: string; wasFirstStart: boolean },
+  ): Promise<void> {
     this.gateway.broadcastStreamStatus(id, {
       eventId: id,
       tenantId,
       status: EventStatus.LIVE,
     });
 
-    await this.notifyLeadsStreamStarted(tenantId, event.slug, event.title, id);
-
-    this.logger.log(`Stream started: ${id}`);
-    const updated = await this.findOneEntity(tenantId, id);
-    return this.withoutStreamingSecrets(updated);
+    if (opts.wasFirstStart) {
+      await this.notifyLeadsStreamStarted(tenantId, opts.slug, opts.title, id);
+    }
   }
 
   /**
@@ -1121,10 +1142,11 @@ export class StreamingService {
           found.status === 'PAUSED' ||
           found.status === 'INTERRUPTED'
         ) {
+          const wasFirstStart = found.status === 'SCHEDULED';
           this.logger.log(
             `Webhook stream.active: sincronizando evento ${found.id} a LIVE`,
           );
-          await this.stateMachine
+          const result = await this.stateMachine
             .transitionIdempotent(
               found.tenantId,
               found.id,
@@ -1137,11 +1159,20 @@ export class StreamingService {
                 source: 'webhook',
               },
             )
-            .catch((err) =>
+            .catch((err) => {
               this.logger.warn(
                 `Error sincronizando stream.active para ${found.id}: ${err}`,
-              ),
-            );
+              );
+              return null;
+            });
+
+          if (result?.success) {
+            await this.announceStreamLive(found.tenantId, found.id, {
+              slug: found.slug,
+              title: found.title,
+              wasFirstStart,
+            });
+          }
         }
         break;
       }
@@ -1151,7 +1182,7 @@ export class StreamingService {
           this.logger.warn(
             `Webhook stream.idle: señal perdida para evento ${found.id}`,
           );
-          await this.stateMachine
+          const result = await this.stateMachine
             .transitionIdempotent(
               found.tenantId,
               found.id,
@@ -1164,11 +1195,20 @@ export class StreamingService {
                 source: 'webhook',
               },
             )
-            .catch((err) =>
+            .catch((err) => {
               this.logger.warn(
                 `Error marcando stream.idle para ${found.id}: ${err}`,
-              ),
-            );
+              );
+              return null;
+            });
+
+          if (result?.success) {
+            this.gateway.broadcastStreamStatus(found.id, {
+              eventId: found.id,
+              tenantId: found.tenantId,
+              status: EventStatus.INTERRUPTED,
+            });
+          }
         }
         break;
       }
