@@ -276,6 +276,37 @@ describe('EventDetailComponent', () => {
     );
   });
 
+  describe('reacting to a webhook-driven stream-status change', () => {
+    it.each(['LIVE', 'FINISHED', 'INTERRUPTED'] as const)(
+      'reloads the full event (not just the status field) when the socket reports %s, so playbackUrl is populated without a manual reload',
+      (status) => {
+        const findOne = vi
+          .fn()
+          .mockReturnValueOnce(of(mockEvent))
+          .mockReturnValueOnce(
+            of({ ...mockEvent, status, playbackUrl: 'https://stream.mux.com/x.m3u8' }),
+          );
+        const { component, streamStatus$ } = setup({ apiOverrides: { findOne } });
+
+        streamStatus$.next(status);
+
+        expect(findOne).toHaveBeenCalledTimes(2);
+        expect(component.event()?.status).toBe(status);
+        expect((component.event() as any)?.playbackUrl).toBe('https://stream.mux.com/x.m3u8');
+      },
+    );
+
+    it('patches the status in place (no refetch) for a status that does not need playback', () => {
+      const findOne = vi.fn().mockReturnValue(of(mockEvent));
+      const { component, streamStatus$ } = setup({ apiOverrides: { findOne } });
+
+      streamStatus$.next('PAUSED');
+
+      expect(findOne).toHaveBeenCalledTimes(1);
+      expect(component.event()?.status).toBe('PAUSED');
+    });
+  });
+
   describe('copyToClipboard', () => {
     it('should write to clipboard and show snackbar', async () => {
       const writeText = vi.fn().mockResolvedValue(undefined);
