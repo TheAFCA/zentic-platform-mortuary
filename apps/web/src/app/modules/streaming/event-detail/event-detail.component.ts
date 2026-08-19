@@ -997,7 +997,19 @@ export class EventDetailComponent {
       });
 
       this.socket.streamStatus$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((status) => {
-        this.event.update((e) => (e ? { ...e, status: status as EventStatus } : e));
+        const newStatus = status as EventStatus;
+        const needsPlayback =
+          newStatus === EventStatus.LIVE ||
+          newStatus === EventStatus.FINISHED ||
+          newStatus === EventStatus.INTERRUPTED;
+        if (needsPlayback) {
+          // findOne() solo resuelve playbackUrl para estos estados (a diferencia
+          // del endpoint público) — parchear solo el status dejaría el player sin
+          // src hasta recargar la página. Se recarga el evento completo.
+          this.loadEvent();
+        } else {
+          this.event.update((e) => (e ? { ...e, status: newStatus } : e));
+        }
       });
 
       this.socket.messagePending$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((msg) => {
