@@ -1143,6 +1143,18 @@ export class StreamingService {
           found.status === 'INTERRUPTED'
         ) {
           const wasFirstStart = found.status === 'SCHEDULED';
+          // El grafo de transiciones (event-state-machine.ts) valida el trigger
+          // exacto por par (from, to): 'signal_recovered' solo es válido desde
+          // INTERRUPTED. Un primer arranque real usa 'start_stream' (mismo
+          // trigger que el botón manual) y una reanudación desde pausa usa
+          // 'resume_stream' — usar 'signal_recovered' para los tres casos
+          // hacía que la transición se rechazara en silencio para SCHEDULED/PAUSED.
+          const trigger =
+            found.status === 'SCHEDULED'
+              ? 'start_stream'
+              : found.status === 'PAUSED'
+                ? 'resume_stream'
+                : 'signal_recovered';
           this.logger.log(
             `Webhook stream.active: sincronizando evento ${found.id} a LIVE`,
           );
@@ -1152,7 +1164,7 @@ export class StreamingService {
               found.id,
               found.status,
               'LIVE',
-              'signal_recovered',
+              trigger,
               {
                 tenantId: found.tenantId,
                 eventId: found.id,

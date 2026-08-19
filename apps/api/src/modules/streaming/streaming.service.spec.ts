@@ -27,6 +27,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { StreamAccessService } from './stream-access.service';
 import { EventStateMachineService } from './domain/event-state-machine.service';
+import { isValidTransition } from './domain/event-state-machine';
 import { ProvisioningSagaService } from './domain/provisioning-saga.service';
 import { InvitationsService } from '../invitations/invitations.service';
 
@@ -307,18 +308,13 @@ describe('StreamingService', () => {
           toStatus: string,
           trigger: string,
         ) => {
-          const allowedTransitions: Record<string, string[]> = {
-            SCHEDULED: ['LIVE', 'CANCELLED', 'PROVISIONING'],
-            PROVISIONING: ['LIVE', 'PROVISION_FAILED'],
-            PROVISION_FAILED: ['SCHEDULED'],
-            LIVE: ['PAUSED', 'FINISHED', 'INTERRUPTED'],
-            PAUSED: ['LIVE', 'FINISHED', 'INTERRUPTED'],
-            INTERRUPTED: ['LIVE', 'PAUSED'],
-            FINISHED: [],
-            CANCELLED: [],
-          };
-          const allowed = allowedTransitions[fromStatus] || [];
-          if (!allowed.includes(toStatus)) {
+          if (fromStatus === toStatus) {
+            return { success: true };
+          }
+          // Igual que EventStateMachineService.canTransition en producción:
+          // con un trigger explícito, la validez depende del par exacto
+          // (from, to, trigger) del grafo real, no solo de from->to.
+          if (!isValidTransition(fromStatus as any, toStatus as any, trigger)) {
             return {
               success: false,
               error: `Transición inválida de ${fromStatus} a ${toStatus}`,
@@ -2078,7 +2074,7 @@ describe('StreamingService', () => {
         eventId,
         'SCHEDULED',
         'LIVE',
-        'signal_recovered',
+        'start_stream',
         expect.objectContaining({ source: 'webhook' }),
       );
       expect(mockGateway.broadcastStreamStatus).toHaveBeenCalledWith(eventId, {
@@ -2105,6 +2101,47 @@ describe('StreamingService', () => {
 
       await service.handleMuxWebhook(rawBody, headers);
 
+      expect(mockStateMachine.transitionIdempotent).toHaveBeenCalledWith(
+        tenantId,
+        eventId,
+        'INTERRUPTED',
+        'LIVE',
+        'signal_recovered',
+        expect.objectContaining({ source: 'webhook' }),
+      );
+      expect(mockGateway.broadcastStreamStatus).toHaveBeenCalledWith(eventId, {
+        eventId,
+        tenantId,
+        status: EventStatus.LIVE,
+      });
+      expect(mockRepo.findLeadsWithEmailByEvent).not.toHaveBeenCalled();
+      expect(mockEmailService.sendStreamStartedEmail).not.toHaveBeenCalled();
+    });
+
+    it('resumes a PAUSED event to LIVE via webhook and broadcasts, but does not re-email leads', async () => {
+      mockMuxProvider.parseWebhookEvent.mockReturnValue({
+        type: 'stream.active',
+        providerStreamId: 'mux-live-stream-1',
+      });
+      mockRepo.findByProviderStreamId.mockResolvedValue({
+        id: eventId,
+        tenantId,
+        status: 'PAUSED',
+        slug: 'test-event-abababab',
+        title: 'Test Event',
+        tenant: { plan: 'BASIC' },
+      } as any);
+
+      await service.handleMuxWebhook(rawBody, headers);
+
+      expect(mockStateMachine.transitionIdempotent).toHaveBeenCalledWith(
+        tenantId,
+        eventId,
+        'PAUSED',
+        'LIVE',
+        'resume_stream',
+        expect.objectContaining({ source: 'webhook' }),
+      );
       expect(mockGateway.broadcastStreamStatus).toHaveBeenCalledWith(eventId, {
         eventId,
         tenantId,
