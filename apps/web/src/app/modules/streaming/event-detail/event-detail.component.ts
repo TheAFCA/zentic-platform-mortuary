@@ -211,6 +211,14 @@ import { getErrorMessage } from '../../../core/utils/error-message';
         }
       }
 
+      .waiting-signal {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-size: 0.85rem;
+        color: var(--ink-secondary, #6b7280);
+      }
+
       .creds-card {
         border-radius: 1rem;
         background: var(--surface-alt, #fff);
@@ -619,14 +627,18 @@ import { getErrorMessage } from '../../../core/utils/error-message';
           <div class="control-bar">
             <div class="control-bar__actions">
               @if (ev.status === 'SCHEDULED') {
+                <span class="waiting-signal">
+                  <mat-spinner diameter="16" />
+                  Esperando señal de OBS… la transmisión pasará a EN VIVO automáticamente.
+                </span>
                 <button
-                  mat-raised-button
-                  color="primary"
+                  mat-stroked-button
                   (click)="startStream()"
                   [disabled]="streamLoading()"
+                  matTooltip="Úsalo solo si OBS ya está transmitiendo y el estado no cambió solo"
                 >
                   <mat-icon>play_arrow</mat-icon>
-                  Iniciar transmisión
+                  Forzar inicio
                 </button>
               }
               @if (ev.status === 'LIVE' || ev.status === 'PAUSED') {
@@ -1204,7 +1216,10 @@ export class EventDetailComponent {
             this.loadCredentials();
           }
 
-          if (ev.status === EventStatus.LIVE || ev.status === EventStatus.PAUSED) {
+          if (ev.status !== EventStatus.FINISHED && ev.status !== EventStatus.CANCELLED) {
+            // Conexión temprana: el estado LIVE/INTERRUPTED puede llegar por
+            // webhook (sin que el operador haga clic en ningún botón), así que
+            // hay que estar escuchando el socket desde que el evento carga.
             this.socket.connect(this.eventId, true);
           }
         },

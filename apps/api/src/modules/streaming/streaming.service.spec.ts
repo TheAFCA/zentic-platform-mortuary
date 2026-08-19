@@ -2037,7 +2037,7 @@ describe('StreamingService', () => {
       expect(mockRepo.findByProviderStreamId).not.toHaveBeenCalled();
     });
 
-    it('ignores stream.active/idle events (state is driven by the operator panel)', async () => {
+    it('is a no-op for stream.active when the event cannot be matched by providerStreamId', async () => {
       mockMuxProvider.parseWebhookEvent.mockReturnValue({
         type: 'stream.active',
         providerStreamId: 'mux-live-stream-1',
@@ -2051,6 +2051,98 @@ describe('StreamingService', () => {
         'mux-live-stream-1',
       );
       expect(mockRepo.update).not.toHaveBeenCalled();
+      expect(mockGateway.broadcastStreamStatus).not.toHaveBeenCalled();
+    });
+
+    it('syncs a SCHEDULED event to LIVE, broadcasts and emails leads on stream.active (RF-STREAM-011 / LIFE-07)', async () => {
+      mockMuxProvider.parseWebhookEvent.mockReturnValue({
+        type: 'stream.active',
+        providerStreamId: 'mux-live-stream-1',
+      });
+      mockRepo.findByProviderStreamId.mockResolvedValue({
+        id: eventId,
+        tenantId,
+        status: 'SCHEDULED',
+        slug: 'test-event-abababab',
+        title: 'Test Event',
+        tenant: { plan: 'BASIC' },
+      } as any);
+      mockRepo.findLeadsWithEmailByEvent.mockResolvedValue([
+        { name: 'Ana', email: 'ana@example.com', consent: true },
+      ] as any);
+
+      await service.handleMuxWebhook(rawBody, headers);
+
+      expect(mockStateMachine.transitionIdempotent).toHaveBeenCalledWith(
+        tenantId,
+        eventId,
+        'SCHEDULED',
+        'LIVE',
+        'signal_recovered',
+        expect.objectContaining({ source: 'webhook' }),
+      );
+      expect(mockGateway.broadcastStreamStatus).toHaveBeenCalledWith(eventId, {
+        eventId,
+        tenantId,
+        status: EventStatus.LIVE,
+      });
+      expect(mockEmailService.sendStreamStartedEmail).toHaveBeenCalledTimes(1);
+    });
+
+    it('recovers an INTERRUPTED event to LIVE and broadcasts, but does not re-email leads', async () => {
+      mockMuxProvider.parseWebhookEvent.mockReturnValue({
+        type: 'stream.active',
+        providerStreamId: 'mux-live-stream-1',
+      });
+      mockRepo.findByProviderStreamId.mockResolvedValue({
+        id: eventId,
+        tenantId,
+        status: 'INTERRUPTED',
+        slug: 'test-event-abababab',
+        title: 'Test Event',
+        tenant: { plan: 'BASIC' },
+      } as any);
+
+      await service.handleMuxWebhook(rawBody, headers);
+
+      expect(mockGateway.broadcastStreamStatus).toHaveBeenCalledWith(eventId, {
+        eventId,
+        tenantId,
+        status: EventStatus.LIVE,
+      });
+      expect(mockRepo.findLeadsWithEmailByEvent).not.toHaveBeenCalled();
+      expect(mockEmailService.sendStreamStartedEmail).not.toHaveBeenCalled();
+    });
+
+    it('marks a LIVE event as INTERRUPTED and broadcasts on stream.idle (LIFE-06/LIFE-07)', async () => {
+      mockMuxProvider.parseWebhookEvent.mockReturnValue({
+        type: 'stream.idle',
+        providerStreamId: 'mux-live-stream-1',
+      });
+      mockRepo.findByProviderStreamId.mockResolvedValue({
+        id: eventId,
+        tenantId,
+        status: 'LIVE',
+        slug: 'test-event-abababab',
+        title: 'Test Event',
+        tenant: { plan: 'BASIC' },
+      } as any);
+
+      await service.handleMuxWebhook(rawBody, headers);
+
+      expect(mockStateMachine.transitionIdempotent).toHaveBeenCalledWith(
+        tenantId,
+        eventId,
+        'LIVE',
+        'INTERRUPTED',
+        'signal_lost',
+        expect.objectContaining({ source: 'webhook' }),
+      );
+      expect(mockGateway.broadcastStreamStatus).toHaveBeenCalledWith(eventId, {
+        eventId,
+        tenantId,
+        status: EventStatus.INTERRUPTED,
+      });
     });
 
     it('sets recordingUrl and a 30-day expiry for a BASIC plan when recording.ready arrives', async () => {
