@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, Output, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -52,6 +53,7 @@ const EMPTY_VALUE: ObituaryFormValue = {
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    MatDatepickerModule,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
@@ -159,20 +161,25 @@ export class ObituaryFormComponent implements OnChanges {
     }
 
     const raw = this.form.getRawValue();
-    if (!this.datesAreValid(raw.birthDate, raw.deathDate)) {
+    // MatDatepicker entrega un Date, no el string que espera el API.
+    const birthDate = this.toLocalDateString(raw.birthDate);
+    const deathDate = this.toLocalDateString(raw.deathDate);
+    const serviceDate = this.toLocalDateString(raw.serviceDate);
+
+    if (!this.datesAreValid(birthDate, deathDate)) {
       return;
     }
 
     const serviceAt =
-      raw.serviceDate && raw.serviceTime
-        ? new Date(`${raw.serviceDate}T${raw.serviceTime}:00`).toISOString()
+      serviceDate && raw.serviceTime
+        ? new Date(`${serviceDate}T${raw.serviceTime}:00`).toISOString()
         : '';
 
     const value: ObituaryFormValue = {
       firstName: raw.firstName,
       lastName: raw.lastName,
-      birthDate: raw.birthDate,
-      deathDate: raw.deathDate,
+      birthDate,
+      deathDate,
       birthCity: raw.birthCity,
       deathCity: raw.deathCity,
       epitaph: raw.epitaph,
@@ -200,5 +207,14 @@ export class ObituaryFormComponent implements OnChanges {
       return false;
     }
     return true;
+  }
+
+  private toLocalDateString(value: string | Date): string {
+    if (typeof value === 'string') return value;
+
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }
