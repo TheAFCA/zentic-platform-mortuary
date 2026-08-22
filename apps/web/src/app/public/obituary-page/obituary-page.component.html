@@ -61,8 +61,8 @@
           <h1 class="obituary-page__name">{{ deceased.firstName }} {{ deceased.lastName }}</h1>
 
           <p class="obituary-page__dates">
-            <span *ngIf="deceased.birthDate">⭐ {{ deceased.birthDate | date: 'longDate' }}</span>
-            <span *ngIf="deceased.deathDate">✝ {{ deceased.deathDate | date: 'longDate' }}</span>
+            <span *ngIf="deceased.birthDate">⭐ {{ deceased.birthDate | date: 'longDate':'UTC' }}</span>
+            <span *ngIf="deceased.deathDate">✝ {{ deceased.deathDate | date: 'longDate':'UTC' }}</span>
           </p>
 
           <p class="obituary-page__epitaph" *ngIf="deceased.epitaph">"{{ deceased.epitaph }}"</p>

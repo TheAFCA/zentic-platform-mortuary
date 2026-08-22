@@ -38,10 +38,10 @@
           </h1>
           <p class="obituary-detail__dates">
             <span *ngIf="obituary.deceased.birthDate">
-              ⭐ {{ obituary.deceased.birthDate | date: 'longDate' }}
+              ⭐ {{ obituary.deceased.birthDate | date: 'longDate':'UTC' }}
             </span>
             <span *ngIf="obituary.deceased.deathDate">
-              ✝ {{ obituary.deceased.deathDate | date: 'longDate' }}
+              ✝ {{ obituary.deceased.deathDate | date: 'longDate':'UTC' }}
             </span>
           </p>
           <p class="obituary-detail__epitaph" *ngIf="obituary.deceased.epitaph">
