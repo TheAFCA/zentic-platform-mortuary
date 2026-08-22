@@ -1045,13 +1045,13 @@ const REACTION_ICONS = [
                         @if (deceased.birthDate || deceased.deathDate) {
                           <p class="stream-room__about-dates">
                             @if (deceased.birthDate) {
-                              {{ deceased.birthDate | date: 'dd/MM/yyyy' }}
+                              {{ deceased.birthDate | date: 'dd/MM/yyyy' : 'UTC' }}
                             }
                             @if (deceased.birthDate && deceased.deathDate) {
                               –
                             }
                             @if (deceased.deathDate) {
-                              {{ deceased.deathDate | date: 'dd/MM/yyyy' }}
+                              {{ deceased.deathDate | date: 'dd/MM/yyyy' : 'UTC' }}
                             }
                           </p>
                         }

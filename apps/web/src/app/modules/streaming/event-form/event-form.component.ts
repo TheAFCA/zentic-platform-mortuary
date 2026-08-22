@@ -280,8 +280,13 @@ const CEREMONY_LABELS: Record<string, string> = {
                       <strong>{{ deceased.firstName }} {{ deceased.lastName }}</strong>
                     </div>
                     <div class="form-field" *ngIf="deceased.birthDate || deceased.deathDate">
-                      {{ deceased.birthDate ? (deceased.birthDate | date: 'longDate') : '—' }} —
-                      {{ deceased.deathDate ? (deceased.deathDate | date: 'longDate') : '—' }}
+                      {{
+                        deceased.birthDate ? (deceased.birthDate | date: 'longDate' : 'UTC') : '—'
+                      }}
+                      —
+                      {{
+                        deceased.deathDate ? (deceased.deathDate | date: 'longDate' : 'UTC') : '—'
+                      }}
                     </div>
                   </div>
                 } @else {

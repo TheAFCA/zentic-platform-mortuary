@@ -1,10 +1,11 @@
 import { TestBed } from '@angular/core/testing';
+import { MatNativeDateModule } from '@angular/material/core';
 import { vi } from 'vitest';
 import { ObituaryFormComponent } from './obituary-form.component';
 
 describe('ObituaryFormComponent', () => {
   function createFixture() {
-    TestBed.configureTestingModule({ imports: [ObituaryFormComponent] });
+    TestBed.configureTestingModule({ imports: [ObituaryFormComponent, MatNativeDateModule] });
     const fixture = TestBed.createComponent(ObituaryFormComponent);
     fixture.detectChanges();
     return fixture;

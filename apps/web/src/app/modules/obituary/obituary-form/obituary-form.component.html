@@ -44,20 +44,24 @@
       <mat-label>Fecha de nacimiento</mat-label>
       <input
         matInput
-        type="date"
+        [matDatepicker]="birthDatePicker"
         formControlName="birthDate"
         data-testid="obituary-birthdate-input"
       />
+      <mat-datepicker-toggle matSuffix [for]="birthDatePicker" />
+      <mat-datepicker #birthDatePicker />
     </mat-form-field>
 
     <mat-form-field appearance="outline">
       <mat-label>Fecha de fallecimiento</mat-label>
       <input
         matInput
-        type="date"
+        [matDatepicker]="deathDatePicker"
         formControlName="deathDate"
         data-testid="obituary-deathdate-input"
       />
+      <mat-datepicker-toggle matSuffix [for]="deathDatePicker" />
+      <mat-datepicker #deathDatePicker />
     </mat-form-field>
 
     <mat-form-field appearance="outline">
@@ -120,10 +124,12 @@
         <mat-label>Fecha del servicio</mat-label>
         <input
           matInput
-          type="date"
+          [matDatepicker]="serviceDatePicker"
           formControlName="serviceDate"
           data-testid="obituary-service-date-input"
         />
+        <mat-datepicker-toggle matSuffix [for]="serviceDatePicker" />
+        <mat-datepicker #serviceDatePicker />
       </mat-form-field>
 
       <mat-form-field appearance="outline">
