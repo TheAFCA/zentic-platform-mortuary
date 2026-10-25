@@ -1,12 +1,37 @@
-import { Injectable, inject } from '@angular/core';
-import { MatSnackBar, MatSnackBarConfig } from '@angular/material/snack-bar';
+import { Injectable, signal } from '@angular/core';
 import { getErrorMessage } from '../utils/error-message';
 
 export type NotificationKind = 'success' | 'error' | 'warning' | 'info';
+export type NotificationSeverity = 'success' | 'error' | 'warn' | 'info';
+
+export interface ActiveNotification {
+  id: number;
+  severity: NotificationSeverity;
+  icon: string;
+  message: string;
+}
+
+const SEVERITY_BY_KIND: Record<NotificationKind, NotificationSeverity> = {
+  success: 'success',
+  error: 'error',
+  warning: 'warn',
+  info: 'info',
+};
+
+const ICON_BY_KIND: Record<NotificationKind, string> = {
+  success: 'pi pi-check',
+  error: 'pi pi-times-circle',
+  warning: 'pi pi-exclamation-triangle',
+  info: 'pi pi-info-circle',
+};
 
 @Injectable({ providedIn: 'root' })
 export class NotificationService {
-  private readonly snackBar = inject(MatSnackBar);
+  private readonly _notifications = signal<ActiveNotification[]>([]);
+  readonly notifications = this._notifications.asReadonly();
+
+  private nextId = 0;
+  private readonly timers = new Map<number, ReturnType<typeof setTimeout>>();
 
   success(message: string): void {
     this.open(message, 'success', 4000);
@@ -29,15 +54,27 @@ export class NotificationService {
     this.error(getErrorMessage(error, fallback));
   }
 
+  dismiss(id: number): void {
+    const timer = this.timers.get(id);
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      this.timers.delete(id);
+    }
+    this._notifications.update((items) => items.filter((item) => item.id !== id));
+  }
+
   private open(message: string, kind: NotificationKind, duration?: number): void {
-    const config: MatSnackBarConfig = {
-      announcementMessage: message,
-      politeness: kind === 'error' ? 'assertive' : 'polite',
-      panelClass: ['zentic-notification', `zentic-notification--${kind}`],
-      horizontalPosition: 'center',
-      verticalPosition: 'bottom',
-    };
-    if (duration !== undefined) config.duration = duration;
-    this.snackBar.open(message, 'Cerrar', config);
+    const id = this.nextId++;
+    this._notifications.update((items) => [
+      ...items,
+      { id, severity: SEVERITY_BY_KIND[kind], icon: ICON_BY_KIND[kind], message },
+    ]);
+
+    if (duration !== undefined) {
+      this.timers.set(
+        id,
+        setTimeout(() => this.dismiss(id), duration),
+      );
+    }
   }
 }

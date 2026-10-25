@@ -4,7 +4,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { StreamingApiService } from '../../../../core/services/streaming-api.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { RouterModule } from '@angular/router';
@@ -19,7 +18,6 @@ import { RouterModule } from '@angular/router';
     MatCardModule,
     MatDividerModule,
     MatIconModule,
-    MatSnackBarModule,
   ],
   styles: [
     `

@@ -9,6 +9,8 @@ import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideNativeDateAdapter } from '@angular/material/core';
+import { providePrimeNG } from 'primeng/config';
+import Aura from '@primeng/themes/aura';
 import { createErrorHandler } from '@sentry/angular';
 import { routes } from './app.routes';
 import { tenantContextInterceptor } from './core/interceptors/tenant-context.interceptor';
@@ -38,5 +40,6 @@ export const appConfig: ApplicationConfig = {
     ),
     provideAnimationsAsync(),
     provideNativeDateAdapter(),
+    providePrimeNG({ theme: { preset: Aura } }),
   ],
 };

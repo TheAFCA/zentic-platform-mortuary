@@ -3,23 +3,12 @@ import { EventDetailComponent } from './event-detail.component';
 import { StreamingApiService } from '../../../core/services/streaming-api.service';
 import { StreamingSocketService } from '../../../core/services/streaming-socket.service';
 import { ActivatedRoute } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { DomSanitizer } from '@angular/platform-browser';
 import { of, Subject, throwError } from 'rxjs';
 import { EventStatus } from '@zentic/shared-types';
 import { AuthStateService } from '../../../core/services/auth-state.service';
 import { InvitationsApiService } from '../../../core/services/invitations-api.service';
-
-const successNotification = expect.objectContaining({
-  duration: 4000,
-  politeness: 'polite',
-  panelClass: ['zentic-notification', 'zentic-notification--success'],
-});
-
-const errorNotification = expect.objectContaining({
-  politeness: 'assertive',
-  panelClass: ['zentic-notification', 'zentic-notification--error'],
-});
+import { NotificationService } from '../../../core/services/notification.service';
 
 const mockDeceased = {
   id: 'dec-1',
@@ -101,7 +90,13 @@ interface SetupReturn {
     newReaction$: Subject<any>;
     messagePending$: Subject<any>;
   };
-  snackBar: { open: ReturnType<typeof vi.fn> };
+  notificationService: {
+    success: ReturnType<typeof vi.fn>;
+    error: ReturnType<typeof vi.fn>;
+    warning: ReturnType<typeof vi.fn>;
+    info: ReturnType<typeof vi.fn>;
+    apiError: ReturnType<typeof vi.fn>;
+  };
   sanitizer: { bypassSecurityTrustResourceUrl: ReturnType<typeof vi.fn> };
   newMessage$: Subject<any>;
   viewerCount$: Subject<number>;
@@ -173,7 +168,13 @@ function setup(overrides?: {
 
   const api = { ...apiDefaults, ...overrides?.apiOverrides };
 
-  const snackBar = { open: vi.fn() };
+  const notificationService = {
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    info: vi.fn(),
+    apiError: vi.fn(),
+  };
   const sanitizer = { bypassSecurityTrustResourceUrl: vi.fn().mockReturnValue('safe-url') };
   const route = { snapshot: { paramMap: { get: vi.fn().mockReturnValue('evt-1') } } };
 
@@ -192,10 +193,9 @@ function setup(overrides?: {
         useValue: { hasPermission: vi.fn().mockReturnValue(true) },
       },
       { provide: DomSanitizer, useValue: sanitizer },
+      { provide: NotificationService, useValue: notificationService },
     ],
   });
-
-  TestBed.overrideProvider(MatSnackBar, { useValue: snackBar });
 
   const fixture = TestBed.createComponent(EventDetailComponent);
   fixture.detectChanges();
@@ -205,7 +205,7 @@ function setup(overrides?: {
     component: fixture.componentInstance,
     api,
     socket: mockSocket,
-    snackBar,
+    notificationService,
     sanitizer,
     newMessage$,
     viewerCount$,
@@ -316,23 +316,19 @@ describe('EventDetailComponent', () => {
         writable: true,
       });
 
-      const { component, snackBar } = setup();
+      const { component, notificationService } = setup();
       component.copyToClipboard('test-value');
 
       await vi.waitFor(() => {
         expect(writeText).toHaveBeenCalledWith('test-value');
       });
-      expect(snackBar.open).toHaveBeenCalledWith(
-        'Copiado al portapapeles',
-        'Cerrar',
-        successNotification,
-      );
+      expect(notificationService.success).toHaveBeenCalledWith('Copiado al portapapeles');
     });
   });
 
   describe('startStream', () => {
     it('should call api.startStream and connect socket', () => {
-      const { component, api, socket, snackBar } = setup();
+      const { component, api, socket, notificationService } = setup();
       api.startStream.mockReturnValue(of({ ...mockEvent, status: 'LIVE' }));
 
       component.startStream();
@@ -341,15 +337,11 @@ describe('EventDetailComponent', () => {
       expect(socket.connect).toHaveBeenCalledWith('evt-1', true);
       expect(component.streamLoading()).toBe(false);
       expect(component.event()?.status).toBe('LIVE');
-      expect(snackBar.open).toHaveBeenCalledWith(
-        'Transmisión iniciada',
-        'Cerrar',
-        successNotification,
-      );
+      expect(notificationService.success).toHaveBeenCalledWith('Transmisión iniciada');
     });
 
     it('should handle error from API', () => {
-      const { component, api, socket, snackBar } = setup();
+      const { component, api, socket, notificationService } = setup();
       api.startStream.mockReturnValue(throwError(() => new Error('Error de red')));
       // La carga inicial ya conecta el socket (evento no-terminal) para poder
       // recibir el LIVE que dispare el webhook sin acción del operador — solo
@@ -360,7 +352,10 @@ describe('EventDetailComponent', () => {
 
       expect(component.streamLoading()).toBe(false);
       expect(socket.connect).not.toHaveBeenCalled();
-      expect(snackBar.open).toHaveBeenCalledWith('Error de red', 'Cerrar', errorNotification);
+      expect(notificationService.apiError).toHaveBeenCalledWith(
+        expect.any(Error),
+        'No se pudo iniciar la transmisión',
+      );
     });
   });
 
@@ -395,7 +390,7 @@ describe('EventDetailComponent', () => {
 
   describe('stopStream', () => {
     it('should call api.stopStream and disconnect socket', () => {
-      const { component, api, socket, snackBar } = setup();
+      const { component, api, socket, notificationService } = setup();
       api.stopStream.mockReturnValue(of({ ...mockEvent, status: 'FINISHED' }));
 
       component.stopStream();
@@ -404,22 +399,21 @@ describe('EventDetailComponent', () => {
       expect(socket.disconnect).toHaveBeenCalled();
       expect(component.streamLoading()).toBe(false);
       expect(component.event()?.status).toBe('FINISHED');
-      expect(snackBar.open).toHaveBeenCalledWith(
-        'Transmisión finalizada',
-        'Cerrar',
-        successNotification,
-      );
+      expect(notificationService.success).toHaveBeenCalledWith('Transmisión finalizada');
     });
 
     it('should handle error from API', () => {
-      const { component, api, socket, snackBar } = setup();
+      const { component, api, socket, notificationService } = setup();
       api.stopStream.mockReturnValue(throwError(() => new Error('Error de red')));
 
       component.stopStream();
 
       expect(component.streamLoading()).toBe(false);
       expect(socket.disconnect).not.toHaveBeenCalled();
-      expect(snackBar.open).toHaveBeenCalledWith('Error de red', 'Cerrar', errorNotification);
+      expect(notificationService.apiError).toHaveBeenCalledWith(
+        expect.any(Error),
+        'No se pudo finalizar la transmisión',
+      );
     });
   });
 
@@ -462,7 +456,7 @@ describe('EventDetailComponent', () => {
 
   describe('approveMessage', () => {
     it('should call api.approveMessage and update messages', () => {
-      const { component, api, snackBar } = setup();
+      const { component, api, notificationService } = setup();
       api.approveMessage.mockReturnValue(of({}));
       component.messages.set(mockMessages);
       component.pendingCount.set(2);
@@ -472,13 +466,13 @@ describe('EventDetailComponent', () => {
       expect(api.approveMessage).toHaveBeenCalledWith('evt-1', 'msg-2');
       expect(component.messages().find((m: any) => m.id === 'msg-2')).toBeUndefined();
       expect(component.pendingCount()).toBe(1);
-      expect(snackBar.open).toHaveBeenCalledWith('Mensaje aprobado', 'Cerrar', successNotification);
+      expect(notificationService.success).toHaveBeenCalledWith('Mensaje aprobado');
     });
   });
 
   describe('rejectMessage', () => {
     it('should call api.rejectMessage', () => {
-      const { component, api, snackBar } = setup();
+      const { component, api, notificationService } = setup();
       api.rejectMessage.mockReturnValue(of({}));
       component.messages.set(mockMessages);
       component.pendingCount.set(2);
@@ -488,11 +482,7 @@ describe('EventDetailComponent', () => {
       expect(api.rejectMessage).toHaveBeenCalledWith('evt-1', 'msg-2');
       expect(component.messages().find((m: any) => m.id === 'msg-2')).toBeUndefined();
       expect(component.pendingCount()).toBe(1);
-      expect(snackBar.open).toHaveBeenCalledWith(
-        'Mensaje rechazado',
-        'Cerrar',
-        successNotification,
-      );
+      expect(notificationService.success).toHaveBeenCalledWith('Mensaje rechazado');
     });
   });
 

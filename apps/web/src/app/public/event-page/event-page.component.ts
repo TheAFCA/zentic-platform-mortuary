@@ -4,7 +4,6 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -52,7 +51,6 @@ const REACTION_ICONS = [
     ReactiveFormsModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    MatSnackBarModule,
     MatTooltipModule,
     HlsPlayerComponent,
     PoweredByBadgeComponent,

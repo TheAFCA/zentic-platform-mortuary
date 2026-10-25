@@ -9,7 +9,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
-import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import {
   StreamingApiService,
@@ -44,7 +43,6 @@ const CEREMONY_LABELS: Record<string, string> = {
     MatInputModule,
     MatProgressSpinnerModule,
     MatSelectModule,
-    MatSnackBarModule,
     MatSlideToggleModule,
   ],
   styles: [

@@ -5,12 +5,12 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { MatNativeDateModule } from '@angular/material/core';
 import { Router } from '@angular/router';
 import { ActivatedRoute } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { of, throwError } from 'rxjs';
 import { VenuesApiService } from '../../../core/services/venues-api.service';
 import { ClientsApiService } from '../../../core/services/clients-api.service';
 import { ObituariesApiService } from '../../../core/services/obituaries-api.service';
 import { UsersService } from '../../../core/services/users.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { ClientStatus, EventStatus, Venue, Client } from '@zentic/shared-types';
 
 const mockStreamingEvent = {
@@ -156,7 +156,13 @@ describe('EventFormComponent', () => {
   let mockObituariesApi: { get: ReturnType<typeof vi.fn> };
   let mockUsersService: { list: ReturnType<typeof vi.fn> };
   let mockRouter: { navigate: ReturnType<typeof vi.fn> };
-  let mockSnackBar: { open: ReturnType<typeof vi.fn> };
+  let mockNotificationService: {
+    success: ReturnType<typeof vi.fn>;
+    error: ReturnType<typeof vi.fn>;
+    warning: ReturnType<typeof vi.fn>;
+    info: ReturnType<typeof vi.fn>;
+    apiError: ReturnType<typeof vi.fn>;
+  };
 
   function createComponent(
     id: string | null,
@@ -165,11 +171,6 @@ describe('EventFormComponent', () => {
     fixture: ComponentFixture<EventFormComponent>;
     component: EventFormComponent;
   } {
-    TestBed.overrideComponent(EventFormComponent, {
-      set: {
-        providers: [{ provide: MatSnackBar, useValue: mockSnackBar }],
-      },
-    });
     const mockRoute = {
       snapshot: {
         paramMap: {
@@ -191,7 +192,7 @@ describe('EventFormComponent', () => {
         { provide: UsersService, useValue: mockUsersService },
         { provide: Router, useValue: mockRouter },
         { provide: ActivatedRoute, useValue: mockRoute },
-        { provide: MatSnackBar, useValue: mockSnackBar },
+        { provide: NotificationService, useValue: mockNotificationService },
       ],
     });
 
@@ -211,7 +212,13 @@ describe('EventFormComponent', () => {
     mockObituariesApi = { get: vi.fn() };
     mockUsersService = { list: vi.fn().mockReturnValue(of(mockOperators)) };
     mockRouter = { navigate: vi.fn().mockResolvedValue(true) };
-    mockSnackBar = { open: vi.fn() };
+    mockNotificationService = {
+      success: vi.fn(),
+      error: vi.fn(),
+      warning: vi.fn(),
+      info: vi.fn(),
+      apiError: vi.fn(),
+    };
   });
 
   it('should create the component', () => {
@@ -394,13 +401,9 @@ describe('EventFormComponent', () => {
     component.onSubmit();
 
     expect(mockApi.create).toHaveBeenCalled();
-    expect(mockSnackBar.open).toHaveBeenCalledWith(
-      'Error de red',
-      'Cerrar',
-      expect.objectContaining({
-        politeness: 'assertive',
-        panelClass: ['zentic-notification', 'zentic-notification--error'],
-      }),
+    expect(mockNotificationService.apiError).toHaveBeenCalledWith(
+      expect.any(Error),
+      'No se pudo guardar el evento',
     );
   });
 
