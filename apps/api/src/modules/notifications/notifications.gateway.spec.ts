@@ -17,10 +17,21 @@ describe('NotificationsGateway', () => {
     user: { findFirst: jest.Mock };
   };
 
+  // Registro de salas en memoria para que server.in(room).fetchSockets()
+  // refleje los join/leave reales de cada socket simulado.
+  let rooms: Map<string, Set<string>>;
+
   const makeSocket = (id: string) => ({
     id,
-    join: jest.fn().mockResolvedValue(undefined),
-    leave: jest.fn().mockResolvedValue(undefined),
+    join: jest.fn((room: string) => {
+      if (!rooms.has(room)) rooms.set(room, new Set());
+      rooms.get(room)!.add(id);
+      return Promise.resolve();
+    }),
+    leave: jest.fn((room: string) => {
+      rooms.get(room)?.delete(id);
+      return Promise.resolve();
+    }),
     data: {},
     handshake: { auth: {}, headers: {} },
   });
@@ -74,10 +85,15 @@ describe('NotificationsGateway', () => {
 
     gateway = module.get(NotificationsGateway);
 
+    rooms = new Map();
     emit = jest.fn();
     to = jest.fn().mockReturnValue({ emit });
     (gateway as unknown as { server: { to: jest.Mock } }).server = {
       to,
+      in: (room: string) => ({
+        fetchSockets: () =>
+          Promise.resolve([...(rooms.get(room) ?? [])].map((id) => ({ id }))),
+      }),
     } as any;
   });
 
@@ -209,6 +225,31 @@ describe('NotificationsGateway', () => {
         eventId: 'event-1',
         tenantId: '',
         count: 0,
+      });
+    });
+
+    it('does not count a moderator whose join-admin resolves before join-event', async () => {
+      const viewer = makeSocket('viewer-1');
+      const admin = makeSocket('admin-1');
+      admin.data = {
+        user: {
+          sub: 'user-1',
+          email: 'operator@example.com',
+          role: UserRole.OPERATOR,
+          tenantId: 'tenant-1',
+          permissions: ['streaming:moderate'],
+        },
+      };
+      await gateway.handleJoinEvent(viewer as any, { eventId: 'event-1' });
+
+      await gateway.handleJoinAdmin(admin as any, { eventId: 'event-1' });
+      await gateway.handleJoinEvent(admin as any, { eventId: 'event-1' });
+
+      expect(admin.join).toHaveBeenCalledWith('event:event-1');
+      expect(emit).toHaveBeenLastCalledWith('viewer-count', {
+        eventId: 'event-1',
+        tenantId: '',
+        count: 1,
       });
     });
 

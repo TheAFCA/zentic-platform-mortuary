@@ -1253,6 +1253,9 @@ export class EventPageComponent {
     this.destroyRef.onDestroy(() => {
       this.clearPlaybackRefreshTimer();
       this.cancelPoll();
+      // El servicio es root: sin esto el socket sobrevive a la navegación y
+      // sigue contando como espectador.
+      this.socket.disconnect();
     });
   }
 

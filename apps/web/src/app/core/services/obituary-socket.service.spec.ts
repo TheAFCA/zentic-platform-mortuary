@@ -44,7 +44,7 @@ describe('ObituarySocketService', () => {
     it('should create a socket connection to the /events namespace', () => {
       service.connect('obituary-1');
 
-      expect(io).toHaveBeenCalledWith('http://localhost:3000/events', {
+      expect(io).toHaveBeenCalledWith('/events', {
         transports: ['websocket', 'polling'],
       });
     });
