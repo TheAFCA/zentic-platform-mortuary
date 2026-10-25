@@ -1,0 +1,46 @@
+name: homena-storage
+
+services:
+  garage:
+    image: dxflrs/garage:v2.5.0
+    restart: unless-stopped
+    command: [/garage, server]
+    environment:
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?Generate GARAGE_RPC_SECRET with openssl rand -hex 32}
+    configs:
+      - source: garage_config
+        target: /etc/garage.toml
+    volumes:
+      - garage_metadata:/var/lib/garage/meta
+      - garage_data:/var/lib/garage/data
+    ports:
+      - '127.0.0.1:3900:3900'
+    healthcheck:
+      test: ['CMD', '/garage', 'status']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+configs:
+  garage_config:
+    content: |
+      metadata_dir = "/var/lib/garage/meta"
+      data_dir = "/var/lib/garage/data"
+      db_engine = "sqlite"
+      replication_factor = 1
+      rpc_bind_addr = "127.0.0.1:3901"
+      rpc_public_addr = "127.0.0.1:3901"
+
+      [s3_api]
+      s3_region = "garage"
+      api_bind_addr = "0.0.0.0:3900"
+
+volumes:
+  garage_metadata:
+  garage_data:

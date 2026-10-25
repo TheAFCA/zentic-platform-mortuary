@@ -85,13 +85,34 @@ describe('DeceasedPhotoService', () => {
     expect(sharpChain.webp).toHaveBeenNthCalledWith(3, { quality: 60 });
   });
 
-  it('deja de reducir calidad al llegar al mínimo aunque siga excediendo el tamaño', async () => {
+  it('rechaza el resultado si al llegar a la calidad mínima aún excede 1MB', async () => {
     sharpChain.metadata.mockResolvedValue({ width: 1000, height: 1000 });
     sharpChain.toBuffer.mockResolvedValue(Buffer.alloc(5_000_000));
     filesService.upload.mockResolvedValue('http://cdn/photo.webp');
 
-    await service.process('tenant-1', inputFile);
+    await expect(service.process('tenant-1', inputFile)).rejects.toThrow(
+      'No se pudo optimizar la fotografía',
+    );
+    expect(filesService.upload).not.toHaveBeenCalled();
 
     expect(sharpChain.webp).toHaveBeenLastCalledWith({ quality: 40 });
+  });
+  it('rejects an oversized original before invoking sharp', async () => {
+    await expect(
+      service.process('tenant-1', {
+        ...inputFile,
+        buffer: Buffer.alloc(5 * 1024 * 1024 + 1),
+      }),
+    ).rejects.toThrow('El archivo excede el máximo de 5 MB');
+    expect(sharpMock).not.toHaveBeenCalled();
+    expect(filesService.upload).not.toHaveBeenCalled();
+  });
+
+  it('rejects corrupt image content before storage', async () => {
+    sharpChain.metadata.mockRejectedValue(new Error('Invalid image'));
+    await expect(service.process('tenant-1', inputFile)).rejects.toThrow(
+      'El archivo no es una imagen válida',
+    );
+    expect(filesService.upload).not.toHaveBeenCalled();
   });
 });

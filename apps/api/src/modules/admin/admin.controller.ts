@@ -12,7 +12,12 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtPayload } from '@zentic/shared-types';
+import {
+  JwtPayload,
+  IMAGE_UPLOAD_LIMITS,
+  BRAND_IMAGE_MIME_TYPES,
+} from '@zentic/shared-types';
+import { imageUploadOptions } from '../files/image-upload.options';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
@@ -91,7 +96,12 @@ export class AdminController {
 
   @Post('settings/brand/logo')
   @RequirePermission('settings:manage')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor(
+      'file',
+      imageUploadOptions(IMAGE_UPLOAD_LIMITS.logo, BRAND_IMAGE_MIME_TYPES),
+    ),
+  )
   uploadBrandLogo(
     @TenantId() tenantId: string,
     @UploadedFile() file?: Express.Multer.File,
@@ -102,7 +112,12 @@ export class AdminController {
 
   @Post('settings/brand/favicon')
   @RequirePermission('settings:manage')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor(
+      'file',
+      imageUploadOptions(IMAGE_UPLOAD_LIMITS.favicon, BRAND_IMAGE_MIME_TYPES),
+    ),
+  )
   uploadBrandFavicon(
     @TenantId() tenantId: string,
     @UploadedFile() file?: Express.Multer.File,

@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { TenantBrandConfig } from '@zentic/shared-types';
+import { TenantBrandConfig, IMAGE_UPLOAD_LIMITS } from '@zentic/shared-types';
 import { AdminSettingsApiService } from '../../../../core/services/admin-settings-api.service';
 import { BrandThemeService } from '../../../../core/services/brand-theme.service';
 import { FileDropzoneComponent } from '../../../../shared/molecules/file-dropzone/file-dropzone.component';
@@ -23,6 +23,7 @@ import { getErrorMessage } from '../../../../core/utils/error-message';
   styleUrl: './brand-settings.component.scss',
 })
 export class BrandSettingsComponent implements OnInit {
+  readonly imageUploadLimits = IMAGE_UPLOAD_LIMITS;
   private readonly fb = inject(FormBuilder);
   private readonly settingsApi = inject(AdminSettingsApiService);
   private readonly brandTheme = inject(BrandThemeService);

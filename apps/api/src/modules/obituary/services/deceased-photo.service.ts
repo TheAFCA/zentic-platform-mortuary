@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { IMAGE_UPLOAD_LIMITS, PHOTO_MIME_TYPES } from '@zentic/shared-types';
+import { validateImageUpload } from '../../files/image-upload.options';
 import { FilesService, UploadableFile } from '../../files/files.service';
 
 // sharp publica un paquete dual ESM/CJS cuyo campo "types" raíz apunta al build ESM
@@ -27,7 +29,7 @@ interface SharpPipeline {
 
 const TARGET_SIZE = 800;
 const MAX_VISIBLE_BYTES = 1_000_000; // RF-OBT-002: máx. 1MB visible
-const UPLOAD_CEILING_BYTES = 2_000_000; // margen de seguridad si la compresión no converge
+const UPLOAD_CEILING_BYTES = MAX_VISIBLE_BYTES;
 const MIN_QUALITY = 40;
 const QUALITY_STEP = 10;
 const INITIAL_QUALITY = 80;
@@ -46,13 +48,28 @@ export class DeceasedPhotoService {
     tenantId: string,
     file: UploadableFile,
   ): Promise<ProcessedPhoto> {
-    const metadata = await sharpFactory(file.buffer).metadata();
+    validateImageUpload(file.buffer, IMAGE_UPLOAD_LIMITS.photo);
+    if (!PHOTO_MIME_TYPES.includes(file.mimetype)) {
+      throw new BadRequestException(
+        'Formato no soportado. Use PNG, JPG o WebP',
+      );
+    }
+    const metadata = await sharpFactory(file.buffer)
+      .metadata()
+      .catch(() => {
+        throw new BadRequestException('El archivo no es una imagen válida');
+      });
     // Caso borde §12 del spec: se acepta pero se advierte, no se bloquea la subida.
     const lowResolutionWarning =
       (metadata.width ?? 0) < MIN_RECOMMENDED_DIMENSION ||
       (metadata.height ?? 0) < MIN_RECOMMENDED_DIMENSION;
 
-    const optimizedBuffer = await this.optimize(file.buffer);
+    const optimizedBuffer = await this.optimize(file.buffer).catch(
+      (error: unknown) => {
+        if (error instanceof BadRequestException) throw error;
+        throw new BadRequestException('El archivo no es una imagen válida');
+      },
+    );
 
     const photoUrl = await this.filesService.upload(
       {
@@ -76,6 +93,11 @@ export class DeceasedPhotoService {
       output = await this.render(buffer, quality);
     }
 
+    if (output.byteLength > MAX_VISIBLE_BYTES) {
+      throw new BadRequestException(
+        'No se pudo optimizar la fotografía a un máximo de 1 MB. Selecciona otra imagen.',
+      );
+    }
     return output;
   }
 

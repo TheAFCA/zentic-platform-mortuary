@@ -7,6 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import {
+  IMAGE_UPLOAD_LIMITS,
   AdminDashboardMetrics,
   JwtPayload,
   TenantAccountSettings,
@@ -31,8 +32,8 @@ const DEFAULT_TENANT_TIMEZONE = 'America/Bogota';
 
 const MANAGEABLE_ROLES = ['OPERATOR', 'VIEWER'] as const;
 
-const LOGO_MAX_SIZE_BYTES = 2 * 1024 * 1024;
-const FAVICON_MAX_SIZE_BYTES = 512 * 1024;
+const LOGO_MAX_SIZE_BYTES = IMAGE_UPLOAD_LIMITS.logo;
+const FAVICON_MAX_SIZE_BYTES = IMAGE_UPLOAD_LIMITS.favicon;
 
 @Injectable()
 export class AdminService {

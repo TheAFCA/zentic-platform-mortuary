@@ -13,6 +13,8 @@ import {
   UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { IMAGE_UPLOAD_LIMITS, PHOTO_MIME_TYPES } from '@zentic/shared-types';
+import { imageUploadOptions } from '../files/image-upload.options';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ObituaryService } from './obituary.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -97,7 +99,12 @@ export class ObituaryController {
 
   @Post(':id/photo')
   @RequirePermission('obituary:update')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor(
+      'file',
+      imageUploadOptions(IMAGE_UPLOAD_LIMITS.photo, PHOTO_MIME_TYPES),
+    ),
+  )
   uploadPhoto(
     @TenantId() tenantId: string,
     @Param('id') id: string,
