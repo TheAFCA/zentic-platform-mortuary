@@ -20,6 +20,38 @@ const MIME_EXTENSIONS: Record<string, string> = {
   'image/webp': 'webp',
 };
 
+/**
+ * El `mimetype` de multer viene del cliente: se contrasta con los primeros bytes reales
+ * para que no se pueda subir, p.ej., un HTML declarado como image/png.
+ */
+function matchesSignature(mimetype: string, buffer: Buffer): boolean {
+  switch (mimetype) {
+    case 'image/png':
+      return buffer
+        .subarray(0, 8)
+        .equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+    case 'image/jpeg':
+      return buffer.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]));
+    case 'image/webp':
+      return (
+        buffer.subarray(0, 4).toString('ascii') === 'RIFF' &&
+        buffer.subarray(8, 12).toString('ascii') === 'WEBP'
+      );
+    case 'image/svg+xml': {
+      const head = buffer
+        .subarray(0, 1024)
+        .toString('utf8')
+        .replace(/^\uFEFF/, '')
+        .trimStart();
+      return /^(<\?xml[^>]*>\s*)?(<!--[\s\S]*?-->\s*)*(<!DOCTYPE[^>]*>\s*)?<svg[\s>]/i.test(
+        head,
+      );
+    }
+    default:
+      return false;
+  }
+}
+
 export interface UploadableFile {
   buffer: Buffer;
   mimetype: string;
@@ -52,6 +84,11 @@ export class FilesService {
       const maxMb = Math.round(options.maxSizeBytes / (1024 * 1024));
       throw new BadRequestException(
         `El archivo excede el máximo de ${maxMb}MB`,
+      );
+    }
+    if (!matchesSignature(file.mimetype, file.buffer)) {
+      throw new BadRequestException(
+        'El contenido del archivo no coincide con su formato',
       );
     }
 

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+const DEFAULT_ACCESS_CODE_HMAC_SECRET = 'zentic-access-code-secret';
+
 const envSchema = z.object({
   NODE_ENV: z
     .enum(['development', 'test', 'production'])
@@ -36,6 +38,8 @@ const envSchema = z.object({
   // Throttler
   THROTTLE_TTL: z.coerce.number().default(60000),
   THROTTLE_LIMIT: z.coerce.number().default(100),
+  // Saltos de proxy confiables (Express `trust proxy`). 0 = desactivado.
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
 
   // Streaming
   STREAM_PROVIDER: z.enum(['mux', 'cloudflare']).default('mux'),
@@ -62,7 +66,7 @@ const envSchema = z.object({
   ACCESS_CODE_HMAC_SECRET: z
     .string()
     .min(16)
-    .default('zentic-access-code-secret'),
+    .default(DEFAULT_ACCESS_CODE_HMAC_SECRET),
 
   // Storage
   STORAGE_PROVIDER: z.enum(['r2', 's3']).default('r2'),
@@ -78,10 +82,25 @@ const envSchema = z.object({
   EMAIL_FROM: z.string().email().default('noreply@zentic.pro'),
 });
 
-export type Env = z.infer<typeof envSchema>;
+// El default del HMAC de códigos de acceso es público (está en el repo): en
+// producción hay que definirlo explícitamente.
+const refinedEnvSchema = envSchema.superRefine((env, ctx) => {
+  if (
+    env.NODE_ENV === 'production' &&
+    env.ACCESS_CODE_HMAC_SECRET === DEFAULT_ACCESS_CODE_HMAC_SECRET
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['ACCESS_CODE_HMAC_SECRET'],
+      message: 'Debe definirse en producción',
+    });
+  }
+});
+
+export type Env = z.infer<typeof refinedEnvSchema>;
 
 export function validateEnv(config: Record<string, unknown>): Env {
-  const result = envSchema.safeParse(config);
+  const result = refinedEnvSchema.safeParse(config);
   if (!result.success) {
     const errors = result.error.flatten().fieldErrors;
     throw new Error(

@@ -5,6 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as Sentry from '@sentry/node';
 import * as cookieParser from 'cookie-parser';
 import helmet from 'helmet';
+import { ServerResponse } from 'http';
 import { join } from 'path';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -28,8 +29,24 @@ async function bootstrap() {
   });
   const config = app.get(ConfigService);
 
+  // Detrás del proxy de Render, sin esto req.ip es la del proxy y el throttler
+  // agrupa a todos los clientes en un solo contador.
+  const trustProxyHops = config.get<number>('TRUST_PROXY_HOPS', 0);
+  if (trustProxyHops > 0) app.set('trust proxy', trustProxyHops);
+
   // TODO(post-HU5): retirar cuando FilesService migre a R2/S3.
-  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads' });
+  // Se aceptan SVG subidos por tenants: el CSP sandbox impide que ejecuten script
+  // si alguien abre la URL directamente (en <img> los SVG nunca ejecutan script).
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+    prefix: '/uploads',
+    setHeaders: (res: ServerResponse) => {
+      res.setHeader(
+        'Content-Security-Policy',
+        "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+      );
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+    },
+  });
 
   const frontendUrl = config.get<string>(
     'FRONTEND_URL',

@@ -11,6 +11,11 @@ jest.mock('fs/promises', () => ({
   unlink: jest.fn(),
 }));
 
+const PNG_BYTES = Buffer.concat([
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  Buffer.from('fake-png-body'),
+]);
+
 describe('FilesService', () => {
   let service: FilesService;
 
@@ -65,7 +70,7 @@ describe('FilesService', () => {
     it('writes the file to disk and returns a public URL under /uploads', async () => {
       // ARRANGE
       const file = {
-        buffer: Buffer.from('fake-png-bytes'),
+        buffer: PNG_BYTES,
         mimetype: 'image/png',
         originalname: 'logo.png',
       };
@@ -81,6 +86,43 @@ describe('FilesService', () => {
       expect(url).toMatch(
         /^http:\/\/localhost:3000\/uploads\/brand\/tenant-1\/[\w-]+\.png$/,
       );
+    });
+
+    it.each([
+      ['image/png', Buffer.from('<html><script>alert(1)</script></html>')],
+      ['image/jpeg', PNG_BYTES],
+      ['image/webp', Buffer.from('RIFF0000WAVE')],
+      ['image/svg+xml', Buffer.from('<html><body>no svg</body></html>')],
+    ])(
+      'rejects a %s whose bytes do not match the declared format',
+      async (mimetype, buffer) => {
+        await expect(
+          service.upload(
+            { buffer, mimetype, originalname: 'file' },
+            'brand/tenant-1',
+            { maxSizeBytes: 2_000_000 },
+          ),
+        ).rejects.toThrow(BadRequestException);
+        expect(fs.writeFile).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([
+      ['image/jpeg', Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00])],
+      ['image/webp', Buffer.from('RIFF\x00\x00\x00\x00WEBPVP8 ', 'latin1')],
+      [
+        'image/svg+xml',
+        Buffer.from(
+          '\uFEFF<?xml version="1.0"?>\n<!-- logo -->\n<svg xmlns="http://www.w3.org/2000/svg"></svg>',
+        ),
+      ],
+    ])('accepts a valid %s', async (mimetype, buffer) => {
+      await service.upload(
+        { buffer, mimetype, originalname: 'file' },
+        'brand/tenant-1',
+        { maxSizeBytes: 2_000_000 },
+      );
+      expect(fs.writeFile).toHaveBeenCalled();
     });
   });
 

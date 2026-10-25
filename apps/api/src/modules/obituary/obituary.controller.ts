@@ -97,7 +97,10 @@ export class ObituaryController {
 
   @Post(':id/photo')
   @RequirePermission('obituary:update')
-  @UseInterceptors(FileInterceptor('file'))
+  // Mismo tope que el dropzone del formulario; sin límite multer guarda en memoria cualquier tamaño.
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }),
+  )
   uploadPhoto(
     @TenantId() tenantId: string,
     @Param('id') id: string,

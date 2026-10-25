@@ -91,7 +91,9 @@ export class AdminController {
 
   @Post('settings/brand/logo')
   @RequirePermission('settings:manage')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 2 * 1024 * 1024 } }),
+  )
   uploadBrandLogo(
     @TenantId() tenantId: string,
     @UploadedFile() file?: Express.Multer.File,
@@ -102,7 +104,9 @@ export class AdminController {
 
   @Post('settings/brand/favicon')
   @RequirePermission('settings:manage')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 512 * 1024 } }),
+  )
   uploadBrandFavicon(
     @TenantId() tenantId: string,
     @UploadedFile() file?: Express.Multer.File,
