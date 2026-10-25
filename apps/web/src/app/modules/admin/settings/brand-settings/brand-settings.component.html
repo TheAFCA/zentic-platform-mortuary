@@ -14,15 +14,15 @@
     <section class="brand-settings__uploads">
       <app-file-dropzone
         label="Logo"
-        hint="PNG, JPG o SVG · máx. 2MB"
-        [maxSizeBytes]="2 * 1024 * 1024"
+        hint="PNG, JPG, WebP o SVG"
+        [maxSizeBytes]="imageUploadLimits.logo"
         [previewUrl]="logoUrl()"
         (fileSelected)="onLogoSelected($event)"
       />
       <app-file-dropzone
         label="Favicon"
-        hint="PNG, JPG o SVG · máx. 512KB"
-        [maxSizeBytes]="512 * 1024"
+        hint="PNG, JPG, WebP o SVG"
+        [maxSizeBytes]="imageUploadLimits.favicon"
         [previewUrl]="faviconUrl()"
         (fileSelected)="onFaviconSelected($event)"
       />

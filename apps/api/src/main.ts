@@ -28,7 +28,7 @@ async function bootstrap() {
   });
   const config = app.get(ConfigService);
 
-  // TODO(post-HU5): retirar cuando FilesService migre a R2/S3.
+  // Preserve legacy local image URLs while new assets use Garage/S3.
   app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads' });
 
   const frontendUrl = config.get<string>(

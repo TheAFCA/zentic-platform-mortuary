@@ -65,7 +65,13 @@ const envSchema = z.object({
     .default('zentic-access-code-secret'),
 
   // Storage
-  STORAGE_PROVIDER: z.enum(['r2', 's3']).default('r2'),
+  STORAGE_PROVIDER: z.enum(['local', 'r2', 's3']).default('local'),
+  S3_ENDPOINT: z.string().optional(),
+  S3_REGION: z.string().default('garage'),
+  S3_BUCKET: z.string().optional(),
+  S3_ACCESS_KEY_ID: z.string().optional(),
+  S3_SECRET_ACCESS_KEY: z.string().optional(),
+  STORAGE_PUBLIC_URL: z.string().optional(),
   R2_ACCOUNT_ID: z.string().optional(),
   R2_ACCESS_KEY_ID: z.string().optional(),
   R2_SECRET_ACCESS_KEY: z.string().optional(),
@@ -88,5 +94,31 @@ export function validateEnv(config: Record<string, unknown>): Env {
       `Environment validation failed:\n${JSON.stringify(errors, null, 2)}`,
     );
   }
-  return result.data;
+  const env = result.data;
+  if (env.STORAGE_PROVIDER === 's3') {
+    const required = [
+      'S3_ENDPOINT',
+      'S3_BUCKET',
+      'S3_ACCESS_KEY_ID',
+      'S3_SECRET_ACCESS_KEY',
+      'STORAGE_PUBLIC_URL',
+    ] as const;
+    for (const key of required) {
+      if (!env[key]?.trim())
+        throw new Error(`Missing required storage configuration: ${key}`);
+    }
+    for (const key of ['S3_ENDPOINT', 'STORAGE_PUBLIC_URL'] as const) {
+      const parsed = z.string().url().safeParse(env[key]);
+      if (!parsed.success || !/^https?:\/\//.test(parsed.data)) {
+        throw new Error(`Invalid storage URL: ${key}`);
+      }
+    }
+    if (
+      env.NODE_ENV === 'production' &&
+      !env.STORAGE_PUBLIC_URL!.startsWith('https://')
+    ) {
+      throw new Error('STORAGE_PUBLIC_URL must use HTTPS in production');
+    }
+  }
+  return env;
 }

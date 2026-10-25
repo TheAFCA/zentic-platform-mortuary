@@ -6,7 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { QuillEditorComponent } from 'ngx-quill';
-import { Venue } from '@zentic/shared-types';
+import { Venue, IMAGE_UPLOAD_LIMITS, PHOTO_MIME_TYPES } from '@zentic/shared-types';
 import { FileDropzoneComponent } from '../../../shared/molecules/file-dropzone/file-dropzone.component';
 import { InitialsAvatarComponent } from '../../../shared/atoms/initials-avatar/initials-avatar.component';
 
@@ -65,6 +65,8 @@ const EMPTY_VALUE: ObituaryFormValue = {
   styleUrl: './obituary-form.component.scss',
 })
 export class ObituaryFormComponent implements OnChanges {
+  readonly imageUploadLimits = IMAGE_UPLOAD_LIMITS;
+  readonly photoMimeTypes = PHOTO_MIME_TYPES;
   @Input() initialValue: ObituaryFormValue | null = null;
   @Input() initialPhotoUrl: string | null = null;
   @Input() venues: Venue[] = [];

@@ -1,5 +1,5 @@
 FROM node:20-alpine AS base
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10.34.5
 
 FROM base AS deps
 WORKDIR /app
@@ -23,7 +23,7 @@ RUN pnpm --filter @zentic/api build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10.34.5
 
 RUN apk add --no-cache openssl
 
