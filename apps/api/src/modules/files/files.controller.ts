@@ -26,6 +26,8 @@ export class FilesController {
       `${category}/${tenantId}/${filename}`,
     );
     if (!image) throw new NotFoundException('Imagen no encontrada');
+    // Public images are embedded by tenant subdomains and external previews.
+    response.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     response.setHeader('Cache-Control', 'public, max-age=3600');
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader(
