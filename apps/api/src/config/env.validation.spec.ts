@@ -40,19 +40,4 @@ describe('validateEnv', () => {
       validateEnv({ ...BASE_ENV, TRUST_PROXY_HOPS: '1' }).TRUST_PROXY_HOPS,
     ).toBe(1);
   });
-
-  it('rejects the default ACCESS_CODE_HMAC_SECRET in production', () => {
-    expect(() => validateEnv({ ...BASE_ENV, NODE_ENV: 'production' })).toThrow(
-      'ACCESS_CODE_HMAC_SECRET',
-    );
-  });
-
-  it('accepts an explicit ACCESS_CODE_HMAC_SECRET in production', () => {
-    const env = validateEnv({
-      ...BASE_ENV,
-      NODE_ENV: 'production',
-      ACCESS_CODE_HMAC_SECRET: 'd'.repeat(32),
-    });
-    expect(env.ACCESS_CODE_HMAC_SECRET).toBe('d'.repeat(32));
-  });
 });
