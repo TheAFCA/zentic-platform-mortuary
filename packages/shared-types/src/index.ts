@@ -1125,3 +1125,5 @@ export interface AccessCodeInput {
   email?: string;
   consent?: boolean;
 }
+
+export * from './image-upload';

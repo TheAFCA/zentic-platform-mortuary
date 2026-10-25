@@ -77,3 +77,70 @@ La prueba crea y elimina únicamente `verification/check.txt`. No ejecutar `dock
 - [Garage: instalación](https://garagehq.deuxfleurs.fr/documentation/quick-start/)
 - [Garage: configuración](https://garagehq.deuxfleurs.fr/documentation/reference-manual/configuration/)
 - [Compose: configs](https://docs.docker.com/reference/compose-file/configs/)
+
+## Conexión de Homena después del merge y publicación de imágenes
+
+Variables del Stack de API:
+
+| Variable             | Valor                                           |
+| -------------------- | ----------------------------------------------- |
+| STORAGE_PROVIDER     | s3                                              |
+| S3_ENDPOINT          | http://garage:3900                              |
+| S3_REGION            | garage                                          |
+| S3_BUCKET            | homena-imagenes                                 |
+| S3_ACCESS_KEY_ID     | Clave homena-api creada en Garage               |
+| S3_SECRET_ACCESS_KEY | Secreto de esa clave                            |
+| STORAGE_PUBLIC_URL   | https://DOMINIO-REAL-DE-HOMENA/api/files/images |
+
+Las claves S3 son diferentes de GARAGE_RPC_SECRET. No subir valores reales a Git.
+La URL que se guarda en PostgreSQL utiliza el HTTPS de Homena. Garage sigue privado.
+
+Conservar las redes actuales de la API y añadir la red existente de Garage:
+
+```yaml
+networks:
+  garage_storage:
+    external: true
+    name: homena-storage_default
+```
+
+Agregar garage_storage a networks del servicio api sin retirar sus redes actuales.
+Confirmar antes el nombre real de la red en Portainer. El alias garage debe resolver
+allí. Esta modificación se hace al desplegar la integración, no al instalar Garage.
+
+La web también necesita la imagen construida con el nginx.conf de esta rama:
+/api/ tiene prioridad sobre archivos estáticos y el máximo de cuerpo es 6 MiB
+para admitir una foto de 5 MiB más multipart. Si Nginx Proxy Manager impone un
+límite menor, configurar client_max_body_size 6m en el proxy de Homena.
+
+Las imágenes mantienen el carácter público de /uploads mediante identificadores
+aleatorios. La API lee el bucket privado con sus credenciales. No colocar PDF
+privados en carpetas de imágenes: conservan su almacenamiento y rutas autenticadas.
+Las invitaciones y los PDF leen fotos S3 mediante FilesService sin descargar URLs
+externas arbitrarias. Las URLs locales previas siguen soportadas si sus archivos
+existen; no se recuperan archivos perdidos en despliegues anteriores.
+
+Límites compartidos: fotos 5 MiB, logos 2 MiB, favicon 512 KiB. Las fotos se
+convierten a WebP de 800 × 800; se rechaza el resultado si sigue superando
+1.000.000 bytes después de reducir la calidad.
+
+Los Dockerfiles fijan pnpm 10.34.5 para evitar el fallo de los overrides del
+lockfile con versiones incompatibles instaladas mediante pnpm sin versión fija.
+
+### Prueba real optativa
+
+El test modules/files/garage.integration.spec.ts usa un servidor HTTP de prueba de
+Nest y Garage real. No toca PostgreSQL ni reemplaza servicios. Requiere las variables
+GARAGE_INTEGRATION_ENDPOINT, GARAGE_INTEGRATION_BUCKET,
+GARAGE_INTEGRATION_ACCESS_KEY y GARAGE_INTEGRATION_SECRET_KEY fuera del historial.
+
+```bash
+pnpm --filter @zentic/shared-types build
+pnpm --filter @zentic/api exec jest --runInBand modules/files/garage.integration.spec.ts
+```
+
+Desde el PC se puede usar un túnel SSH temporal hacia 127.0.0.1:3900 del servidor.
+El test crea y elimina solo imágenes aleatorias en deceased/integration-test/.
+Comprueba subida HTTP, optimización, lectura S3, visualización HTTP y límites.
+El dominio homena.test es una URL de prueba; el test usa HTTP local y no valida
+certificados TLS ni el proxy de producción.

@@ -1,5 +1,5 @@
 FROM node:20-alpine AS build
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10.34.5
 WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY apps/web/package.json ./apps/web/

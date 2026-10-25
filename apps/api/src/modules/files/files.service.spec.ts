@@ -58,7 +58,7 @@ describe('FilesService', () => {
         service.upload(file, 'brand/tenant-1', {
           maxSizeBytes: 2 * 1024 * 1024,
         }),
-      ).rejects.toThrow('El archivo excede el máximo de 2MB');
+      ).rejects.toThrow('El archivo excede el máximo de 2 MB');
       expect(fs.writeFile).not.toHaveBeenCalled();
     });
 

@@ -1,8 +1,10 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
+import { validateImageUpload } from './image-upload.options';
 import { mkdir, readFile, unlink, writeFile } from 'fs/promises';
-import { join, normalize } from 'path';
+import { join, resolve, sep } from 'path';
+import { S3StorageService } from './s3-storage.service';
 
 const UPLOADS_ROOT = join(process.cwd(), 'uploads');
 
@@ -30,14 +32,46 @@ export interface UploadOptions {
   maxSizeBytes: number;
 }
 
-/**
- * TODO(post-HU5): migrar a R2/S3 usando STORAGE_PROVIDER / R2_* (ver env.validation.ts).
- * Esta implementación en disco local es un puente temporal para no bloquear el Módulo 05 en
- * infraestructura cloud — no apuntar esto a un volumen persistente en producción.
- */
 @Injectable()
 export class FilesService {
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    @Optional() private readonly s3?: S3StorageService,
+  ) {}
+
+  private get publicBaseUrl(): string {
+    return this.config
+      .getOrThrow<string>('STORAGE_PUBLIC_URL')
+      .replace(/\/+$/, '');
+  }
+
+  private managedS3Key(fileUrl: string): string | null {
+    if (!this.s3?.enabled) return null;
+    const prefix = this.publicBaseUrl + '/';
+    if (!fileUrl.startsWith(prefix)) return null;
+    const key = fileUrl.slice(prefix.length);
+    return this.isImageKey(key) ? key : null;
+  }
+
+  private isImageKey(key: string): boolean {
+    return /^(brand|deceased|invitations)\/[a-zA-Z0-9_-]+\/[0-9a-f-]{36}\.(png|jpg|webp|svg)$/.test(
+      key,
+    );
+  }
+
+  /** Public image assets only. Private PDFs never pass through this endpoint. */
+  async readPublicImage(
+    key: string,
+  ): Promise<{ buffer: Buffer; contentType: string } | null> {
+    if (!this.isImageKey(key) || !this.s3?.enabled) return null;
+    const buffer = await this.s3.read(key);
+    if (!buffer) return null;
+    const extension = key.split('.').pop();
+    const contentType = Object.entries(MIME_EXTENSIONS).find(
+      ([, ext]) => ext === extension,
+    )?.[0];
+    return contentType ? { buffer, contentType } : null;
+  }
 
   async upload(
     file: UploadableFile,
@@ -48,11 +82,17 @@ export class FilesService {
     if (!extension) {
       throw new BadRequestException('Formato no soportado. Use PNG, JPG o SVG');
     }
-    if (file.buffer.byteLength > options.maxSizeBytes) {
-      const maxMb = Math.round(options.maxSizeBytes / (1024 * 1024));
-      throw new BadRequestException(
-        `El archivo excede el máximo de ${maxMb}MB`,
-      );
+    validateImageUpload(file.buffer, options.maxSizeBytes);
+
+    if (!/^(brand|deceased|invitations)\/[a-zA-Z0-9_-]+$/.test(folder)) {
+      throw new BadRequestException('Carpeta de imágenes no válida');
+    }
+    if (this.s3?.enabled) {
+      const key = `${folder}/${randomUUID()}.${extension}`;
+      // Resolve configuration before writing to avoid orphaned objects.
+      const url = `${this.publicBaseUrl}/${key}`;
+      await this.s3.put(key, file.buffer, file.mimetype);
+      return url;
     }
 
     const targetDir = join(UPLOADS_ROOT, folder);
@@ -69,13 +109,18 @@ export class FilesService {
   }
 
   async delete(fileUrl: string): Promise<void> {
+    const s3Key = this.managedS3Key(fileUrl);
+    if (s3Key) {
+      await this.s3!.delete(s3Key);
+      return;
+    }
     const marker = '/uploads/';
     const index = fileUrl.indexOf(marker);
     if (index === -1) return;
 
     const relativePath = fileUrl.slice(index + marker.length);
-    const filePath = normalize(join(UPLOADS_ROOT, relativePath));
-    if (!filePath.startsWith(UPLOADS_ROOT)) return;
+    const filePath = resolve(UPLOADS_ROOT, relativePath);
+    if (!filePath.startsWith(UPLOADS_ROOT + sep)) return;
 
     try {
       await unlink(filePath);
@@ -86,18 +131,17 @@ export class FilesService {
     }
   }
 
-  /**
-   * Lee el archivo en disco a partir de la URL pública devuelta por upload().
-   * TODO(post-HU5): al migrar a R2/S3 esto pasa a ser un fetch HTTP a la URL firmada.
-   */
+  /** Reads managed S3 assets and legacy local uploads without fetching arbitrary URLs. */
   async readLocalFile(fileUrl: string): Promise<Buffer | null> {
+    const s3Key = this.managedS3Key(fileUrl);
+    if (s3Key) return this.s3!.read(s3Key);
     const marker = '/uploads/';
     const index = fileUrl.indexOf(marker);
     if (index === -1) return null;
 
     const relativePath = fileUrl.slice(index + marker.length);
-    const filePath = normalize(join(UPLOADS_ROOT, relativePath));
-    if (!filePath.startsWith(UPLOADS_ROOT)) return null;
+    const filePath = resolve(UPLOADS_ROOT, relativePath);
+    if (!filePath.startsWith(UPLOADS_ROOT + sep)) return null;
 
     try {
       return await readFile(filePath);
@@ -127,8 +171,8 @@ export class FilesService {
   }
 
   async readPrivateFile(relativePath: string): Promise<Buffer | null> {
-    const filePath = normalize(join(PRIVATE_STORAGE_ROOT, relativePath));
-    if (!filePath.startsWith(PRIVATE_STORAGE_ROOT)) return null;
+    const filePath = resolve(PRIVATE_STORAGE_ROOT, relativePath);
+    if (!filePath.startsWith(PRIVATE_STORAGE_ROOT + sep)) return null;
 
     try {
       return await readFile(filePath);

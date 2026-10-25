@@ -4,7 +4,7 @@ services:
   garage:
     image: dxflrs/garage:v2.5.0
     restart: unless-stopped
-    command: [server]
+    command: [/garage, server]
     environment:
       GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?Generate GARAGE_RPC_SECRET with openssl rand -hex 32}
     configs:

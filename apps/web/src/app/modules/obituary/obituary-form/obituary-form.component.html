@@ -24,7 +24,8 @@
     <app-file-dropzone
       label="Foto del difunto"
       hint="PNG, JPG o WebP — se optimiza automáticamente"
-      [maxSizeBytes]="5 * 1024 * 1024"
+      [maxSizeBytes]="imageUploadLimits.photo"
+      [acceptedMimeTypes]="photoMimeTypes"
       (fileSelected)="onPhotoSelected($event)"
     />
   </div>
