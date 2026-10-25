@@ -74,6 +74,15 @@ export type PlayerMode = 'live' | 'recording';
           }
         </div>
 
+        @if (needsGesture() && mode() === 'live') {
+          <button type="button" class="hls-player__tap" (click)="playFromGesture()">
+            <span class="hls-player__tap-pill">
+              <mat-icon>play_arrow</mat-icon>
+              Toca para ver la transmisión
+            </span>
+          </button>
+        }
+
         @if (status() === 'ready' && mode() === 'live') {
           <div class="hls-player__live-badge">
             <span class="hls-player__dot"></span>
@@ -83,10 +92,14 @@ export type PlayerMode = 'live' | 'recording';
             <button
               type="button"
               class="hls-player__live-btn"
+              [class.hls-player__live-btn--label]="liveMuted()"
               (click)="toggleMute()"
               [attr.aria-label]="liveMuted() ? 'Activar sonido' : 'Silenciar'"
             >
               <mat-icon>{{ liveMuted() ? 'volume_off' : 'volume_up' }}</mat-icon>
+              @if (liveMuted()) {
+                <span>Activar sonido</span>
+              }
             </button>
             <button
               type="button"
@@ -185,6 +198,40 @@ export type PlayerMode = 'live' | 'recording';
     .hls-player__live-btn:hover {
       background: rgba(0, 0, 0, 0.75);
     }
+    .hls-player__live-btn--label {
+      width: auto;
+      gap: 0.375rem;
+      padding: 0 0.875rem 0 0.625rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+    }
+    .hls-player__tap {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      padding: 0;
+      background: rgba(0, 0, 0, 0.35);
+      color: #fff;
+      cursor: pointer;
+    }
+    .hls-player__tap-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.25rem 0.75rem 1rem;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.7);
+      font-size: 0.9375rem;
+      font-weight: 600;
+    }
+    .hls-player__tap-pill mat-icon {
+      font-size: 1.75rem;
+      width: 1.75rem;
+      height: 1.75rem;
+    }
     .hls-player__live-btn mat-icon {
       font-size: 1.25rem;
       width: 1.25rem;
@@ -243,6 +290,12 @@ export class HlsPlayerComponent implements OnDestroy {
 
   readonly status = signal<PlayerStatus>('loading');
   readonly liveMuted = signal(true);
+  /**
+   * El navegador rechazó play() incluso en muted (iOS en modo bajo consumo, ahorro de
+   * datos, navegadores in-app de WhatsApp/Facebook/Instagram). Sin controles en vivo,
+   * el espectador vería el póster con "EN VIVO" y nada más, así que se muestra un botón.
+   */
+  readonly needsGesture = signal(false);
   private userToggledMute = false;
 
   readonly src = input<string | null>(null);
@@ -265,22 +318,42 @@ export class HlsPlayerComponent implements OnDestroy {
    * — y pausa — un `video.muted = false` disparado por script sin un gesto real, aunque
    * el video ya estuviera reproduciéndose muted. Por eso el auto-unmute NO se dispara al
    * llegar a "ready" (ver markReady) sino acá, donde si hay un gesto legítimo.
+   *
+   * Ojo: scroll, wheel, touchstart y pointerdown táctil NO son activación según la
+   * especificación — desmutear en ellos hacía que Chrome pausara el video apenas el
+   * espectador bajaba a leer el chat, y en celular tocar la pantalla nunca lo
+   * destrababa. Esos eventos solo reintentan play() (en muted, que sí está permitido);
+   * el audio se activa únicamente si hay activación real.
    */
   private static readonly INTERACTION_EVENTS: Array<keyof DocumentEventMap> = [
     'pointerdown',
+    'pointerup',
+    'click',
     'keydown',
     'touchstart',
+    'touchend',
     'scroll',
     'wheel',
   ];
-  private readonly onInteraction = (): void => {
+  /** Respaldo para navegadores sin navigator.userActivation (Safari < 16.4). */
+  private static readonly ACTIVATION_EVENTS = new Set([
+    'pointerup',
+    'click',
+    'keydown',
+    'touchend',
+  ]);
+  private readonly onInteraction = (event: Event): void => {
     const video = this.activeVideo;
     if (!video || this.mode() !== 'live') return;
-    if (!this.userToggledMute && this.liveMuted()) {
-      this.liveMuted.set(false);
+    const userActivation = (navigator as Navigator & { userActivation?: { isActive: boolean } })
+      .userActivation;
+    const activated =
+      userActivation?.isActive ?? HlsPlayerComponent.ACTIVATION_EVENTS.has(event.type);
+    if (activated && !this.userToggledMute && this.liveMuted()) {
+      this.setMuted(video, false);
     }
     if (video.paused) {
-      video.play().catch(() => {});
+      this.tryPlay(video);
     }
   };
 
@@ -301,6 +374,7 @@ export class HlsPlayerComponent implements OnDestroy {
     this.destroyPlayback();
     this.status.set('loading');
     this.liveMuted.set(true);
+    this.needsGesture.set(false);
     this.userToggledMute = false;
     if (!url || !video) return;
 
@@ -315,7 +389,7 @@ export class HlsPlayerComponent implements OnDestroy {
     this.addNativeListener(video, 'loadedmetadata', () => {
       if (!this.isCurrentPlayback(url, video, generation)) return;
       this.markReady();
-      video.play().catch(() => {});
+      this.tryPlay(video);
     });
     this.addNativeListener(video, 'error', () => {
       if (!this.isCurrentPlayback(url, video, generation)) return;
@@ -336,6 +410,7 @@ export class HlsPlayerComponent implements OnDestroy {
     });
     this.addNativeListener(video, 'playing', () => {
       if (!this.isCurrentPlayback(url, video, generation)) return;
+      this.needsGesture.set(false);
       this.markReady();
     });
     this.addLiveGuards(video, url, generation);
@@ -374,7 +449,7 @@ export class HlsPlayerComponent implements OnDestroy {
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         if (!this.isCurrentPlayback(url, video, generation)) return;
         this.markReady();
-        video.play().catch(() => {});
+        this.tryPlay(video);
       });
 
       hls.on(
@@ -421,6 +496,7 @@ export class HlsPlayerComponent implements OnDestroy {
       });
       this.addNativeListener(video, 'playing', () => {
         if (!this.isCurrentPlayback(url, video, generation)) return;
+        this.needsGesture.set(false);
         this.markReady();
       });
       this.addLiveGuards(video, url, generation);
@@ -454,11 +530,50 @@ export class HlsPlayerComponent implements OnDestroy {
     this.status.set('ready');
   }
 
+  /**
+   * play() que nunca deja el video pausado en silencio: si el navegador rechaza la
+   * reproducción con sonido, vuelve a muted y reintenta (muted casi siempre está
+   * permitido); si incluso muted se rechaza, muestra el botón "Toca para ver".
+   */
+  private tryPlay(video: HTMLVideoElement): void {
+    video
+      .play()
+      .then(() => this.needsGesture.set(false))
+      .catch((error: unknown) => {
+        // AbortError (play interrumpido por un cambio de fuente, etc.) no es un bloqueo.
+        if (!(error instanceof DOMException) || error.name !== 'NotAllowedError') return;
+        if (this.mode() !== 'live' || video !== this.activeVideo) return;
+        if (!video.muted) {
+          this.setMuted(video, true);
+          video
+            .play()
+            .then(() => this.needsGesture.set(false))
+            .catch(() => this.needsGesture.set(true));
+          return;
+        }
+        this.needsGesture.set(true);
+      });
+  }
+
+  /** Aplica el mute al elemento de inmediato (no espera al próximo ciclo de detección). */
+  private setMuted(video: HTMLVideoElement, muted: boolean): void {
+    this.liveMuted.set(muted);
+    video.muted = muted;
+  }
+
+  /** Click en "Toca para ver la transmisión": es un gesto real, así que también da audio. */
+  playFromGesture(): void {
+    const video = this.activeVideo;
+    if (!video) return;
+    this.setMuted(video, false);
+    this.tryPlay(video);
+  }
+
   /** Impide pausar o retroceder en vivo: sin barra de progreso ni botón de play, el usuario siempre ve el borde en vivo. */
   private addLiveGuards(video: HTMLVideoElement, url: string, generation: number): void {
     this.addNativeListener(video, 'pause', () => {
       if (!this.isCurrentPlayback(url, video, generation)) return;
-      if (this.mode() === 'live') video.play().catch(() => {});
+      if (this.mode() === 'live') this.tryPlay(video);
     });
     this.addNativeListener(video, 'keydown', (event) => {
       if (this.mode() !== 'live') return;
@@ -503,7 +618,7 @@ export class HlsPlayerComponent implements OnDestroy {
         // recibe cualquier interacción (scroll, fullscreen, cambiar de pestaña) — un
         // empujón periódico evita depender de que el usuario lo descubra por accidente.
         this.nudgeRepaint(video);
-        video.play().catch(() => {});
+        this.tryPlay(video);
         this.lastObservedTime = video.currentTime;
         this.stalledFrameChecks = 0;
         return;
@@ -516,7 +631,7 @@ export class HlsPlayerComponent implements OnDestroy {
         // Reintentamos acá cada 2s en vez de quedar pausado indefinidamente.
         this.lastObservedTime = video.currentTime;
         this.stalledFrameChecks = 0;
-        video.play().catch(() => {});
+        this.tryPlay(video);
         return;
       }
       if (video.currentTime !== this.lastObservedTime) {
@@ -528,7 +643,7 @@ export class HlsPlayerComponent implements OnDestroy {
       if (this.stalledFrameChecks === 1) {
         this.nudgeRepaint(video);
       } else if (this.stalledFrameChecks === 2) {
-        video.play().catch(() => {});
+        this.tryPlay(video);
       } else if (this.stalledFrameChecks >= 3) {
         this.stalledFrameChecks = 0;
         this.requestPlaybackRefresh(generation);
@@ -553,7 +668,13 @@ export class HlsPlayerComponent implements OnDestroy {
 
   toggleMute(): void {
     this.userToggledMute = true;
-    this.liveMuted.update((muted) => !muted);
+    const video = this.activeVideo;
+    if (!video) {
+      this.liveMuted.update((muted) => !muted);
+      return;
+    }
+    this.setMuted(video, !this.liveMuted());
+    if (video.paused) this.tryPlay(video);
   }
 
   /**
