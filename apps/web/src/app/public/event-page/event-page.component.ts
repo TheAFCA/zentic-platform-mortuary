@@ -586,6 +586,9 @@ const REACTION_ICONS = [
       min-width: 0;
     }
     .stream-room__message-author {
+      /* Bloque propio: Angular elimina el espacio entre spans y el nombre
+         quedaba pegado al contenido ("AutorMensaje"). */
+      display: block;
       font-weight: 600;
       color: color-mix(in srgb, var(--brand-primary, #9147ff) 55%, white);
     }
@@ -1253,6 +1256,9 @@ export class EventPageComponent {
     this.destroyRef.onDestroy(() => {
       this.clearPlaybackRefreshTimer();
       this.cancelPoll();
+      // El servicio es root: sin esto el socket sobrevive a la navegación y
+      // sigue contando como espectador.
+      this.socket.disconnect();
     });
   }
 

@@ -404,6 +404,9 @@ import { getErrorMessage } from '../../../core/utils/error-message';
         line-height: 1.4;
       }
       .chat-message__author {
+        /* Bloque propio: Angular elimina el espacio entre spans y el nombre
+           quedaba pegado al contenido ("AutorMensaje"). */
+        display: block;
         font-weight: 600;
         font-size: 0.82rem;
         color: var(--ink, #1f2937);

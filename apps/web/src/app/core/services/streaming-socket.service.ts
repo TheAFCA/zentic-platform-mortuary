@@ -60,6 +60,15 @@ export interface SocketStreamStatus {
 export class StreamingSocketService implements OnDestroy {
   private socket: Socket | null = null;
 
+  // Al recargar/cerrar/salir de la página el navegador no siempre cierra el
+  // WebSocket a tiempo, y el servidor sigue contando al espectador hasta el
+  // timeout de ping. Se cierra explícitamente y se reabre si la página vuelve
+  // desde el bfcache.
+  private readonly onPageHide = () => this.socket?.disconnect();
+  private readonly onPageShow = (event: PageTransitionEvent) => {
+    if (event.persisted) this.socket?.connect();
+  };
+
   private newMessageSubject = new Subject<SocketMessage>();
   private newReactionSubject = new Subject<SocketReaction>();
   private viewerCountSubject = new BehaviorSubject<number>(0);
@@ -126,6 +135,9 @@ export class StreamingSocketService implements OnDestroy {
     this.socket.on('reconnect', () => {
       this.reconnectSubject.next();
     });
+
+    window.addEventListener('pagehide', this.onPageHide);
+    window.addEventListener('pageshow', this.onPageShow);
   }
 
   /**
@@ -133,6 +145,8 @@ export class StreamingSocketService implements OnDestroy {
    * Reinicia el contador de espectadores a 0.
    */
   disconnect(): void {
+    window.removeEventListener('pagehide', this.onPageHide);
+    window.removeEventListener('pageshow', this.onPageShow);
     if (this.socket) {
       this.socket.removeAllListeners();
       this.socket.disconnect();

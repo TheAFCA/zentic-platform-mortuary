@@ -31,6 +31,10 @@ import { DistributedRateLimiterService } from '../streaming/services/distributed
 
 @WebSocketGateway({
   namespace: '/events',
+  // Defaults 25s/20s: un navegador que se cierra sin despedirse seguía contando
+  // como espectador ~45s. Con 15s/10s se descarta en ~25s.
+  pingInterval: 15_000,
+  pingTimeout: 10_000,
   cors: {
     origin: process.env.FRONTEND_URL ?? 'http://localhost:4200',
     credentials: true,
@@ -44,10 +48,7 @@ export class NotificationsGateway
 
   private readonly logger = new Logger(NotificationsGateway.name);
 
-  private readonly eventViewers = new Map<string, Set<string>>();
   private readonly socketToEvent = new Map<string, string>();
-  private readonly VIEWER_PREFIX = 'ws:viewers:';
-  private readonly VIEWER_TTL = 120;
   private pubClient: Redis;
   private subClient: Redis;
 
@@ -55,7 +56,7 @@ export class NotificationsGateway
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
-    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    @Inject(REDIS_CLIENT) redis: Redis,
     private readonly rateLimiter: DistributedRateLimiterService,
   ) {
     this.pubClient = redis;
@@ -86,7 +87,8 @@ export class NotificationsGateway
     const eventId = this.socketToEvent.get(client.id);
     this.socketToEvent.delete(client.id);
     if (eventId) {
-      await this.removeViewer(eventId, client.id);
+      // Socket.IO emite "disconnect" antes de sacar al socket de sus salas.
+      await client.leave(this.viewersRoom(eventId));
       await this.broadcastCurrentViewerCount(eventId);
     }
   }
@@ -127,13 +129,17 @@ export class NotificationsGateway
     const previousEventId = this.socketToEvent.get(client.id);
     if (previousEventId && previousEventId !== data.eventId) {
       await client.leave(`event:${previousEventId}`);
-      await this.removeViewer(previousEventId, client.id);
+      await client.leave(this.viewersRoom(previousEventId));
       await this.broadcastCurrentViewerCount(previousEventId);
     }
 
     await client.join(`event:${data.eventId}`);
     this.socketToEvent.set(client.id, data.eventId);
-    await this.addViewer(data.eventId, client.id);
+    // El panel admin emite join-event y join-admin a la vez; si join-admin
+    // terminó primero, no se debe volver a contar al moderador como espectador.
+    if (!this.socketData(client).adminEventIds?.has(data.eventId)) {
+      await client.join(this.viewersRoom(data.eventId));
+    }
     this.logger.log(`Client ${client.id} joined event room: ${data.eventId}`);
     await this.broadcastCurrentViewerCount(data.eventId);
   }
@@ -151,8 +157,8 @@ export class NotificationsGateway
     data: EventRoomDto,
   ) {
     await client.leave(`event:${data.eventId}`);
+    await client.leave(this.viewersRoom(data.eventId));
     this.socketToEvent.delete(client.id);
-    await this.removeViewer(data.eventId, client.id);
     await this.broadcastCurrentViewerCount(data.eventId);
   }
 
@@ -201,9 +207,11 @@ export class NotificationsGateway
       throw new WsException('No autorizado para moderar este evento');
     }
 
-    this.socketData(client).user = user;
+    const socketData = this.socketData(client);
+    socketData.user = user;
+    (socketData.adminEventIds ??= new Set()).add(data.eventId);
     await client.join(`event:${data.eventId}:admin`);
-    await this.removeViewer(data.eventId, client.id);
+    await client.leave(this.viewersRoom(data.eventId));
     this.logger.log(`Admin ${client.id} joined admin room: ${data.eventId}`);
     await this.broadcastCurrentViewerCount(data.eventId);
   }
@@ -220,43 +228,30 @@ export class NotificationsGateway
     @MessageBody(new ValidationPipe({ whitelist: true, transform: true }))
     data: EventRoomDto,
   ) {
+    this.socketData(client).adminEventIds?.delete(data.eventId);
     await client.leave(`event:${data.eventId}:admin`);
   }
 
-  private async addViewer(eventId: string, socketId: string): Promise<void> {
-    if (!this.eventViewers.has(eventId)) {
-      this.eventViewers.set(eventId, new Set());
-    }
-    this.eventViewers.get(eventId)!.add(socketId);
-
-    const redisKey = `${this.VIEWER_PREFIX}${eventId}`;
-    await this.redis.sadd(redisKey, socketId);
-    await this.redis.expire(redisKey, this.VIEWER_TTL);
-  }
-
-  private async removeViewer(eventId: string, socketId: string): Promise<void> {
-    const viewers = this.eventViewers.get(eventId);
-    if (viewers) {
-      viewers.delete(socketId);
-      if (viewers.size === 0) this.eventViewers.delete(eventId);
-    }
-
-    const redisKey = `${this.VIEWER_PREFIX}${eventId}`;
-    await this.redis.srem(redisKey, socketId);
+  /**
+   * Sala que contiene solo a los espectadores (sin moderadores). Contar sus
+   * sockets vía el adapter Redis refleja únicamente conexiones vivas de todas
+   * las instancias, así que un reinicio o caída de la API no deja espectadores
+   * fantasma inflando el contador.
+   */
+  private viewersRoom(eventId: string): string {
+    return `event:${eventId}:viewers`;
   }
 
   private async broadcastCurrentViewerCount(eventId: string): Promise<void> {
-    const localCount = this.eventViewers.get(eventId)?.size ?? 0;
-
-    const redisKey = `${this.VIEWER_PREFIX}${eventId}`;
-    let redisCount = 0;
+    let count: number;
     try {
-      redisCount = await this.redis.scard(redisKey);
-    } catch {
-      redisCount = localCount;
+      count = (await this.server.in(this.viewersRoom(eventId)).fetchSockets())
+        .length;
+    } catch (error) {
+      this.logger.warn(`Error counting viewers for ${eventId}: ${error}`);
+      return;
     }
 
-    const count = Math.max(localCount, redisCount);
     this.broadcastViewerCount(eventId, { eventId, tenantId: '', count });
 
     await this.debouncedSyncViewerCount(eventId, count);
@@ -433,8 +428,11 @@ export class NotificationsGateway
     }
   }
 
-  private socketData(client: Socket): { user?: JwtPayload } {
-    return client.data as { user?: JwtPayload };
+  private socketData(client: Socket): {
+    user?: JwtPayload;
+    adminEventIds?: Set<string>;
+  } {
+    return client.data as { user?: JwtPayload; adminEventIds?: Set<string> };
   }
 
   private async authenticateClient(client: Socket): Promise<JwtPayload | null> {

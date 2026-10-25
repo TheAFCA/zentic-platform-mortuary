@@ -44,10 +44,26 @@ describe('StreamingSocketService', () => {
     it('should create socket connection with correct URL and options', () => {
       service.connect('event-1');
 
-      expect(io).toHaveBeenCalledWith('http://localhost:3000/events', {
+      expect(io).toHaveBeenCalledWith('/events', {
         transports: ['websocket', 'polling'],
         withCredentials: true,
       });
+    });
+
+    it('should close the socket on pagehide and reopen it when restored from bfcache', () => {
+      const socket = { ...mockSocket, connect: vi.fn() };
+      (io as unknown as ReturnType<typeof vi.fn>).mockReturnValue(socket);
+      service.connect('event-1');
+
+      window.dispatchEvent(new Event('pagehide'));
+      expect(socket.disconnect).toHaveBeenCalled();
+
+      const pageshow = new Event('pageshow') as PageTransitionEvent;
+      Object.defineProperty(pageshow, 'persisted', { value: true });
+      window.dispatchEvent(pageshow);
+      expect(socket.connect).toHaveBeenCalled();
+
+      service.disconnect();
     });
 
     it('should emit join-event on connect', () => {

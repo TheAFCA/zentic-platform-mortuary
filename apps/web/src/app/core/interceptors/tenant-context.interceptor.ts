@@ -9,7 +9,7 @@ const IPV6_CHARS_PATTERN = /^[0-9a-fA-F:]+$/;
 const isIpAddress = (host: string): boolean =>
   IPV4_PATTERN.test(host) || (host.includes(':') && IPV6_CHARS_PATTERN.test(host));
 
-const getTenantSlug = () => {
+export const getTenantSlug = (): string | null => {
   const host = window.location.hostname;
 
   // Acceso por IP directa (ej. pruebas sin dominio todavía) — "169.58.175.212".split('.')[0]

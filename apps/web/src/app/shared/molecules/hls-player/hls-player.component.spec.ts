@@ -133,7 +133,7 @@ describe('HlsPlayerComponent', () => {
     expect(video.muted).toBe(true);
   });
 
-  it('unmutes only on a genuine user interaction, never automatically', async () => {
+  it('unmutes only on a genuine user activation, never on scroll', async () => {
     vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('');
     fixture.componentRef.setInput('src', 'https://stream.example/live.m3u8');
     fixture.componentRef.setInput('mode', 'live');
@@ -145,10 +145,65 @@ describe('HlsPlayerComponent', () => {
     fixture.detectChanges();
     expect(video.muted).toBe(true);
 
+    // Scroll no es activación: desmutear acá hacía que Chrome pausara el video.
     document.dispatchEvent(new Event('scroll'));
+    fixture.detectChanges();
+    expect(video.muted).toBe(true);
+
+    document.dispatchEvent(new Event('pointerup'));
+    fixture.detectChanges();
+    expect(video.muted).toBe(false);
+  });
+
+  it('shows a tap-to-play button when the browser blocks even muted autoplay', async () => {
+    vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('');
+    const playSpy = vi
+      .spyOn(HTMLMediaElement.prototype, 'play')
+      .mockRejectedValue(new DOMException('blocked', 'NotAllowedError'));
+    fixture.componentRef.setInput('src', 'https://stream.example/live.m3u8');
+    fixture.componentRef.setInput('mode', 'live');
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(hlsMockState.instances).toHaveLength(1));
+    const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+
+    emitHls(latestHlsInstance(), 'manifest-parsed');
+    await vi.waitFor(() => expect(fixture.componentInstance.needsGesture()).toBe(true));
+    fixture.detectChanges();
+    const tap = fixture.nativeElement.querySelector('.hls-player__tap') as HTMLButtonElement;
+    expect(tap.textContent).toContain('Toca para ver la transmisión');
+
+    playSpy.mockResolvedValue(undefined);
+    tap.click();
+    await vi.waitFor(() => expect(fixture.componentInstance.needsGesture()).toBe(false));
     fixture.detectChanges();
 
     expect(video.muted).toBe(false);
+    expect(fixture.nativeElement.querySelector('.hls-player__tap')).toBeNull();
+  });
+
+  it('falls back to muted playback when sound is blocked instead of staying paused', async () => {
+    vi.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('');
+    fixture.componentRef.setInput('src', 'https://stream.example/live.m3u8');
+    fixture.componentRef.setInput('mode', 'live');
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(hlsMockState.instances).toHaveLength(1));
+    const video = fixture.nativeElement.querySelector('video') as HTMLVideoElement;
+    emitHls(latestHlsInstance(), 'manifest-parsed');
+    document.dispatchEvent(new Event('pointerup'));
+    expect(video.muted).toBe(false);
+
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(function (
+      this: HTMLMediaElement,
+    ) {
+      return this.muted
+        ? Promise.resolve()
+        : Promise.reject(new DOMException('needs gesture', 'NotAllowedError'));
+    });
+    video.dispatchEvent(new Event('pause'));
+
+    await vi.waitFor(() => expect(video.muted).toBe(true));
+    expect(fixture.componentInstance.liveMuted()).toBe(true);
+    expect(fixture.componentInstance.needsGesture()).toBe(false);
   });
 
   it('keeps native controls (with seek) for finished recordings', async () => {
